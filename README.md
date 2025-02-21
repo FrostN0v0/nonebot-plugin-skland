@@ -10,6 +10,10 @@
 
 _✨ 通过森空岛查询游戏数据 ✨_
 
+<p align="center" style="font-size: 2.5rem; color: #ff5722; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
+  🚧 绝赞施工中 🚧
+</p>
+
 <a href="./LICENSE">
     <img src="https://img.shields.io/github/license/FrostN0v0/nonebot-plugin-skland.svg" alt="license">
 </a>
@@ -37,7 +41,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 ## 📖 介绍
 
-你的插件介绍
+通过森空岛查询游戏数据
 
 ## 💿 安装
 

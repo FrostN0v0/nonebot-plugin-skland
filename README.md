@@ -6,23 +6,23 @@
 
 <div align="center">
 
-# nonebot-plugin-example
+# nonebot-plugin-skland
 
-_✨ 你的插件简述 ✨_
+_✨ 通过森空岛查询游戏数据 ✨_
 
 <a href="./LICENSE">
-    <img src="https://img.shields.io/github/license/owner/nonebot-plugin-example.svg" alt="license">
+    <img src="https://img.shields.io/github/license/FrostN0v0/nonebot-plugin-skland.svg" alt="license">
 </a>
-<a href="https://pypi.python.org/pypi/nonebot-plugin-example">
-    <img src="https://img.shields.io/pypi/v/nonebot-plugin-example.svg" alt="pypi">
+<a href="https://pypi.python.org/pypi/nonebot-plugin-skland">
+    <img src="https://img.shields.io/pypi/v/nonebot-plugin-skland.svg" alt="pypi">
 </a>
 <img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="python">
 <br>
-<a href="https://results.pre-commit.ci/latest/github/owner/nonebot-plugin-example/master">
-    <img src="https://results.pre-commit.ci/badge/github/owner/nonebot-plugin-example/master.svg" alt="pre-commit.ci status">
+<a href="https://results.pre-commit.ci/latest/github/FrostN0v0/nonebot-plugin-skland/master">
+    <img src="https://results.pre-commit.ci/badge/github/FrostN0v0/nonebot-plugin-skland/master.svg" alt="pre-commit.ci status">
 </a>
-<a href="https://registry.nonebot.dev/plugin/nonebot-plugin-example:nonebot_plugin_example">
-  <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fnbbdg.lgc2333.top%2Fplugin%2Fnonebot-plugin-example" alt="NoneBot Registry" />
+<a href="https://registry.nonebot.dev/plugin/nonebot-plugin-skland:nonebot_plugin_skland">
+  <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fnbbdg.lgc2333.top%2Fplugin%2Fnonebot-plugin-skland" alt="NoneBot Registry" />
 </a>
 <a href="https://github.com/astral-sh/uv">
     <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json" alt="uv">
@@ -30,7 +30,7 @@ _✨ 你的插件简述 ✨_
 <a href="https://github.com/astral-sh/ruff">
 <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v2.json" alt="ruff">
 </a>
-<a href="https://www.codefactor.io/repository/github/owner/nonebot-plugin-example"><img src="https://www.codefactor.io/repository/github/owner/nonebot-plugin-example/badge" alt="CodeFactor" />
+<a href="https://www.codefactor.io/repository/github/FrostN0v0/nonebot-plugin-skland"><img src="https://www.codefactor.io/repository/github/FrostN0v0/nonebot-plugin-skland/badge" alt="CodeFactor" />
 </a>
 
 </div>
@@ -45,7 +45,7 @@ _✨ 你的插件简述 ✨_
 <summary>使用 nb-cli 安装</summary>
 在 nonebot2 项目的根目录下打开命令行, 输入以下指令即可安装
 
-    nb plugin install nonebot-plugin-example
+    nb plugin install nonebot-plugin-skland
 
 </details>
 
@@ -56,27 +56,27 @@ _✨ 你的插件简述 ✨_
 <details>
 <summary>pip</summary>
 
-    pip install nonebot-plugin-example
+    pip install nonebot-plugin-skland
 </details>
 <details>
 <summary>pdm</summary>
 
-    pdm add nonebot-plugin-example
+    pdm add nonebot-plugin-skland
 </details>
 <details>
 <summary>poetry</summary>
 
-    poetry add nonebot-plugin-example
+    poetry add nonebot-plugin-skland
 </details>
 <details>
 <summary>conda</summary>
 
-    conda install nonebot-plugin-example
+    conda install nonebot-plugin-skland
 </details>
 
 打开 nonebot2 项目根目录下的 `pyproject.toml` 文件, 在 `[tool.nonebot]` 部分追加写入
 
-    plugins = ["nonebot_plugin_example"]
+    plugins = ["nonebot_plugin_skland"]
 
 </details>
 
@@ -105,7 +105,7 @@ _✨ 你的插件简述 ✨_
 
 ### 📸 效果图
 
-![示例图1](docs/example-1.png)
+![示例图1](docs/skland-1.png)
 
 ## 💖 鸣谢
 

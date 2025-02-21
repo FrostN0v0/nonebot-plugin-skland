@@ -1,31 +1,33 @@
 from nonebot import require
 from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 
+from .config import config
+
 require("nonebot_plugin_alconna")
 from nonebot_plugin_alconna import Alconna, UniMessage, CommandMeta, on_alconna
 
-from .config import config
+from .api import SklandAPI, SklandLoginAPI
 
 __plugin_meta__ = PluginMetadata(
-    name="插件发布名称",
-    description="插件描述",
+    name="明日方舟数据查询",
+    description="通过森空岛查询游戏数据",
     usage="描述你的插件用法",
     type="application",
-    homepage="https://github.com/owner/nonebot-plugin-example",
+    homepage="https://github.com/FrostN0v0/nonebot-plugin-skland",
     supported_adapters=inherit_supported_adapters("nonebot_plugin_alconna"),
     extra={
-        "author": "owner <your@email>",
+        "author": "FrostN0v0 <1614591760@qq.com>",
         "version": "0.1.0",
     },
 )
 
-your_matcher = on_alconna(
+skland = on_alconna(
     Alconna(
-        "your_matcher",
+        "skland",
         meta=CommandMeta(
             description=__plugin_meta__.description,
             usage=__plugin_meta__.usage,
-            example="/your_matcher",
+            example="/skland",
         ),
     ),
     block=True,
@@ -33,6 +35,6 @@ your_matcher = on_alconna(
 )
 
 
-@your_matcher.handle()
+@skland.handle()
 async def _():
-    await UniMessage(config.your_plugin_config_here).finish()
+    await UniMessage(config.your_plugin_config_here).send()

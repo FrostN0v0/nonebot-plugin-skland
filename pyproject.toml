@@ -1,18 +1,19 @@
 [project]
-name = "nonebot-plugin-example"
+name = "nonebot-plugin-skland"
 version = "0.1.0"
-description = "你的插件描述"
+description = "通过森空岛查询游戏数据"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
 dependencies = [
+    "httpx>=0.28.1",
     "nonebot-plugin-alconna>=0.54.2",
     "nonebot2>=2.4.1",
 ]
 
 [project.urls]
-homepage = "https://github.com/owner/nonebot-plugin-example"
-repository = "https://github.com/owner/nonebot-plugin-example"
+homepage = "https://github.com/FrostN0v0/nonebot-plugin-skland"
+repository = "https://github.com/FrostN0v0/nonebot-plugin-skland"
 
 [project.optional-dependencies]
 dev = [
@@ -25,7 +26,7 @@ requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
 [tool.nonebot]
-plugins = ["nonebot_plugin_example"]
+plugins = ["nonebot_plugin_skland"]
 adapters = [
     { name = "OneBot V11", module_name = "nonebot.adapters.onebot.v11" },
 ]

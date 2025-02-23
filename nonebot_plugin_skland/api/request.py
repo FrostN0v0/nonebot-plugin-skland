@@ -7,11 +7,10 @@ from urllib.parse import urlparse
 
 import httpx
 
-from nonebot_plugin_skland.schemas.cred import CRED
-
 from ..exception import RequestException
+from ..schemas import CRED, ArkSignResponse
 
-base_url = "https://zonai.skland.com/api/v1/game/"
+base_url = "https://zonai.skland.com/api/v1"
 
 
 class SklandAPI:
@@ -29,12 +28,12 @@ class SklandAPI:
     @classmethod
     async def get_binding(cls, cred: CRED) -> list:
         """获取绑定的角色"""
-        binding_url = f"{base_url}player/binding"
+        binding_url = f"{base_url}/game/player/binding"
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
                     binding_url,
-                    headers=await cls.get_sign_header(cred, binding_url, method="get"),
+                    headers=cls.get_sign_header(cred, binding_url, method="get"),
                 )
                 if status := response.json().get("status"):
                     if status != 0:
@@ -46,32 +45,52 @@ class SklandAPI:
                 raise RequestException(f"获取绑定角色失败: {e}")
 
     @classmethod
-    async def get_sign_header(
+    def get_sign_header(
         cls,
         cred: CRED,
         url: str,
         method: Literal["get", "post"],
-        query_body: str | None = None,
+        query_body: dict | None = None,
     ) -> dict:
         """获取带sign请求头"""
-        parsed_url = urlparse(url)
-        timestamp = int(datetime.now().timestamp())
+        timestamp = int(datetime.now().timestamp()) - 1
         header_ca = {**cls._header_for_sign, "timestamp": str(timestamp)}
-        if method == "get":
-            query_params = parsed_url.query
-        elif query_body:
-            query_params = query_body
-        secret = (
-            f"{parsed_url.path}{query_params}{timestamp}"
-            f"{json.dumps(header_ca, separators=(',', ':'))}"
+        parsed_url = urlparse(url)
+        query_params = json.dumps(query_body) if method == "post" else parsed_url.query
+        header_ca_str = json.dumps(
+            {**cls._header_for_sign, "timestamp": str(timestamp)},
+            separators=(",", ":"),
         )
-        signature = await cls.generate_signature(cred.token, secret)
-        return {"cred": cred.cred, **cls._headers, **header_ca, "sign": signature}
+        secret = f"{parsed_url.path}{query_params}{timestamp}{header_ca_str}"
+        hex_secret = hmac.new(
+            cred.token.encode("utf-8"), secret.encode("utf-8"), hashlib.sha256
+        ).hexdigest()
+        signature = hashlib.md5(hex_secret.encode("utf-8")).hexdigest()
+        return {"cred": cred.cred, **cls._headers, "sign": signature, **header_ca}
 
     @classmethod
-    async def generate_signature(cls, token: str, secret: str) -> str:
-        """生成签名"""
-        hex_secret = hmac.new(
-            token.encode("utf-8"), secret.encode("utf-8"), hashlib.sha256
-        ).hexdigest()
-        return hashlib.md5(hex_secret.encode("utf-8")).hexdigest()
+    async def ark_sign(
+        cls, cred: CRED, uid: str, channel_master_id: str
+    ) -> ArkSignResponse:
+        """进行明日方舟签到"""
+        body = {"uid": uid, "gameId": channel_master_id}
+        json_body = json.dumps(
+            body, ensure_ascii=False, separators=(", ", ": "), allow_nan=False
+        )
+        sign_url = f"{base_url}/game/attendance"
+        headers = cls.get_sign_header(
+            cred,
+            sign_url,
+            method="post",
+            query_body=body,
+        )
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    sign_url,
+                    headers={**headers, "Content-Type": "application/json"},
+                    content=json_body,
+                )
+            except httpx.HTTPError as e:
+                raise RequestException(f"获取arksign失败: {e}")
+            return ArkSignResponse(**response.json())

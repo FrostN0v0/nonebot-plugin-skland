@@ -1,17 +1,35 @@
 from nonebot import require
 from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 
-from .config import config
-
 require("nonebot_plugin_alconna")
-from nonebot_plugin_alconna import Alconna, UniMessage, CommandMeta, on_alconna
+require("nonebot_plugin_user")
+require("nonebot_plugin_orm")
+from nonebot_plugin_user import UserSession
+from nonebot_plugin_orm import async_scoped_session
+from nonebot_plugin_alconna import (
+    Args,
+    Field,
+    Match,
+    Option,
+    Alconna,
+    MsgTarget,
+    Subcommand,
+    UniMessage,
+    CommandMeta,
+    on_alconna,
+)
 
+from .model import User
+from .schemas import CRED
+from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
+from .utils import get_characters_and_bind
+from .db_handler import get_arknights_characters
 
 __plugin_meta__ = PluginMetadata(
     name="明日方舟数据查询",
     description="通过森空岛查询游戏数据",
-    usage="描述你的插件用法",
+    usage="/skland",
     type="application",
     homepage="https://github.com/FrostN0v0/nonebot-plugin-skland",
     supported_adapters=inherit_supported_adapters("nonebot_plugin_alconna"),
@@ -24,17 +42,98 @@ __plugin_meta__ = PluginMetadata(
 skland = on_alconna(
     Alconna(
         "skland",
+        Option(
+            "-b|--bind|bind",
+            Args["token", str, Field(completion=lambda: "请输入 token 或 cred 完成绑定")],
+        ),
+        Subcommand(
+            "arksign",
+            Option(
+                "-u|--uid|uid",
+                Args["uid", str, Field(completion=lambda: "请输入指定绑定角色uid")],
+            ),
+        ),
         meta=CommandMeta(
             description=__plugin_meta__.description,
             usage=__plugin_meta__.usage,
             example="/skland",
         ),
     ),
+    comp_config={"lite": True},
+    skip_for_unmatch=False,
     block=True,
     use_cmd_start=True,
 )
 
 
-@skland.handle()
+@skland.assign("$main")
 async def _():
-    await UniMessage(config.your_plugin_config_here).send()
+    await UniMessage("").send()
+
+
+@skland.assign("bind")
+async def _(
+    token: Match[str],
+    user_session: UserSession,
+    msg_target: MsgTarget,
+    session: async_scoped_session,
+):
+    if await session.get(User, user_session.user_id):
+        await UniMessage("已绑定过 skland 账号").finish(at_sender=True)
+
+    if not msg_target.private:
+        await UniMessage("绑定指令只允许在私聊中使用").finish(at_sender=True)
+
+    if token.available:
+        try:
+            if len(token.result) == 24:
+                grant_code = await SklandLoginAPI.get_grant_code(token.result)
+                cred = await SklandLoginAPI.get_cred(grant_code)
+                user = User(
+                    access_token=token.result,
+                    cred=cred.cred,
+                    cred_token=cred.token,
+                    id=user_session.user_id,
+                )
+            elif len(token.result) == 32:
+                cred = await SklandLoginAPI.refresh_token(token.result)
+                user = User(
+                    cred=cred.cred,
+                    cred_token=cred.token,
+                    id=user_session.user_id,
+                )
+            else:
+                await UniMessage("token 或 cred 错误,请检查格式").finish(at_sender=True)
+            session.add(user)
+            await get_characters_and_bind(user, session)
+            await UniMessage("绑定成功").finish(at_sender=True)
+        except RequestException as e:
+            await UniMessage(f"绑定失败,错误信息:{e}").finish(at_sender=True)
+
+
+@skland.assign("arksign")
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+    uid: Match[str],
+):
+    if user := await session.get(User, user_session.user_id):
+        cred = CRED(cred=user.cred, token=user.cred_token)
+        if uid.available:
+            try:
+                await SklandAPI.ark_sign(cred, uid.result, channel_master_id="1")
+                await UniMessage("签到成功").finish(at_sender=True)
+            except RequestException as e:
+                await UniMessage(f"签到失败,错误信息:{e}").finish(at_sender=True)
+        elif ark_characters := await get_arknights_characters(user, session):
+            try:
+                await SklandAPI.ark_sign(
+                    cred, str(ark_characters[0].uid), ark_characters[0].channel_master_id
+                )
+                await UniMessage("签到成功").finish(at_sender=True)
+            except RequestException as e:
+                await UniMessage(f"签到失败,错误信息:{e}").finish(at_sender=True)
+        else:
+            await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
+    else:
+        await UniMessage("未绑定 skland 账号").finish(at_sender=True)

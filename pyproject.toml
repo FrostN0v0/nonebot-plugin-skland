@@ -8,6 +8,8 @@ requires-python = ">=3.10"
 dependencies = [
     "httpx>=0.28.1",
     "nonebot-plugin-alconna>=0.54.2",
+    "nonebot-plugin-orm>=0.7.6",
+    "nonebot-plugin-user>=0.4.4",
     "nonebot2>=2.4.1",
 ]
 
@@ -18,6 +20,7 @@ repository = "https://github.com/FrostN0v0/nonebot-plugin-skland"
 [project.optional-dependencies]
 dev = [
     "nonebot-adapter-onebot>=2.4.6",
+    "nonebot-plugin-orm[default]>=0.7.6",
     "nonebot2[fastapi]>=2.4.1",
 ]
 

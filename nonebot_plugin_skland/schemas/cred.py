@@ -7,5 +7,5 @@ class CRED:
     """登录凭证"""
     token: str
     """登录凭证对应的token"""
-    userId: str
+    userId: str | None = None
     """用户ID"""

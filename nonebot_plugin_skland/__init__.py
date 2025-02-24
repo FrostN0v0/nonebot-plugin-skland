@@ -141,8 +141,7 @@ async def _(user_session: UserSession, session: async_scoped_session, uid: Match
     async def sign_in(user: User, uid: str, channel_master_id: str):
         """执行签到逻辑"""
         cred = CRED(cred=user.cred, token=user.cred_token)
-        await SklandAPI.ark_sign(cred, uid, channel_master_id=channel_master_id)
-        await UniMessage("签到成功").send(at_sender=True)
+        return await SklandAPI.ark_sign(cred, uid, channel_master_id=channel_master_id)
 
     user = await session.get(User, user_session.user_id)
     if not user:
@@ -150,13 +149,19 @@ async def _(user_session: UserSession, session: async_scoped_session, uid: Match
 
     if uid.available:
         character = await get_arknights_character_by_uid(user, uid.result, session)
-        await sign_in(user, uid.result, character.channel_master_id)
+        sign_result = await sign_in(user, uid.result, character.channel_master_id)
     else:
         ark_characters = await get_arknights_characters(user, session)
         if not ark_characters:
             await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
 
         char = ark_characters[0]
-        await sign_in(user, str(char.uid), char.channel_master_id)
+        sign_result = await sign_in(user, str(char.uid), char.channel_master_id)
+
+    if sign_result:
+        await UniMessage(
+            f"角色: {char.nickname} 签到成功，获得了:\n"
+            + "\n".join(f"{award.resource.name} x {award.count}" for award in sign_result.awards)
+        ).send(at_sender=True)
 
     await session.commit()

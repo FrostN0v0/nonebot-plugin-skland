@@ -91,4 +91,4 @@ class SklandAPI:
                         raise RequestException(f"arksign失败：{response.json().get('message')}")
             except httpx.HTTPError as e:
                 raise RequestException(f"获取arksign失败: {e}")
-            return ArkSignResponse(**response.json())
+            return ArkSignResponse(**response.json()["data"])

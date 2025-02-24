@@ -6,19 +6,17 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 import httpx
+from loguru import logger
 
-from ..exception import RequestException
 from ..schemas import CRED, ArkSignResponse
+from ..exception import LoginException, RequestException, UnauthorizedException
 
 base_url = "https://zonai.skland.com/api/v1"
 
 
 class SklandAPI:
     _headers = {
-        "User-Agent": (
-            "Skland/1.32.1 (com.hypergryph.skland; build:103201004; Android 33; ) "
-            "Okhttp/4.11.0"
-        ),
+        "User-Agent": ("Skland/1.32.1 (com.hypergryph.skland; build:103201004; Android 33; ) Okhttp/4.11.0"),
         "Accept-Encoding": "gzip",
         "Connection": "close",
     }
@@ -37,9 +35,7 @@ class SklandAPI:
                 )
                 if status := response.json().get("status"):
                     if status != 0:
-                        raise RequestException(
-                            f"获取绑定角色失败：{response.json().get('msg')}"
-                        )
+                        raise RequestException(f"获取绑定角色失败：{response.json().get('message')}")
                 return response.json()["data"]["list"]
             except httpx.HTTPError as e:
                 raise RequestException(f"获取绑定角色失败: {e}")
@@ -62,21 +58,15 @@ class SklandAPI:
             separators=(",", ":"),
         )
         secret = f"{parsed_url.path}{query_params}{timestamp}{header_ca_str}"
-        hex_secret = hmac.new(
-            cred.token.encode("utf-8"), secret.encode("utf-8"), hashlib.sha256
-        ).hexdigest()
+        hex_secret = hmac.new(cred.token.encode("utf-8"), secret.encode("utf-8"), hashlib.sha256).hexdigest()
         signature = hashlib.md5(hex_secret.encode("utf-8")).hexdigest()
         return {"cred": cred.cred, **cls._headers, "sign": signature, **header_ca}
 
     @classmethod
-    async def ark_sign(
-        cls, cred: CRED, uid: str, channel_master_id: str
-    ) -> ArkSignResponse:
+    async def ark_sign(cls, cred: CRED, uid: str, channel_master_id: str) -> ArkSignResponse:
         """进行明日方舟签到"""
         body = {"uid": uid, "gameId": channel_master_id}
-        json_body = json.dumps(
-            body, ensure_ascii=False, separators=(", ", ": "), allow_nan=False
-        )
+        json_body = json.dumps(body, ensure_ascii=False, separators=(", ", ": "), allow_nan=False)
         sign_url = f"{base_url}/game/attendance"
         headers = cls.get_sign_header(
             cred,
@@ -91,6 +81,14 @@ class SklandAPI:
                     headers={**headers, "Content-Type": "application/json"},
                     content=json_body,
                 )
+                logger.debug(f"签到回复：{response.json()}")
+                if status := response.json().get("code"):
+                    if status == 10000:
+                        raise UnauthorizedException(f"arksign失败：{response.json().get('message')}")
+                    elif status == 10002:
+                        raise LoginException(f"arksign失败：{response.json().get('message')}")
+                    elif status != 0:
+                        raise RequestException(f"arksign失败：{response.json().get('message')}")
             except httpx.HTTPError as e:
                 raise RequestException(f"获取arksign失败: {e}")
             return ArkSignResponse(**response.json())

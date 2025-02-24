@@ -1,2 +1,2 @@
 class ArkSignResponse:
-    raise NotImplementedError
+    pass

@@ -1,4 +1,4 @@
-from nonebot import logger, require
+from nonebot import require
 from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 
 require("nonebot_plugin_alconna")
@@ -22,10 +22,10 @@ from nonebot_plugin_alconna import (
 
 from .model import User
 from .schemas import CRED
+from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
-from .utils import get_characters_and_bind
-from .db_handler import get_arknights_characters
-from .exception import LoginException, RequestException, UnauthorizedException
+from .db_handler import get_arknights_characters, get_arknights_character_by_uid
+from .utils import get_characters_and_bind, refresh_cred_token_if_needed, refresh_access_token_if_needed
 
 __plugin_meta__ = PluginMetadata(
     name="明日方舟数据查询",
@@ -133,56 +133,30 @@ async def _(
 
 
 @skland.assign("arksign")
-async def _(
-    user_session: UserSession,
-    session: async_scoped_session,
-    uid: Match[str],
-):
-    if user := await session.get(User, user_session.user_id):
+async def _(user_session: UserSession, session: async_scoped_session, uid: Match[str]):
+    """明日方舟森空岛签到"""
+
+    @refresh_cred_token_if_needed
+    @refresh_access_token_if_needed
+    async def sign_in(user: User, uid: str, channel_master_id: str):
+        """执行签到逻辑"""
         cred = CRED(cred=user.cred, token=user.cred_token)
-        if uid.available:
-            try:
-                await SklandAPI.ark_sign(cred, uid.result, channel_master_id="1")
-                await UniMessage("签到成功").finish(at_sender=True)
-            except RequestException as e:
-                await UniMessage(f"签到失败,错误信息:{e}").finish(at_sender=True)
-        elif ark_characters := await get_arknights_characters(user, session):
-            try:
-                await SklandAPI.ark_sign(cred, str(ark_characters[0].uid), ark_characters[0].channel_master_id)
-                await UniMessage("签到成功").finish(at_sender=True)
-            except RequestException as e:
-                await UniMessage(f"签到失败,错误信息:{e}").finish(at_sender=True)
-            except LoginException:
-                if user.access_token:
-                    try:
-                        grent_code = await SklandLoginAPI.get_grant_code(user.access_token)
-                        new_cred = await SklandLoginAPI.get_cred(grent_code)
-                        user.cred = new_cred.cred
-                        user.cred_token = new_cred.token
-                        logger.info("access_token失效，已自动刷新")
-                        await SklandAPI.ark_sign(
-                            new_cred,
-                            str(ark_characters[0].uid),
-                            ark_characters[0].channel_master_id,
-                        )
-                        await UniMessage("签到成功").send(at_sender=True)
-                    except (RequestException, LoginException, UnauthorizedException) as e:
-                        await UniMessage(f"签到失败,错误信息:{e}").send(at_sender=True)
-            except UnauthorizedException:
-                try:
-                    new_cred = await SklandLoginAPI.refresh_token(user.cred)
-                    user.cred_token = new_cred.token
-                    logger.info("cred_token失效，已自动刷新")
-                    await SklandAPI.ark_sign(
-                        new_cred,
-                        str(ark_characters[0].uid),
-                        ark_characters[0].channel_master_id,
-                    )
-                    await UniMessage("签到成功").send(at_sender=True)
-                except (RequestException, LoginException, UnauthorizedException) as e:
-                    await UniMessage(f"签到失败,错误信息:{e}").send(at_sender=True)
-        else:
-            await UniMessage("未绑定 arknights 账号").send(at_sender=True)
-        await session.commit()
-    else:
+        await SklandAPI.ark_sign(cred, uid, channel_master_id=channel_master_id)
+        await UniMessage("签到成功").send(at_sender=True)
+
+    user = await session.get(User, user_session.user_id)
+    if not user:
         await UniMessage("未绑定 skland 账号").finish(at_sender=True)
+
+    if uid.available:
+        character = await get_arknights_character_by_uid(user, uid.result, session)
+        await sign_in(user, uid.result, character.channel_master_id)
+    else:
+        ark_characters = await get_arknights_characters(user, session)
+        if not ark_characters:
+            await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
+
+        char = ark_characters[0]
+        await sign_in(user, str(char.uid), char.channel_master_id)
+
+    await session.commit()

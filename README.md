@@ -41,6 +41,16 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 通过森空岛查询游戏数据
 
+<img width="100%" src="https://starify.komoridevs.icu/api/starify?owner=FrostN0v0&repo=nonebot-plugin-skland" alt="starify" />
+
+<details>
+  <summary><kbd>Star History</kbd></summary>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=FrostN0v0/nonebot-plugin-skland&theme=dark&type=Date" />
+    <img width="100%" src="https://star-history.com/#FrostN0v0/nonebot-plugin-skland&Date",alt="star history" />
+  </picture>
+</details>
+
 ## 💿 安装
 
 <details open>
@@ -116,7 +126,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 ## 📋 TODO
 
-- [ ] 肉鸽战绩返回信息解析
+- [x] 肉鸽战绩返回信息解析
 - [ ] 渲染角色信息卡片
 - [ ] 渲染肉鸽战绩卡片
 - [ ] 完善指令逻辑

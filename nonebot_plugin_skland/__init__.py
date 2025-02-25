@@ -84,6 +84,8 @@ async def _(
     msg_target: MsgTarget,
     session: async_scoped_session,
 ):
+    """绑定森空岛账号"""
+    # TODO: 储存默认角色uid,解决多绑定角色场景下的默认查询问题，而不是用ark_characters[0]
     if user := await session.get(User, user_session.user_id):
         if result.find("bind.update"):
             if len(token.result) == 24:
@@ -98,7 +100,7 @@ async def _(
                 user.cred_token = cred.token
             else:
                 await UniMessage("token 或 cred 错误,请检查格式").finish(at_sender=True)
-            await session.commit()
+            await get_characters_and_bind(user, session)
             await UniMessage("更新成功").finish(at_sender=True)
         await UniMessage("已绑定过 skland 账号").finish(at_sender=True)
 

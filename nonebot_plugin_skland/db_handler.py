@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from nonebot_plugin_orm import async_scoped_session
 
 from .model import User, Character
@@ -28,3 +28,7 @@ async def get_arknights_character_by_uid(user: User, uid: str, session: async_sc
         )
     ).scalar_one()
     return characters
+
+
+async def delete_characters(user: User, session: async_scoped_session):
+    await session.execute(delete(Character).where(Character.id == user.id))

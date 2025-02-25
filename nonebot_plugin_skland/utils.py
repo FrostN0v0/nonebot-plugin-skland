@@ -4,11 +4,14 @@ from nonebot_plugin_orm import async_scoped_session
 
 from .schemas import CRED
 from .model import User, Character
+from .db_handler import delete_characters
 from .api import SklandAPI, SklandLoginAPI
 from .exception import LoginException, RequestException, UnauthorizedException
 
 
 async def get_characters_and_bind(user: User, session: async_scoped_session):
+    await delete_characters(user, session)
+
     cred = CRED(cred=user.cred, token=user.cred_token)
     binding_app_list = await SklandAPI.get_binding(cred)
     for app in binding_app_list:
@@ -20,7 +23,7 @@ async def get_characters_and_bind(user: User, session: async_scoped_session):
                 app_code=app["appCode"],
                 channel_master_id=character["channelMasterId"],
             )
-        session.add(character_model)
+            session.add(character_model)
     await session.commit()
 
 

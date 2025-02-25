@@ -46,9 +46,7 @@ skland = on_alconna(
         Subcommand(
             "-b|--bind|bind",
             Args["token", str, Field(completion=lambda: "请输入 token 或 cred 完成绑定")],
-            Option(
-                "-u|--update|update",
-            ),
+            Option("-u|--update|update"),
             help_text="绑定森空岛账号",
         ),
         Subcommand(
@@ -57,6 +55,7 @@ skland = on_alconna(
                 "-u|--uid|uid",
                 Args["uid", str, Field(completion=lambda: "请输入指定绑定角色uid")],
             ),
+            help_text="森空岛签到",
         ),
         meta=CommandMeta(
             description=__plugin_meta__.description,
@@ -95,9 +94,9 @@ async def _(
                 user.cred = cred.cred
                 user.cred_token = cred.token
             elif len(token.result) == 32:
-                cred = await SklandLoginAPI.refresh_token(token.result)
-                user.cred = cred.cred
-                user.cred_token = cred.token
+                cred_token = await SklandLoginAPI.refresh_token(token.result)
+                user.cred = token.result
+                user.cred_token = cred_token
             else:
                 await UniMessage("token 或 cred 错误,请检查格式").finish(at_sender=True)
             await get_characters_and_bind(user, session)
@@ -117,13 +116,16 @@ async def _(
                     cred=cred.cred,
                     cred_token=cred.token,
                     id=user_session.user_id,
+                    user_id=cred.userId,
                 )
             elif len(token.result) == 32:
-                cred = await SklandLoginAPI.refresh_token(token.result)
+                cred_token = await SklandLoginAPI.refresh_token(token.result)
+                user_id = await SklandAPI.get_user_ID(CRED(cred=token.result, token=cred_token))
                 user = User(
-                    cred=cred.cred,
-                    cred_token=cred.token,
+                    cred=token.result,
+                    cred_token=cred_token,
                     id=user_session.user_id,
+                    user_id=user_id,
                 )
             else:
                 await UniMessage("token 或 cred 错误,请检查格式").finish(at_sender=True)

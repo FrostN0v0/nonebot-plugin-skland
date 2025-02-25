@@ -33,7 +33,11 @@ class SklandAPI:
                     binding_url,
                     headers=cls.get_sign_header(cred, binding_url, method="get"),
                 )
-                if status := response.json().get("status"):
+                if status := response.json().get("code"):
+                    if status == 10000:
+                        raise UnauthorizedException(f"获取绑定角色失败：{response.json().get('message')}")
+                    elif status == 10002:
+                        raise LoginException(f"获取绑定角色失败：{response.json().get('message')}")
                     if status != 0:
                         raise RequestException(f"获取绑定角色失败：{response.json().get('message')}")
                 return response.json()["data"]["list"]

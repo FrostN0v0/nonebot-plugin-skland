@@ -41,7 +41,7 @@ class SklandLoginAPI:
             return CRED(**response.json().get("data"))
 
     @classmethod
-    async def refresh_token(cls, cred: str) -> CRED:
+    async def refresh_token(cls, cred: str) -> str:
         async with httpx.AsyncClient() as client:
             refresh_url = "https://zonai.skland.com/api/v1/auth/refresh"
             try:
@@ -54,6 +54,6 @@ class SklandLoginAPI:
                     if status != 0:
                         raise RequestException(f"刷新token失败：{response.json().get('message')}")
                 token = response.json().get("data").get("token")
-                return CRED(cred=cred, token=token)
+                return token
             except (httpx.HTTPStatusError, httpx.ConnectError) as e:
                 raise RequestException(f"刷新token失败：{str(e)}")

@@ -59,8 +59,8 @@ def refresh_cred_token_if_needed(func):
             return await func(user, *args, **kwargs)
         except UnauthorizedException:
             try:
-                new_cred = await SklandLoginAPI.refresh_token(user.cred)
-                user.cred, user.cred_token = new_cred.cred, new_cred.token
+                new_token = await SklandLoginAPI.refresh_token(user.cred)
+                user.cred_token = new_token
                 logger.info("cred_token 失效，已自动刷新")
                 return await func(user, *args, **kwargs)
             except (RequestException, LoginException, UnauthorizedException) as e:

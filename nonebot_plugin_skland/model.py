@@ -14,6 +14,8 @@ class User(Model):
     """Skland Login Credential"""
     cred_token: Mapped[str] = mapped_column(Text)
     """Skland Login Credential Token"""
+    user_id: Mapped[int] = mapped_column(Text, nullable=True)
+    """Skland User ID"""
 
 
 class Character(Model):

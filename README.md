@@ -10,9 +10,7 @@
 
 _✨ 通过森空岛查询游戏数据 ✨_
 
-<p align="center" style="font-size: 2.5rem; color: #ff5722; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
-  🚧 绝赞施工中 🚧
-</p>
+<h1>🚧 <bold>绝赞施工中</bold> 🚧</h1>
 
 <a href="./LICENSE">
     <img src="https://img.shields.io/github/license/FrostN0v0/nonebot-plugin-skland.svg" alt="license">
@@ -118,5 +116,8 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 ## 📋 TODO
 
-- [ ] 你的插件TODO
-- [ ] 待补充,欢迎pr
+- [ ] 肉鸽战绩返回信息解析
+- [ ] 渲染角色信息卡片
+- [ ] 渲染肉鸽战绩卡片
+- [ ] 完善指令逻辑
+- [ ] 待补充

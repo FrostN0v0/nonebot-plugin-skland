@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 import httpx
 from loguru import logger
 
-from ..schemas import CRED, ArkSignResponse
+from ..schemas import CRED, ArkCard, ArkSignResponse
 from ..exception import LoginException, RequestException, UnauthorizedException
 
 base_url = "https://zonai.skland.com/api/v1"
@@ -96,3 +96,65 @@ class SklandAPI:
             except httpx.HTTPError as e:
                 raise RequestException(f"获取arksign失败: {e}")
             return ArkSignResponse(**response.json()["data"])
+
+    @classmethod
+    async def get_user_ID(cls, cred: CRED) -> str:
+        uid_url = f"{base_url}/user/teenager"
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    uid_url,
+                    headers=cls.get_sign_header(cred, uid_url, method="get"),
+                )
+                if status := response.json().get("code"):
+                    if status == 10000:
+                        raise UnauthorizedException(f"获取账号 userId 失败：{response.json().get('message')}")
+                    elif status == 10002:
+                        raise LoginException(f"获取账号 userId 失败：{response.json().get('message')}")
+                    if status != 0:
+                        raise RequestException(f"获取账号 userId 失败：{response.json().get('message')}")
+                return response.json()["data"]["teenager"]["userId"]
+            except httpx.HTTPError as e:
+                raise RequestException(f"获取账号 userId 失败: {e}")
+
+    @classmethod
+    async def ark_card(cls, cred: CRED, uid: str) -> ArkCard:
+        """获取明日方舟角色信息"""
+        game_info_url = f"{base_url}/game/player/info?uid={uid}"
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    game_info_url,
+                    headers=cls.get_sign_header(cred, game_info_url, method="get"),
+                )
+                if status := response.json().get("code"):
+                    if status == 10000:
+                        raise UnauthorizedException(f"获取账号 game_info 失败：{response.json().get('message')}")
+                    elif status == 10002:
+                        raise LoginException(f"获取账号 game_info 失败：{response.json().get('message')}")
+                    if status != 0:
+                        raise RequestException(f"获取账号 game_info 失败：{response.json().get('message')}")
+                return ArkCard(**response.json()["data"]["status"])
+            except httpx.HTTPError as e:
+                raise RequestException(f"获取账号 userId 失败: {e}")
+
+    @classmethod
+    async def get_rogue(cls, cred: CRED, uid: str, topic_id: str):
+        """获取肉鸽数据"""
+        rogue_url = f"{base_url}/game/arknights/rogue?uid={uid}&targetUserId={cred.userId}&topicId={topic_id}"
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    rogue_url,
+                    headers=cls.get_sign_header(cred, rogue_url, method="get"),
+                )
+                logger.debug(f"肉鸽数据：{response.json()}")
+                if status := response.json().get("code"):
+                    if status == 10000:
+                        raise UnauthorizedException(f"获取肉鸽数据失败：{response.json().get('message')}")
+                    elif status == 10002:
+                        raise LoginException(f"获取肉鸽数据失败：{response.json().get('message')}")
+                    if status != 0:
+                        raise RequestException(f"获取肉鸽数据失败：{response.json().get('message')}")
+            except httpx.HTTPError as e:
+                raise RequestException(f"获取肉鸽数据失败: {e}")

@@ -1,0 +1,74 @@
+name: ✨ 功能需求
+title: "Feature: "
+description: 为项目提出一个新的想法或建议
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 注意事项
+        [GitHub Issues](../issues) 专门用于错误报告和功能需求，这意味着我们不接受使用问题。如果你打开的问题不符合要求，它将会被无条件关闭。
+
+        有关使用问题，请通过以下途径：
+        - 阅读文档以解决
+        - 在社区内寻求他人解答
+        - 在网络中搜索是否有人遇到过类似的问题
+
+        最后，请记得遵守我们的社区准则，友好交流。
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 确认事项
+      description: 请确认你已遵守所有必选项。
+      options:
+        - label: 我已仔细阅读并了解上述注意事项。
+          required: true
+        - label: 我已使用最新版本测试过，确认功能并未实现。
+          required: true
+        - label: 我确定在 [GitHub Issues](../issues) 中没有相同或相似的需求。
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你希望能解决什么样的问题？
+      description: 请简要地说明是什么问题导致你想要一个新功能。也许我们可以提出一种现有的解决办法。
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 你想要的解决方案
+      description: 请说明你希望使用什么样的方法解决上述问题。
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 你考虑过的替代方案
+      description: 除了上述方法以外，你还考虑过哪些其他的实现方式？
+
+  - type: textarea
+    id: usecase
+    attributes:
+      label: 实现的功能是什么样的？
+      description: |
+        提供功能在实现后如何使用的代码示例。请注意，你可以使用 Markdown 来设置代码块的格式。
+        尽可能多地提供细节。你希望它如何使用的示例代码会有所帮助。
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 还有什么要补充的吗？
+      description: 在此处添加相关的任何其他上下文或截图，或者你觉得有帮助的信息。
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: 参与贡献
+      description: 欢迎加入我们的贡献者行列！
+      options:
+        - label: 我有足够的时间和能力，愿意为此提交 PR 来实现功能。

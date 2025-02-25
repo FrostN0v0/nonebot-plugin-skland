@@ -1,0 +1,98 @@
+name: 🐛 错误报告
+title: "Bug: 出现异常"
+description: 提交 Bug 反馈以帮助我们改进代码
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 注意事项
+        [GitHub Issues](../issues) 专门用于错误报告和功能需求，这意味着我们不接受使用问题。如果你打开的问题不符合要求，它将会被无条件关闭。
+
+        有关使用问题，请通过以下途径：
+        - 阅读文档以解决
+        - 在社区内寻求他人解答
+        - 在网络中搜索是否有人遇到过类似的问题
+
+        如果你不知道如何有效、精准地提出一个问题，我们建议你先阅读[《提问的智慧》](https://github.com/ryanhanwu/How-To-Ask-Questions-The-Smart-Way/blob/main/README-zh_CN.md)。
+
+        最后，请记得遵守我们的社区准则，友好交流。
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 确认事项
+      description: 请确认你已遵守所有必选项。
+      options:
+        - label: 我已仔细阅读并了解上述注意事项。
+          required: true
+        - label: 我已使用最新版本测试过，确认问题依旧存在。
+          required: true
+        - label: 我确定在 [GitHub Issues](../issues) 中没有相同或相似的问题。
+          required: true
+
+  - type: input
+    id: env-nonebot-ver
+    attributes:
+      label: NoneBot 版本
+      description: 填写 NoneBot 版本
+      placeholder: e.g. 2.4.1
+    validations:
+      required: true
+
+  - type: input
+    id: env-plugin-ver
+    attributes:
+      label: NoneBot skland 插件版本或 Commit ID
+      description: 填写 NoneBot skland 插件版本或 Commit ID
+      placeholder: e.g. 0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: env-protocol
+    attributes:
+      label: 协议端
+      description: 填写连接 NoneBot 的协议端及版本
+      placeholder: e.g. NapCat 4.4.15
+
+
+  - type: textarea
+    id: describe
+    attributes:
+      label: 描述问题
+      description: 清晰简洁地说明问题是什么
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤
+      description: 提供能复现此问题的详细操作步骤
+      placeholder: |
+        1. 首先……
+        2. 然后……
+        3. 发生……
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望的结果
+      description: 清晰简洁地描述你期望发生的事情
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 截图或日志
+      description: 提供有助于诊断问题的任何日志和截图
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: 参与贡献
+      description: 欢迎加入我们的贡献者行列！
+      options:
+        - label: 我有足够的时间和能力，愿意为此提交 PR 来修复问题。

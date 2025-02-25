@@ -229,6 +229,6 @@ async def _(user_session: UserSession, session: async_scoped_session, topic: Mat
         await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
     topic_id = Topics(topic.result).topic_id
     # TODO: 渲染肉鸽战绩卡片，完善指令逻辑
-    await get_rogue_info(user, str(ark_characters[0].uid), topic_id)
-    await UniMessage().send()
+    rogue = await get_rogue_info(user, str(ark_characters[0].uid), topic_id)
+    await UniMessage(rogue.model_dump_json()).send()
     await session.commit()

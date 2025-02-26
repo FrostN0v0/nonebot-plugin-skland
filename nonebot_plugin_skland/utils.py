@@ -24,6 +24,8 @@ async def get_characters_and_bind(user: User, session: async_scoped_session):
                 channel_master_id=character["channelMasterId"],
                 isdefault=character["isDefault"],
             )
+            if len(app["bindingList"]) == 1:
+                character_model.isdefault = True
             session.add(character_model)
     await session.commit()
 

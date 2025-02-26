@@ -134,7 +134,7 @@ class SklandAPI:
                         raise LoginException(f"获取账号 game_info 失败：{response.json().get('message')}")
                     if status != 0:
                         raise RequestException(f"获取账号 game_info 失败：{response.json().get('message')}")
-                return ArkCard(**response.json()["data"]["status"])
+                return ArkCard(**response.json()["data"])
             except httpx.HTTPError as e:
                 raise RequestException(f"获取账号 userId 失败: {e}")
 

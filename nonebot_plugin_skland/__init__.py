@@ -114,7 +114,7 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
 
     # TODO: 渲染角色卡片，完善指令逻辑
     info = await get_character_info(user, str(ark_characters.uid))
-    await UniMessage(info.name).send()
+    await UniMessage(info.status.name).send()
     await session.commit()
 
 

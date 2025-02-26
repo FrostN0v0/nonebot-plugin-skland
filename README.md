@@ -35,6 +35,19 @@ _✨ 通过森空岛查询游戏数据 ✨_
 <a href="https://www.codefactor.io/repository/github/FrostN0v0/nonebot-plugin-skland"><img src="https://www.codefactor.io/repository/github/FrostN0v0/nonebot-plugin-skland/badge" alt="CodeFactor" />
 </a>
 
+<br />
+<a href="#-效果图">
+  <strong>📸 演示与预览</strong>
+</a>
+&nbsp;&nbsp;|&nbsp;&nbsp;
+<a href="#-安装">
+  <strong>📦️ 下载插件</strong>
+</a>
+&nbsp;&nbsp;|&nbsp;&nbsp;
+<a href="https://qm.qq.com/q/bAXUZu1BdK" target="__blank">
+  <strong>💬 加入交流群</strong>
+</a>
+
 </div>
 
 ## 📖 介绍
@@ -125,8 +138,10 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 ## 📋 TODO
 
-- [x] 肉鸽战绩返回信息解析
-- [ ] 渲染角色信息卡片
-- [ ] 渲染肉鸽战绩卡片
 - [ ] 完善指令逻辑
+- [ ] 完善肉鸽战绩返回信息解析
+- [ ] 完善用户接口返回数据解析
+- [ ] 使用[`nonebot-plugin-htmlrender`](https://github.com/kexue-z/nonebot-plugin-htmlrender)渲染信息卡片
+- [ ] 绘制渲染用户信息卡片
+- [ ] 绘制渲染肉鸽战绩卡片
 - [ ] 待补充

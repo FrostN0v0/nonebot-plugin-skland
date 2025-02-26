@@ -1,8 +1,8 @@
-"""first revision
+"""first_revision
 
-迁移 ID: ae42a302c680
+迁移 ID: 997049a57a3a
 父迁移:
-创建时间: 2025-02-25 11:37:06.554666
+创建时间: 2025-02-26 09:22:45.310083
 
 """
 
@@ -13,7 +13,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "ae42a302c680"
+revision: str = "997049a57a3a"
 down_revision: str | Sequence[str] | None = None
 branch_labels: str | Sequence[str] | None = ("nonebot_plugin_skland",)
 depends_on: str | Sequence[str] | None = None
@@ -30,6 +30,7 @@ def upgrade(name: str = "") -> None:
         sa.Column("app_code", sa.Text(), nullable=False),
         sa.Column("channel_master_id", sa.Text(), nullable=False),
         sa.Column("nickname", sa.Text(), nullable=False),
+        sa.Column("isdefault", sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint("id", "uid", name=op.f("pk_skland_characters")),
         info={"bind_key": "nonebot_plugin_skland"},
     )

@@ -31,3 +31,4 @@ class Character(Model):
     """Channel Master ID"""
     nickname: Mapped[str] = mapped_column(Text)
     """Character Nickname"""
+    isdefault: Mapped[bool] = mapped_column(default=False)

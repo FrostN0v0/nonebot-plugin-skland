@@ -25,7 +25,7 @@ from .model import User
 from .schemas import CRED, Topics
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
-from .db_handler import get_arknights_characters, get_arknights_character_by_uid
+from .db_handler import get_arknights_character_by_uid, get_default_arknights_character
 from .utils import get_characters_and_bind, refresh_cred_token_if_needed, refresh_access_token_if_needed
 
 __plugin_meta__ = PluginMetadata(
@@ -89,12 +89,12 @@ async def _(session: async_scoped_session, user_session: UserSession):
     user = await session.get(User, user_session.user_id)
     if not user:
         await UniMessage("未绑定 skland 账号").finish(at_sender=True)
-    ark_characters = await get_arknights_characters(user, session)
+    ark_characters = await get_default_arknights_character(user, session)
     if not ark_characters:
         await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
 
     # TODO: 渲染角色卡片，完善指令逻辑
-    info = await get_character_info(user, str(ark_characters[0].uid))
+    info = await get_character_info(user, str(ark_characters.uid))
     await UniMessage(info.name).send()
     await session.commit()
 
@@ -179,16 +179,15 @@ async def _(user_session: UserSession, session: async_scoped_session, uid: Match
         character = await get_arknights_character_by_uid(user, uid.result, session)
         sign_result = await sign_in(user, uid.result, character.channel_master_id)
     else:
-        ark_characters = await get_arknights_characters(user, session)
-        if not ark_characters:
+        character = await get_default_arknights_character(user, session)
+        if not character:
             await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
 
-        char = ark_characters[0]
-        sign_result = await sign_in(user, str(char.uid), char.channel_master_id)
+        sign_result = await sign_in(user, str(character.uid), character.channel_master_id)
 
     if sign_result:
         await UniMessage(
-            f"角色: {char.nickname} 签到成功，获得了:\n"
+            f"角色: {character.nickname} 签到成功，获得了:\n"
             + "\n".join(f"{award.resource.name} x {award.count}" for award in sign_result.awards)
         ).send(at_sender=True)
 
@@ -224,11 +223,11 @@ async def _(user_session: UserSession, session: async_scoped_session, topic: Mat
     user = await session.get(User, user_session.user_id)
     if not user:
         await UniMessage("未绑定 skland 账号").finish(at_sender=True)
-    ark_characters = await get_arknights_characters(user, session)
-    if not ark_characters:
+    character = await get_default_arknights_character(user, session)
+    if not character:
         await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
     topic_id = Topics(topic.result).topic_id
     # TODO: 渲染肉鸽战绩卡片，完善指令逻辑
-    rogue = await get_rogue_info(user, str(ark_characters[0].uid), topic_id)
+    rogue = await get_rogue_info(user, str(character.uid), topic_id)
     await UniMessage(rogue.model_dump_json()).send()
     await session.commit()

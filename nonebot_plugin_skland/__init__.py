@@ -4,8 +4,8 @@ from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_user")
 require("nonebot_plugin_orm")
-from nonebot_plugin_user import UserSession
 from nonebot_plugin_orm import async_scoped_session
+from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_alconna import (
     At,
     Args,
@@ -29,7 +29,7 @@ from .db_handler import get_arknights_character_by_uid, get_default_arknights_ch
 from .utils import get_characters_and_bind, refresh_cred_token_if_needed, refresh_access_token_if_needed
 
 __plugin_meta__ = PluginMetadata(
-    name="明日方舟数据查询",
+    name="森空岛数据查询",
     description="通过森空岛查询游戏数据",
     usage="/skland",
     type="application",
@@ -62,7 +62,11 @@ skland = on_alconna(
         Subcommand("char", Option("-u|--update|update"), help_text="更新绑定角色信息"),
         Subcommand(
             "rogue",
-            Args["topic", ["萨米", "萨卡兹"], Field(completion=lambda: "请输入指定topic_id")],
+            Args["target?#目标", At | int],
+            Option(
+                "-t|--topic|topic",
+                Args["topic_name?#主题", ["萨米", "萨卡兹"], Field(completion=lambda: "请输入指定topic_id")],
+            ),
             help_text="肉鸽战绩查询",
         ),
         meta=CommandMeta(
@@ -77,16 +81,28 @@ skland = on_alconna(
     use_cmd_start=True,
 )
 
+skland.shortcut("森空岛绑定", {"command": "skland bind", "fuzzy": True, "prefix": True})
+skland.shortcut("明日方舟签到", {"command": "skland arksign", "fuzzy": True, "prefix": True})
+skland.shortcut("萨卡兹肉鸽", {"command": "skland rogue --topic 萨卡兹", "fuzzy": True, "prefix": True})
+skland.shortcut("萨米肉鸽", {"command": "skland rogue --topic 萨米", "fuzzy": True, "prefix": True})
+skland.shortcut("角色更新", {"command": "skland char update", "fuzzy": False, "prefix": True})
+
 
 @skland.assign("$main")
-async def _(session: async_scoped_session, user_session: UserSession):
+async def _(session: async_scoped_session, user_session: UserSession, target: Match[At | int]):
     # Not Finished
     @refresh_cred_token_if_needed
     @refresh_access_token_if_needed
     async def get_character_info(user: User, uid: str):
         return await SklandAPI.ark_card(CRED(cred=user.cred, token=user.cred_token), uid)
 
-    user = await session.get(User, user_session.user_id)
+    if target.available:
+        target_platform_id = target.result.target if isinstance(target.result, At) else target.result
+        target_id = (await get_user(user_session.platform, str(target_platform_id))).id
+    else:
+        target_id = user_session.user_id
+
+    user = await session.get(User, target_id)
     if not user:
         await UniMessage("未绑定 skland 账号").finish(at_sender=True)
     ark_characters = await get_default_arknights_character(user, session)
@@ -108,7 +124,6 @@ async def _(
     session: async_scoped_session,
 ):
     """绑定森空岛账号"""
-    # TODO: 储存默认角色uid,解决多绑定角色场景下的默认查询问题，而不是用ark_characters[0]
     if user := await session.get(User, user_session.user_id):
         if result.find("bind.update"):
             if len(token.result) == 24:
@@ -209,7 +224,7 @@ async def _(user_session: UserSession, session: async_scoped_session):
 
 
 @skland.assign("rogue")
-async def _(user_session: UserSession, session: async_scoped_session, topic: Match[str]):
+async def _(user_session: UserSession, session: async_scoped_session, result: Arparma, target: Match[At | int]):
     """获取明日方舟肉鸽战绩"""
 
     # Not Finished
@@ -220,13 +235,20 @@ async def _(user_session: UserSession, session: async_scoped_session, topic: Mat
             CRED(cred=user.cred, token=user.cred_token, userId=str(user.user_id)), uid, topic_id
         )
 
-    user = await session.get(User, user_session.user_id)
+    if target.available:
+        target_platform_id = target.result.target if isinstance(target.result, At) else target.result
+        target_id = (await get_user(user_session.platform, str(target_platform_id))).id
+    else:
+        target_id = user_session.user_id
+
+    user = await session.get(User, target_id)
     if not user:
         await UniMessage("未绑定 skland 账号").finish(at_sender=True)
     character = await get_default_arknights_character(user, session)
     if not character:
         await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
-    topic_id = Topics(topic.result).topic_id
+
+    topic_id = Topics(str(result.query("rogue.topic.topic_name"))).topic_id if result.find("rogue.topic") else ""
     # TODO: 渲染肉鸽战绩卡片，完善指令逻辑
     rogue = await get_rogue_info(user, str(character.uid), topic_id)
     await UniMessage(rogue.model_dump_json()).send()

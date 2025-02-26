@@ -4,6 +4,19 @@ from nonebot_plugin_orm import async_scoped_session
 from .model import User, Character
 
 
+async def get_arknights_characters(user: User, session: async_scoped_session) -> list[Character]:
+    characters = (
+        (
+            await session.execute(
+                select(Character).where(Character.id == user.id).where(Character.app_code == "arknights")
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return list(characters)
+
+
 async def get_default_arknights_character(user: User, session: async_scoped_session) -> Character:
     character = (
         await session.execute(

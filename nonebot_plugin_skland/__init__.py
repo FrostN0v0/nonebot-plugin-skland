@@ -22,11 +22,11 @@ from nonebot_plugin_alconna import (
 )
 
 from .model import User
-from .schemas import CRED, Topics
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
-from .db_handler import get_arknights_character_by_uid, get_default_arknights_character
+from .schemas import CRED, Topics, ArkSignResponse
 from .utils import get_characters_and_bind, refresh_cred_token_if_needed, refresh_access_token_if_needed
+from .db_handler import get_arknights_characters, get_arknights_character_by_uid, get_default_arknights_character
 
 __plugin_meta__ = PluginMetadata(
     name="森空岛数据查询",
@@ -48,7 +48,7 @@ skland = on_alconna(
         Subcommand(
             "-b|--bind|bind",
             Args["token", str, Field(completion=lambda: "请输入 token 或 cred 完成绑定")],
-            Option("-u|--update|update"),
+            Option("-u|--update|update", help_text="更新绑定的 token 或 cred"),
             help_text="绑定森空岛账号",
         ),
         Subcommand(
@@ -56,8 +56,10 @@ skland = on_alconna(
             Option(
                 "-u|--uid|uid",
                 Args["uid", str, Field(completion=lambda: "请输入指定绑定角色uid")],
+                help_text="指定绑定角色uid进行签到",
             ),
-            help_text="森空岛签到",
+            Option("--all", help_text="签到所有绑定角色"),
+            help_text="明日方舟签到",
         ),
         Subcommand("char", Option("-u|--update|update"), help_text="更新绑定角色信息"),
         Subcommand(
@@ -66,6 +68,7 @@ skland = on_alconna(
             Option(
                 "-t|--topic|topic",
                 Args["topic_name?#主题", ["萨米", "萨卡兹"], Field(completion=lambda: "请输入指定topic_id")],
+                help_text="指定主题进行肉鸽战绩查询",
             ),
             help_text="肉鸽战绩查询",
         ),
@@ -176,7 +179,7 @@ async def _(
 
 
 @skland.assign("arksign")
-async def _(user_session: UserSession, session: async_scoped_session, uid: Match[str]):
+async def _(user_session: UserSession, session: async_scoped_session, uid: Match[str], result: Arparma):
     """明日方舟森空岛签到"""
 
     @refresh_cred_token_if_needed
@@ -190,20 +193,29 @@ async def _(user_session: UserSession, session: async_scoped_session, uid: Match
     if not user:
         await UniMessage("未绑定 skland 账号").finish(at_sender=True)
 
+    sign_result: dict[str, ArkSignResponse] = {}
     if uid.available:
         character = await get_arknights_character_by_uid(user, uid.result, session)
-        sign_result = await sign_in(user, uid.result, character.channel_master_id)
+        sign_result[character.nickname] = await sign_in(user, uid.result, character.channel_master_id)
     else:
-        character = await get_default_arknights_character(user, session)
-        if not character:
-            await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
+        if result.find("arksign.all"):
+            characters = await get_arknights_characters(user, session)
+            for character in characters:
+                sign_result[character.nickname] = await sign_in(user, str(character.uid), character.channel_master_id)
+        else:
+            character = await get_default_arknights_character(user, session)
+            if not character:
+                await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
 
-        sign_result = await sign_in(user, str(character.uid), character.channel_master_id)
+            sign_result[character.nickname] = await sign_in(user, str(character.uid), character.channel_master_id)
 
     if sign_result:
         await UniMessage(
-            f"角色: {character.nickname} 签到成功，获得了:\n"
-            + "\n".join(f"{award.resource.name} x {award.count}" for award in sign_result.awards)
+            "\n".join(
+                f"角色: {nickname} 签到成功，获得了:\n"
+                + "\n".join(f"{award.resource.name} x {award.count}" for award in sign.awards)
+                for nickname, sign in sign_result.items()
+            )
         ).send(at_sender=True)
 
     await session.commit()

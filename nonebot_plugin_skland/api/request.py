@@ -88,13 +88,13 @@ class SklandAPI:
                 logger.debug(f"签到回复：{response.json()}")
                 if status := response.json().get("code"):
                     if status == 10000:
-                        raise UnauthorizedException(f"arksign失败：{response.json().get('message')}")
+                        raise UnauthorizedException(f"角色 {uid} 签到失败：{response.json().get('message')}")
                     elif status == 10002:
-                        raise LoginException(f"arksign失败：{response.json().get('message')}")
+                        raise LoginException(f"角色 {uid} 签到失败：{response.json().get('message')}")
                     elif status != 0:
-                        raise RequestException(f"arksign失败：{response.json().get('message')}")
+                        raise RequestException(f"角色 {uid} 签到失败：{response.json().get('message')}")
             except httpx.HTTPError as e:
-                raise RequestException(f"获取arksign失败: {e}")
+                raise RequestException(f"角色 {uid} 签到失败: {e}")
             return ArkSignResponse(**response.json()["data"])
 
     @classmethod

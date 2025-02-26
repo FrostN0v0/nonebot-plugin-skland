@@ -46,8 +46,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 <details>
   <summary><kbd>Star History</kbd></summary>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=FrostN0v0/nonebot-plugin-skland&theme=dark&type=Date" />
-    <img width="100%" src="https://star-history.com/#FrostN0v0/nonebot-plugin-skland&Date",alt="star history" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=FrostN0v0/nonebot-plugin-skland&type=Date&theme=dark" />
   </picture>
 </details>
 

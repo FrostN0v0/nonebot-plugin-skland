@@ -16,6 +16,8 @@ class Gain(BaseModel):
 
 
 class StockItem(BaseModel):
+    """储存订单"""
+
     instId: int
     type: str
     delivery: list[DeliveryItem]
@@ -24,6 +26,8 @@ class StockItem(BaseModel):
 
 
 class Trading(BaseModel):
+    """贸易站"""
+
     slotId: str
     level: int
     chars: list[BuildingChar]

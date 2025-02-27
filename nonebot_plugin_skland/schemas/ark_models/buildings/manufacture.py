@@ -4,6 +4,8 @@ from .base import BuildingChar
 
 
 class Manufacture(BaseModel):
+    """制造站"""
+
     slotId: str
     level: int
     chars: list[BuildingChar]

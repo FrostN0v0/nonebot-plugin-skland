@@ -4,6 +4,8 @@ from .base import BuildingChar
 
 
 class Clue(BaseModel):
+    """线索信息"""
+
     own: int
     received: int
     dailyReward: bool
@@ -14,6 +16,8 @@ class Clue(BaseModel):
 
 
 class Meeting(BaseModel):
+    """会客厅"""
+
     slotId: str
     level: int
     chars: list[BuildingChar]

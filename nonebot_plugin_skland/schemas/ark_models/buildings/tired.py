@@ -4,6 +4,8 @@ from .base import Bubble
 
 
 class TiredChar(BaseModel):
+    """疲劳干员"""
+
     charId: str
     ap: int
     lastApAddTime: int

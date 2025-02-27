@@ -12,6 +12,8 @@ class Bubble(BaseModel):
 
 
 class BuildingChar(BaseModel):
+    """基建进驻干员信息"""
+
     charId: str
     ap: int
     lastApAddTime: int
@@ -21,6 +23,8 @@ class BuildingChar(BaseModel):
 
 
 class Labor(BaseModel):
+    """无人机"""
+
     maxValue: int
     value: int
     lastUpdateTime: int
@@ -28,4 +32,6 @@ class Labor(BaseModel):
 
 
 class Furniture(BaseModel):
+    """家具持有数"""
+
     total: int

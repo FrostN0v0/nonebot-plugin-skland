@@ -7,6 +7,7 @@ from .buildings import (
     Control,
     Meeting,
     Trading,
+    Training,
     Dormitory,
     Furniture,
     TiredChar,
@@ -26,6 +27,7 @@ class Building(BaseModel):
         dormitories :  宿舍
         meeting :  会客室
         hire :  人力办公室
+        training :  训练室
         labor :  无人机
         furniture :  家具
         control :  控制中枢
@@ -38,6 +40,7 @@ class Building(BaseModel):
     dormitories: list[Dormitory]
     meeting: Meeting
     hire: Hire
+    training: Training
     labor: Labor
     furniture: Furniture
     control: Control

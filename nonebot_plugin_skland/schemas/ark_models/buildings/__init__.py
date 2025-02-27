@@ -6,5 +6,6 @@ from .meeting import Meeting as Meeting
 from .trading import Trading as Trading
 from .base import Furniture as Furniture
 from .tired import TiredChar as TiredChar
+from .training import Training as Training
 from .dormitory import Dormitory as Dormitory
 from .manufacture import Manufacture as Manufacture

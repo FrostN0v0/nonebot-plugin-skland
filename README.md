@@ -142,6 +142,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 - [ ] 完善肉鸽战绩返回信息解析
 - [ ] 完善用户接口返回数据解析
 - [ ] 使用[`nonebot-plugin-htmlrender`](https://github.com/kexue-z/nonebot-plugin-htmlrender)渲染信息卡片
+- [ ] 从[`yuanyan3060/ArknightsGameResource`](https://github.com/yuanyan3060/ArknightsGameResource)下载游戏数据、检查数据更新
 - [ ] 绘制渲染用户信息卡片
 - [ ] 绘制渲染肉鸽战绩卡片
 - [ ] 待补充

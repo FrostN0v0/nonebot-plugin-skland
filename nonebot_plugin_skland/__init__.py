@@ -213,7 +213,7 @@ async def _(user_session: UserSession, session: async_scoped_session, uid: Match
 
             sign_result[character.nickname] = await sign_in(user, str(character.uid), character.channel_master_id)
 
-    if sign_result:
+    if sign_result[character.nickname]:
         await UniMessage(
             "\n".join(
                 f"角色: {nickname} 签到成功，获得了:\n"

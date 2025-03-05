@@ -1,9 +1,10 @@
 from nonebot import require
 from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 
-require("nonebot_plugin_alconna")
-require("nonebot_plugin_user")
 require("nonebot_plugin_orm")
+require("nonebot_plugin_user")
+require("nonebot_plugin_alconna")
+require("nonebot_plugin_localstore")
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_alconna import (
@@ -22,6 +23,8 @@ from nonebot_plugin_alconna import (
 )
 
 from .model import User
+from . import hook as hook
+from .config import Config
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
 from .schemas import CRED, Topics, ArkSignResponse
@@ -32,6 +35,7 @@ __plugin_meta__ = PluginMetadata(
     name="森空岛数据查询",
     description="通过森空岛查询游戏数据",
     usage="/skland",
+    config=Config,
     type="application",
     homepage="https://github.com/FrostN0v0/nonebot-plugin-skland",
     supported_adapters=inherit_supported_adapters("nonebot_plugin_alconna"),

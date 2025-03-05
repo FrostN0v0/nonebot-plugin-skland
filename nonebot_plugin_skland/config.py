@@ -1,10 +1,16 @@
-from pydantic import BaseModel
+from pydantic import Field, BaseModel
 from nonebot.plugin import get_plugin_config
 
 
+class ScopedConfig(BaseModel):
+    github_proxy_url: str = "https://gh.llkk.cc/"
+    """GitHub 代理 URL"""
+    github_token: str = ""
+    """GitHub Token"""
+
+
 class Config(BaseModel):
-    your_plugin_config_here: str = "Hello World!"
-    """ 你的插件配置项 """
+    skland: ScopedConfig = Field(default_factory=ScopedConfig)
 
 
-config = get_plugin_config(Config)
+config = get_plugin_config(Config).skland

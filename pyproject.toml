@@ -57,3 +57,6 @@ ignore = ["E402", "C901"]
 pythonVersion = "3.10"
 pythonPlatform = "All"
 typeCheckingMode = "basic"
+
+[tool.pdm.scripts]
+build_css = "tailwindcss -i ./tailwind.css -o ./nonebot_plugin_skland/resources/templates/index.css -w"

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="./index.css" />
+  </head>
+
+  <body>
+    <div
+      class="relative w-[706px] h-[1160px] bg-[url(../images/bg.jpg)] rounded-[20px] bg-cover bg-center bg-no-repeat">
+      <div
+        class="absolute inset-0 bg-[#080808]/45 rounded-[20px] backdrop-blur-sm"></div>
+      <div
+        class="absolute top-[50px] left-[50px] flex items-center space-x-4 text-white">
+        <div class="relative">
+          <img
+            src="https://web.hycdn.cn/arknights/game/assets/avatar/avatar_special_35.png"
+            class="avater-shadow w-18.75 h-18.75"
+            alt="avatar" />
+          <div
+            class="absolute top-[-20px] right-[-20px] w-10 h-10 bg-[#080309]/80 rounded-full rank-shadow flex items-center justify-center">
+            <span class="text-white font-[Akrobat] text-lg">120</span>
+          </div>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold font-[Akrobat]">Dr. {{ name }}</h1>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

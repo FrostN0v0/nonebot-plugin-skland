@@ -1,1 +1,16 @@
 @import "tailwindcss";
+
+@layer utilities {
+  .avater-shadow {
+    box-shadow: 0px 0px 0px 3px #fbfbf3, 0px 4px 6px -1px rgba(6, 24, 44, 0.65),
+      inset 0px 1px 0px 0px rgba(255, 255, 255, 0.08);
+  }
+  .rank-shadow {
+    box-shadow: 0px 0px 0px 3px rgba(98, 93, 98, 0.6);
+  }
+}
+
+@font-face {
+  font-family: "Akrobat";
+  src: url("../fonts/Akrobat-Bold.otf") format("opentype");
+}

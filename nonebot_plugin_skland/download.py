@@ -2,6 +2,7 @@ import asyncio
 from pathlib import Path
 from itertools import islice
 from datetime import datetime
+from urllib.parse import quote
 from collections.abc import Iterable
 
 from nonebot import logger
@@ -32,6 +33,7 @@ class File(BaseModel):
 
     @model_validator(mode="before")
     def modify_download_url(cls, values):
+        values["download_url"] = quote(values["download_url"], safe="/:")
         if config.github_proxy_url:
             values["download_url"] = f"{config.github_proxy_url}{values['download_url']}"
             return values
@@ -123,7 +125,7 @@ class GameResourceDownloader:
             data = response.json()
             route = route.rstrip("/") + "/"
             files = [
-                File(name=item["path"].split("/")[-1], download_url=f"{dl_url}/{item['path']}")
+                File(name=item["path"].split("/")[-1], download_url=f"{dl_url}{item['path']}")
                 for item in data.get("tree", [])
                 if item["type"] == "blob" and item["path"].startswith(route)
             ]

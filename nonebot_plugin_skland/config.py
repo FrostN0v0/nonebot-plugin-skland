@@ -3,7 +3,7 @@ from nonebot.plugin import get_plugin_config
 
 
 class ScopedConfig(BaseModel):
-    github_proxy_url: str = "https://gh.llkk.cc/"
+    github_proxy_url: str = ""
     """GitHub 代理 URL"""
     github_token: str = ""
     """GitHub Token"""

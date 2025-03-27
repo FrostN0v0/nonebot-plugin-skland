@@ -28,3 +28,10 @@ class AssistChar(BaseModel):
     mainSkillLvl: int
     specializeLevel: int
     equip: Equip
+    uniequip: str | None = None
+
+    @property
+    def portrait(self) -> str:
+        from ...utils import get_portrait
+
+        return get_portrait(self)

@@ -10,6 +10,7 @@ from .ark_models import (
     Building,
     Campaign,
     Character,
+    Equipment,
     AssistChar,
 )
 
@@ -25,3 +26,4 @@ class ArkCard(BaseModel):
     tower: Tower
     routine: Routine
     building: Building
+    equipmentInfoMap: dict[str, Equipment]

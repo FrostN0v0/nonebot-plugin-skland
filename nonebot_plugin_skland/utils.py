@@ -1,8 +1,13 @@
+from datetime import datetime
+
 from nonebot.log import logger
 from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_orm import async_scoped_session
 
+from nonebot_plugin_skland.schemas.ark_models.assist_chars import AssistChar
+
 from .schemas import CRED
+from .config import CACHE_DIR
 from .model import User, Character
 from .db_handler import delete_characters
 from .api import SklandAPI, SklandLoginAPI
@@ -72,3 +77,16 @@ def refresh_cred_token_if_needed(func):
             await UniMessage(f"接口请求失败,错误信息:{e}").send(at_sender=True)
 
     return wrapper
+
+
+def format_time_from_timestamp(timestamp: int) -> str:
+    return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d")
+
+
+def get_portrait(char: AssistChar) -> str:
+    for symbol in ["@", "#"]:
+        if symbol in char.skinId:
+            portrait_id = char.skinId.replace(symbol, "_", 1)
+            break
+    img_path = CACHE_DIR / "portrait" / f"{portrait_id}.png"
+    return img_path.as_uri()

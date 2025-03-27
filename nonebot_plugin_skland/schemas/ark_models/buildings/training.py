@@ -17,7 +17,7 @@ class Trainer(BaseModel):
 class Training(BaseModel):
     slotId: str
     level: int
-    trainee: Trainee
+    trainee: Trainee | None = None
     trainer: Trainer
     remainPoint: float
     speed: float

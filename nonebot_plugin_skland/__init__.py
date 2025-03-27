@@ -5,6 +5,7 @@ require("nonebot_plugin_orm")
 require("nonebot_plugin_user")
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_localstore")
+require("nonebot_plugin_htmlrender")
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_alconna import (
@@ -25,6 +26,7 @@ from nonebot_plugin_alconna import (
 from .model import User
 from . import hook as hook
 from .config import Config
+from .render import render_ark_card
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
 from .schemas import CRED, Topics, ArkSignResponse
@@ -118,7 +120,8 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
 
     # TODO: 渲染角色卡片，完善指令逻辑
     info = await get_character_info(user, str(ark_characters.uid))
-    await UniMessage(info.status.name).send()
+    image = await render_ark_card(info)
+    await UniMessage.image(raw=image).send()
     await session.commit()
 
 

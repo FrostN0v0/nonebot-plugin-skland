@@ -1,0 +1,29 @@
+{% macro assist_char_info(char) %}
+<div class="relative">
+    <img src="{{ char.portrait }}" class="w-24 h-auto -translate-y-4" />
+    <div class="absolute inset-0 bg-gradient-to-b from-transparent gradient-assist"></div>
+    <div class="absolute bottom-2 left-2.5 right-2.5 flex justify-between">
+        <div class="w-8 h-8 relative bg-[#080808]/45 outline-2 outline-white/45">
+            <img src="{{ char.uniequip }}" class="absolute h-8 object-cover" />
+            <img src="../images/ark_card/potential/potential_2.png"
+                class="absolute top-[-33px] h-6 left-1/2 -translate-x-1/2" />
+        </div>
+        <div class="w-8 h-8 relative bg-[#080808]/45 outline-2 outline-white/45">
+            <img src="../images/ark_card/test_skill.png" class="absolute inset-0" />
+            <div class="relative w-3.75 h-3.75 bg-[#080808]/80">
+                <div class="absolute top-0.5 left-[50%] -translate-x-1/2 w-1.25 h-1.25 rounded-full bg-white"></div>
+                <div class="absolute top-1.75 left-[30%] -translate-x-1/2 w-1.25 h-1.25 rounded-full bg-white">
+                </div>
+                <div class="absolute top-1.75 left-[70%] -translate-x-1/2 w-1.25 h-1.25 rounded-full bg-white/40">
+                </div>
+            </div>
+            <div
+                class="absolute top-[-33px] left-1/2 -translate-x-1/2 w-[25px] h-[25px] bg-[#080808]/45 rounded-full outline-2 outline-white/45 flex items-center justify-center">
+                <span class="text-white font-[Akrobat]">50</span>
+            </div>
+        </div>
+        <img src="../images/ark_card/elite/elite_2_large.png"
+            class="absolute bottom-15.5 w-10 left-1/2 -translate-x-1/2" />
+    </div>
+</div>
+{% endmacro %}

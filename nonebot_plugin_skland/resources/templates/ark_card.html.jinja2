@@ -1,20 +1,305 @@
+{% from 'macros.html.jinja2' import assist_char_info %}
+
 <!DOCTYPE html>
 
-<html>
+<html lang="zh-CN">
 
 <head>
   <meta charset="UTF-8">
+  <title>Ark Card</title>
   <style>
-    {
-      % include "index.css" %
-    }
+    {% include "index.css" %}
   </style>
 </head>
 
-<body class="bg-gray-900 text-white flex justify-center p-6">
-  <h1 class="text-3xl text-red-400 font-bold underline">
-    uv 怎么还不支持 scripts💢
-  </h1>
+<body>
+  <div
+    class="relative w-[706px] h-[1160px] bg-[url(../images/ark_card/bg.jpg)] rounded-[20px] bg-cover bg-center bg-no-repeat">
+    <div class="absolute inset-0 bg-[#080808]/45 rounded-[20px] backdrop-blur-sm"></div>
+
+    <div class="absolute top-[50px] left-[50px] flex flex-col items-start space-y-6">
+      <!-- 头像信息 -->
+      <div class="flex items-center space-x-4">
+        <div class="relative">
+          <img src="{{ Dr_avatar }}" class="avater-shadow w-18.75 h-18.75" alt="avatar" />
+          <div
+            class="absolute top-[-20px] right-[-20px] w-10 h-10 bg-[#080309]/80 rounded-full rank-shadow flex items-center justify-center">
+            <span class="text-white font-[Akrobat] text-lg">{{ Dr_level }}</span>
+          </div>
+        </div>
+        <div>
+          <h1 class="text-xl text-white font-bold font-[Akrobat] mb-2">Dr. {{ Dr_name }}</h1>
+          <div class="relative w-40 h-5.5 bg-white/30 rounded-lg reg-shadow flex items-center">
+            <div class="w-15 h-full bg-[#23BAFC]/80 rounded-lg reg-shadow-blue flex items-center justify-center">
+              <span class="text-[#080309]/80 text-sm font-[Bender]">入职日</span>
+            </div>
+            <span class="text-[#080309]/80 font-bold font-[Bender] ml-2">{{ register_time }}</span>
+          </div>
+        </div>
+      </div>
+      <!-- 进度信息 -->
+      <div class="w-153 h-42 bg-[#080808]/40 rounded-lg card-shadow flex items-center justify-center">
+        <div class="p-4 space-x-7 flex">
+          <div class="flex-1 flex flex-col items-center justify-center">
+            <!-- 作战进度 -->
+            <img src="../images/ark_card/career/career_1.png" class="w-24.5 h-auto opacity-60 rounded-md" />
+            <span class="text-white/60 font-bold font-[Bender]">作战进度</span>
+            <span class="text-white font-bold font-[Bender] text-lg">{{ main_progress }}</span>
+          </div>
+          <div class="flex-1 flex flex-col items-center justify-center">
+            <!-- 雇佣干员 -->
+            <img src="../images/ark_card/career/career_2.png" class="w-24.5 h-auto opacity-60 rounded-md" />
+            <span class="text-white/60 font-bold font-[Bender]">雇佣干员</span>
+            <span class="text-white font-bold font-[Bender] text-lg">{{ employed_chars }}</span>
+          </div>
+          <div class="flex-1 flex flex-col items-center justify-center">
+            <!-- 时装 -->
+            <img src="../images/ark_card/career/career_3.png" class="w-24.5 h-auto opacity-60 rounded-md" />
+            <span class="text-white/60 font-bold font-[Bender]">时装数量</span>
+            <span class="text-white font-bold font-[Bender] text-lg">{{ skins }}</span>
+          </div>
+          <div class="flex-1 flex flex-col items-center justify-center">
+            <!-- 家具 -->
+            <img src="../images/ark_card/career/career_4.png" class="w-24.5 h-auto opacity-60 rounded-md" />
+            <span class="text-white/60 font-bold font-[Bender]">家具保有</span>
+            <span class="text-white font-bold font-[Bender] text-lg">{{ furniture }}</span>
+          </div>
+          <div class="flex-1 flex flex-col items-center justify-center">
+            <!-- 蚀刻章 -->
+            <img src="../images/ark_card/career/career_5.png" class="w-16.25 h-auto opacity-60 rounded-md" />
+            <span class="text-white/60 font-bold font-[Bender] mt-4">蚀刻章</span>
+            <span class="text-white font-bold font-[Bender] text-lg">{{ medals }}</span>
+          </div>
+        </div>
+      </div>
+      <!-- 第三行 -->
+      <div class="w-full flex space-x-6.75">
+        <!-- 助战 -->
+        <div class="w-101.75 h-75 bg-[#080808]/40 rounded-lg card-shadow p-4 flex items-center justify-center relative">
+          <div class="absolute top-2 left-2 flex items-center space-x-2">
+            <img src="../images/ark_card/assist_title.png" class="w-5 h-auto opacity-80" />
+            <span class="text-white/80 font-bold font-[Bender] text-lg">助战干员</span>
+          </div>
+          <div class="mt-12 space-x-7.5 flex">
+            {% for char in assist_chars %}
+            {{ assist_char_info(char) }}
+            {% endfor %}
+          </div>
+        </div>
+        <!-- 基建 -->
+        <div class="w-43.75 h-75 bg-[#080808]/40 rounded-lg card-shadow p-5 flex items-center justify-center relative">
+          <div class="absolute top-2 left-2 flex items-center space-x-2">
+            <img src="../images/ark_card/icon_control.png" class="w-5 h-auto opacity-80" />
+            <span class="text-white/80 font-bold font-[Bender] text-lg">基建信息</span>
+          </div>
+          <div class="w-full h-full flex flex-col mt-14">
+            <div
+              class="w-full h-10 flex flex-col items-start justify-center bg-gradient-to-r from-[#DC92FF]/40 to-transparent border-l-3 border-[#DC92FF]">
+              <span class="text-white/80 font-bold font-[Bender] text-sm ml-2 mt-0.5">无人机</span>
+              <span class="text-[#DC92FF] font-bold font-[Bender] text-sm ml-2 -mt-1">
+                99<span class="text-white/60 text-[10px]">/225</span>
+              </span>
+              <img src="../images/ark_card/building/labor.png" class="absolute right-4 w-6 opacity-80" />
+            </div>
+            <div
+              class="w-full h-10 flex flex-col items-start justify-center bg-gradient-to-r from-[#98E37B]/40 to-transparent border-l-3 border-[#98E37B]">
+              <span class="text-white/80 font-bold font-[Bender] text-sm ml-2 mt-0.5">休息进度</span>
+              <span class="text-[#98E37B] font-bold font-[Bender] text-sm ml-2 -mt-1">
+                16<span class="text-white/60 text-[10px]">/20</span>
+              </span>
+              <img src="../images/ark_card/building/dorm.png" class="absolute right-4 w-6 opacity-80 dorm-filter" />
+            </div>
+            <div
+              class="w-full h-10 flex flex-col items-start justify-center bg-gradient-to-r from-[#6DADDC]/40 to-transparent border-l-3 border-[#6DADDC]">
+              <span class="text-white/80 font-bold font-[Bender] text-sm ml-2 mt-0.5">订单进度</span>
+              <span class="text-[#6DADDC] font-bold font-[Bender] text-sm ml-2 -mt-1">
+                5<span class="text-white/60 text-[10px]">/20</span>
+              </span>
+              <img src="../images/ark_card/building/trading.png" class="absolute right-4 w-6 opacity-80" />
+            </div>
+            <div
+              class="w-full h-10 flex flex-col items-start justify-center bg-gradient-to-r from-[#E9CF63]/40 to-transparent border-l-3 border-[#E9CF63]">
+              <span class="text-white/80 font-bold font-[Bender] text-sm ml-2 mt-0.5">制造进度</span>
+              <span class="text-[#E9CF63] font-bold font-[Bender] text-sm ml-2 -mt-1">
+                20<span class="text-white/60 text-[10px]">/82</span>
+              </span>
+              <img src="../images/ark_card/building/manufact.png" class="absolute right-4 w-6 opacity-80" />
+            </div>
+            <div
+              class="w-full h-10 flex flex-col items-start justify-center bg-gradient-to-r from-[#D0685E]/40 to-transparent border-l-3 border-[#D0685E]">
+              <span class="text-white/80 font-bold font-[Bender] text-sm ml-2 mt-0.5">干员疲劳</span>
+              <span class="text-[#D0685E] font-bold font-[Bender] text-sm ml-2 -mt-1">0</span>
+              <img src="../images/ark_card/building/tired.png" class="absolute right-4 w-6 opacity-80 tired-filter" />
+            </div>
+            <div
+              class="w-full h-10 flex flex-col items-start justify-center bg-gradient-to-r from-[#DE9A67]/40 to-transparent border-l-3 border-[#DE9A67]">
+              <span class="text-white/80 font-bold font-[Bender] text-sm ml-2 mt-0.5">线索交流</span>
+              <span class="text-[#DE9A67] font-bold font-[Bender] text-sm ml-2 -mt-1">
+                5<span class="text-white/60 text-[10px]">/7</span>
+              </span>
+              <img src="../images/ark_card/building/meeting.png"
+                class="absolute right-4 w-6 opacity-80 meeting-filter" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="w-152.25 h-110">
+        <div class="flex flex-wrap gap-4.75 justify-between">
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/ap.png" class="absolute left-3 w-18 opacity-80" />
+              <div class="absolute left-22 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-xl">理智</span>
+                <span class="text-white font-bold font-[Bender] text-xl">
+                  20<span class="text-white/60 text-base">/180</span>
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="w-15 h-full rounded-[10px] blue-bar"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">15小时56分钟后全部恢复</span>
+          </div>
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/recruit.png" class="absolute left-3 w-18 opacity-80" />
+              <div class="absolute left-21 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-xl">公开招募</span>
+                <span class="text-white font-bold font-[Bender] text-xl">
+                  4<span class="text-white/60 text-base">/4</span>
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="w-15 h-full rounded-[10px] blue-bar"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">招募已全部完成</span>
+          </div>
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/hire.png" class="absolute left-4 w-15 -translate-y-1 opacity-80" />
+              <div class="absolute left-21 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-xl">公招刷新</span>
+                <span class="text-white font-bold font-[Bender] text-xl">
+                  0<span class="text-white/60 text-base">/3</span>
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="w-15 h-full rounded-[10px] blue-bar"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">可进行公开招募标签刷新</span>
+          </div>
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/jade.png" class="absolute left-3 w-18 opacity-80" />
+              <div class="absolute left-21 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-xl">剿灭奖励</span>
+                <span class="text-white font-bold font-[Bender] text-lg">
+                  1800<span class="text-white/60 text-sm">/1800</span>
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="w-15 h-full rounded-[10px] blue-bar"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">1天13小时后刷新</span>
+          </div>
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/daily.png" class="absolute left-4 w-16 -translate-y-1 opacity-80" />
+              <div class="absolute left-21 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-xl">每日任务</span>
+                <span class="text-white font-bold font-[Bender] text-xl">
+                  10<span class="text-white/60 text-base">/10</span>
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="w-15 h-full rounded-[10px] blue-bar"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">13小时8分钟后刷新</span>
+          </div>
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/weekly.png"
+                class="absolute left-4 w-15 -translate-y-1 opacity-80" />
+              <div class="absolute left-21 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-xl">每周任务</span>
+                <span class="text-white font-bold font-[Bender] text-xl">
+                  13<span class="text-white/60 text-base">/13</span>
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="w-15 h-full rounded-[10px] blue-bar"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">1天13小时后刷新</span>
+          </div>
+
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/tower.png"
+                class="absolute left-4 w-13.5 -translate-y-1 opacity-80" />
+              <div class="absolute left-19 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-lg">数据增补仪</span>
+                <span class="text-white font-bold font-[Bender] text-xl">
+                  24<span class="text-white/60 text-base">/24</span>
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="w-15 h-full rounded-[10px] blue-bar"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">1天13小时后刷新</span>
+          </div>
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/tower.png"
+                class="absolute left-4 w-13.5 -translate-y-1 opacity-80" />
+              <div class="absolute left-19 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-lg">数据增补条</span>
+                <span class="text-white font-bold font-[Bender] text-xl">
+                  60<span class="text-white/60 text-base">/60</span>
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="w-15 h-full rounded-[10px] blue-bar"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">1天13小时后刷新</span>
+          </div>
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/train.png"
+                class="absolute left-4 w-13.5 -translate-y-1 opacity-80" />
+              <div class="absolute left-21 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-xl">训练室</span>
+                <span class="text-white font-bold font-[Bender] text-lg"> 空闲中 </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="w-full h-full rounded-[10px] green-bar"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">空闲中</span>
+          </div>
+        </div>
+      </div>
+      <div class="w-full flex justify-center">
+        <span class="text-white/60 font-[Bender] tracking-wider text-center text-xs">Generated by
+          nonebot-plugin-skland</span>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>

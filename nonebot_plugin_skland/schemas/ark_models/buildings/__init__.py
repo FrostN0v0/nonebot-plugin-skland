@@ -9,3 +9,4 @@ from .tired import TiredChar as TiredChar
 from .training import Training as Training
 from .dormitory import Dormitory as Dormitory
 from .manufacture import Manufacture as Manufacture
+from .manufacture import ManufactureFormulaInfo as ManufactureFormulaInfo

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -29,6 +31,12 @@ class Labor(BaseModel):
     value: int
     lastUpdateTime: int
     remainSecs: int
+
+    @property
+    def labor_now(self) -> int:
+        elapsed_time = datetime.now().timestamp() - self.lastUpdateTime
+        labor_increment = elapsed_time / (self.remainSecs / (self.maxValue - self.value))
+        return min(int(labor_increment + self.value), self.maxValue)
 
 
 class Furniture(BaseModel):

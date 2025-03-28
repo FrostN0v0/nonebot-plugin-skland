@@ -17,3 +17,12 @@ class Manufacture(BaseModel):
     complete: int
     remain: int
     speed: float
+
+
+class ManufactureFormulaInfo(BaseModel):
+    """制造站配方"""
+
+    id: str
+    itemId: str
+    weight: int
+    costPoint: int

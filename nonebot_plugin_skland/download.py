@@ -11,7 +11,6 @@ from rich.panel import Panel
 from rich.table import Table
 from httpx import AsyncClient
 from pydantic import BaseModel
-import nonebot_plugin_localstore as store
 from rich.progress import (
     Task,
     TaskID,
@@ -23,8 +22,8 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 
-from .config import config
 from .compat import model_validator
+from .config import CACHE_DIR, config
 
 
 class File(BaseModel):
@@ -86,7 +85,6 @@ class GameResourceDownloader:
     DOWNLOAD_COUNT: int = 0
     DOWNLOAD_TIME: datetime
     SEMAPHORE = asyncio.Semaphore(100)
-    CACHE_DIR = store.get_plugin_cache_dir()
     RAW_BASE_URL = "https://raw.githubusercontent.com/{owner}/{repo}/{branch}/"
     VERSION_URL = "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/refs/heads/main/version"
     BASE_URL = "https://api.github.com/repos/{owner}/{repo}/git/trees/{branch}?recursive=1"
@@ -99,7 +97,7 @@ class GameResourceDownloader:
             response = await client.get(url)
             response.raise_for_status()
             origin_version = response.content.decode()
-            version_file = cls.CACHE_DIR.joinpath("version")
+            version_file = CACHE_DIR.joinpath("version")
             if not version_file.exists():
                 version_file.write_text(origin_version, encoding="utf-8")
                 return True
@@ -111,7 +109,7 @@ class GameResourceDownloader:
     @classmethod
     def update_version_file(cls, version: str):
         """更新版本文件"""
-        version_file = cls.CACHE_DIR.joinpath("version")
+        version_file = CACHE_DIR.joinpath("version")
         version_file.write_text(version, encoding="utf-8")
 
     @classmethod
@@ -139,7 +137,7 @@ class GameResourceDownloader:
         url = cls.BASE_URL.format(owner=owner, repo=repo, branch=branch)
         dl_url = cls.RAW_BASE_URL.format(owner=owner, repo=repo, branch=branch)
         files = await cls.fetch_file_list(url=url, dl_url=dl_url, route=route)
-        save_path = cls.CACHE_DIR / route
+        save_path = CACHE_DIR / route
         save_path.mkdir(parents=True, exist_ok=True)
 
         async with AsyncClient() as client:

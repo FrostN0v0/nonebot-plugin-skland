@@ -17,10 +17,19 @@ class Trainer(BaseModel):
 class Training(BaseModel):
     slotId: str
     level: int
-    trainee: Trainee
-    trainer: Trainer
+    trainee: Trainee | None = None
+    trainer: Trainer | None = None
     remainPoint: float
     speed: float
     lastUpdateTime: int
     remainSecs: int
     slotState: int
+
+    @property
+    def training_state(self) -> str:
+        if self.trainee:
+            if self.trainee.targetSkill == -1:
+                return "空闲中"
+            else:
+                return str(self.trainee.targetSkill)
+        return "空闲中"

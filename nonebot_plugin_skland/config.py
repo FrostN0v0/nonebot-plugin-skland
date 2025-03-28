@@ -1,5 +1,12 @@
+from pathlib import Path
+
 from pydantic import Field, BaseModel
+import nonebot_plugin_localstore as store
 from nonebot.plugin import get_plugin_config
+
+RES_DIR: Path = Path(__file__).parent / "resources"
+TEMPLATES_DIR: Path = RES_DIR / "templates"
+CACHE_DIR = store.get_plugin_cache_dir()
 
 
 class ScopedConfig(BaseModel):

@@ -7,4 +7,6 @@ from .routine import Routine as Routine
 from .chars import Character as Character
 from .building import Building as Building
 from .campaign import Campaign as Campaign
+from .assist_chars import Equipment as Equipment
 from .assist_chars import AssistChar as AssistChar
+from .buildings import ManufactureFormulaInfo as ManufactureFormulaInfo

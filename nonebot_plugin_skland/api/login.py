@@ -24,7 +24,7 @@ class SklandLoginAPI:
 
             if status := response.json().get("status"):
                 if status != 0:
-                    raise RequestException(f"使用token: {token} 获得认证代码失败：{response.json().get('msg')}")
+                    raise RequestException(f"使用token获得认证代码失败：{response.json().get('msg')}")
             return response.json()["data"]["code"]
 
     @classmethod

@@ -34,7 +34,7 @@ from .utils import get_characters_and_bind, refresh_cred_token_if_needed, refres
 from .db_handler import get_arknights_characters, get_arknights_character_by_uid, get_default_arknights_character
 
 __plugin_meta__ = PluginMetadata(
-    name="森空岛数据查询",
+    name="森空岛",
     description="通过森空岛查询游戏数据",
     usage="/skland",
     config=Config,

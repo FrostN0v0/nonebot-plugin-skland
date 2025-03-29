@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "通过森空岛查询游戏数据"
 readme = "README.md"
 license = { text = "MIT" }
+authors = [
+    {name = "FrostN0v0", email = "1614591760@qq.com"},
+]
 requires-python = ">=3.10"
 dependencies = [
     "httpx>=0.28.1",

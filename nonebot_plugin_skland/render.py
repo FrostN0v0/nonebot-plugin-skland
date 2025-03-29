@@ -10,9 +10,13 @@ async def render_ark_card(props: ArkCard) -> bytes:
     register_time = format_time_from_timestamp(props.status.registerTs)
     main_progress = props.status.mainStageProgress if props.status.mainStageProgress else "全部完成"
     for char in props.assistChars:
-        if char.equip.id in props.equipmentInfoMap.keys():
-            equip_id = props.equipmentInfoMap[char.equip.id].typeIcon
-            uniequip_path = RES_DIR / "images" / "ark_card" / "uniequip" / f"{equip_id}.png"
+        if char.equip:
+            if char.equip.id in props.equipmentInfoMap.keys():
+                equip_id = props.equipmentInfoMap[char.equip.id].typeIcon
+                uniequip_path = RES_DIR / "images" / "ark_card" / "uniequip" / f"{equip_id}.png"
+                char.uniequip = uniequip_path.as_uri()
+        else:
+            uniequip_path = RES_DIR / "images" / "ark_card" / "uniequip" / "original.png"
             char.uniequip = uniequip_path.as_uri()
     stoke_max = 0
     stoke_count = 0
@@ -36,6 +40,12 @@ async def render_ark_card(props: ArkCard) -> bytes:
     trainee_char_id = props.building.training.trainee.charId if props.building.training.trainee else ""
     if trainee_char_id in props.charInfoMap.keys():
         trainee_char_name = props.charInfoMap[trainee_char_id].name
+
+    ap_recovery_time = format_timestamp(props.status.ap.completeRecoveryTime - datetime.now().timestamp())
+    if props.status.ap.completeRecoveryTime > datetime.now().timestamp():
+        ap_recovery = f"{ap_recovery_time}后全部恢复"
+    else:
+        ap_recovery = "已全部恢复"
 
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),
@@ -61,7 +71,7 @@ async def render_ark_card(props: ArkCard) -> bytes:
             "tired": len(props.building.tiredChars),
             "clue": len(props.building.meeting.clue.board),
             "ap": props.status.ap,
-            "ap_recovery_time": format_timestamp(datetime.now().timestamp() - props.status.ap.completeRecoveryTime),
+            "ap_recovery": ap_recovery,
             "recruit_finished": props.recruit_finished,
             "recruit_max": len(props.recruit),
             "recruit_complete_time": props.recruit_complete_time,

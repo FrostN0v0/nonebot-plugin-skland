@@ -28,7 +28,7 @@ class AssistChar(BaseModel):
     skillId: str
     mainSkillLvl: int
     specializeLevel: int
-    equip: Equip
+    equip: Equip | None = None
     uniequip: str | None = None
 
     @property

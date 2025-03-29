@@ -46,7 +46,7 @@ class ArkCard(BaseModel):
     def recruit_complete_time(self) -> str:
         from ..render import format_timestamp
 
-        finish_ts = max([recruit.finishTs for recruit in self.recruit if recruit.state == 1])
+        finish_ts = max([recruit.finishTs for recruit in self.recruit])
         if finish_ts == -1:
             return "招募已全部完成"
         format_time = format_timestamp(datetime.now().timestamp() - finish_ts)

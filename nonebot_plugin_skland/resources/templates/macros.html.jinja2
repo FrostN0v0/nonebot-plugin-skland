@@ -11,25 +11,30 @@
             <img src="{{ char.uniequip }}"
                 class="absolute h-8 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 object-contain" />
             {% endif %}
-            <img src="{{ char.potential }}"
-                class="absolute top-[-33px] h-6 left-1/2 -translate-x-1/2" />
+            <img src="{{ char.potential }}" class="absolute top-[-33px] h-6 left-1/2 -translate-x-1/2" />
         </div>
         <div class="w-8 h-8 relative bg-[#080808]/45 outline-2 outline-white/45">
             <img src="{{ char.skill }}" class="absolute inset-0" />
             <div class="relative w-3.75 h-3.75 bg-[#080808]/80">
-                <div class="absolute top-0.5 left-[50%] -translate-x-1/2 w-1.25 h-1.25 rounded-full bg-white"></div>
-                <div class="absolute top-1.75 left-[30%] -translate-x-1/2 w-1.25 h-1.25 rounded-full bg-white">
+                {% set classes = ["bg-white/40", "bg-white/40", "bg-white/40"] %}
+                {% for i in range(char.specializeLevel) %}
+                {% set _ = classes.__setitem__(i, "bg-white") %}
+                {% endfor %}
+
+                <div class="absolute top-0.5 left-[50%] -translate-x-1/2 w-1.25 h-1.25 rounded-full {{ classes[0] }}">
                 </div>
-                <div class="absolute top-1.75 left-[70%] -translate-x-1/2 w-1.25 h-1.25 rounded-full bg-white/40">
+                <div class="absolute top-1.75 left-[30%] -translate-x-1/2 w-1.25 h-1.25 rounded-full {{ classes[1] }}">
                 </div>
+                <div class="absolute top-1.75 left-[70%] -translate-x-1/2 w-1.25 h-1.25 rounded-full {{ classes[2] }}">
+                </div>
+
             </div>
             <div
                 class="absolute top-[-33px] left-1/2 -translate-x-1/2 w-[25px] h-[25px] bg-[#080808]/45 rounded-full outline-2 outline-white/45 flex items-center justify-center">
                 <span class="text-white font-[Akrobat]">{{ char.level }}</span>
             </div>
         </div>
-        <img src="{{ char.evolve }}"
-            class="absolute bottom-15.5 w-10 left-1/2 -translate-x-1/2" />
+        <img src="{{ char.evolve }}" class="absolute bottom-15.5 w-10 left-1/2 -translate-x-1/2" />
     </div>
 </div>
 {% endmacro %}

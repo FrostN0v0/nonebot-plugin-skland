@@ -91,7 +91,7 @@ skland = on_alconna(
 )
 
 skland.shortcut("森空岛绑定", {"command": "skland bind", "fuzzy": True, "prefix": True})
-skland.shortcut("明日方舟签到", {"command": "skland arksign", "fuzzy": True, "prefix": True})
+skland.shortcut("明日方舟签到", {"command": "skland arksign --all", "fuzzy": True, "prefix": True})
 skland.shortcut("萨卡兹肉鸽", {"command": "skland rogue --topic 萨卡兹", "fuzzy": True, "prefix": True})
 skland.shortcut("萨米肉鸽", {"command": "skland rogue --topic 萨米", "fuzzy": True, "prefix": True})
 skland.shortcut("角色更新", {"command": "skland char update", "fuzzy": False, "prefix": True})
@@ -99,7 +99,6 @@ skland.shortcut("角色更新", {"command": "skland char update", "fuzzy": False
 
 @skland.assign("$main")
 async def _(session: async_scoped_session, user_session: UserSession, target: Match[At | int]):
-    # Not Finished
     @refresh_cred_token_if_needed
     @refresh_access_token_if_needed
     async def get_character_info(user: User, uid: str):
@@ -118,7 +117,6 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
     if not ark_characters:
         await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
 
-    # TODO: 渲染角色卡片，完善指令逻辑
     info = await get_character_info(user, str(ark_characters.uid))
     image = await render_ark_card(info)
     await UniMessage.image(raw=image).send()
@@ -269,6 +267,7 @@ async def _(user_session: UserSession, session: async_scoped_session, result: Ar
 
     topic_id = Topics(str(result.query("rogue.topic.topic_name"))).topic_id if result.find("rogue.topic") else ""
     # TODO: 渲染肉鸽战绩卡片，完善指令逻辑
-    rogue = await get_rogue_info(user, str(character.uid), topic_id)
-    await UniMessage(rogue.model_dump_json()).send()
+    rogue = await get_rogue_info(user, str(character.uid), topic_id)  # noqa: F841
+    # await UniMessage(rogue.model_dump_json()).send()
+    await UniMessage("功能开发中（救命!来画渲染模板").send()
     await session.commit()

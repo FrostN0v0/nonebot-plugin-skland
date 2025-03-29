@@ -14,6 +14,8 @@ class ScopedConfig(BaseModel):
     """GitHub 代理 URL"""
     github_token: str = ""
     """GitHub Token"""
+    check_res_update: bool = True
+    """检查资源更新"""
 
 
 class Config(BaseModel):

@@ -115,6 +115,7 @@ class GameResourceDownloader:
     @classmethod
     async def fetch_file_list(cls, url: str, dl_url: str, route: str) -> list[File]:
         """获取 GitHub 仓库下的所有文件，并返回可下载的 URL"""
+        headers = {}
         if config.github_token:
             headers = {"Authorization": f"{config.github_token}"}
         async with AsyncClient() as client:

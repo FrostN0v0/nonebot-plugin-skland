@@ -49,5 +49,5 @@ class ArkCard(BaseModel):
         finish_ts = max([recruit.finishTs for recruit in self.recruit])
         if finish_ts == -1:
             return "招募已全部完成"
-        format_time = format_timestamp(datetime.now().timestamp() - finish_ts)
+        format_time = format_timestamp(finish_ts - datetime.now().timestamp())
         return f"{format_time}后全部完成"

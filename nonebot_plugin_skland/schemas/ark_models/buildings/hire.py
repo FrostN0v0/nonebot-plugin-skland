@@ -22,5 +22,5 @@ class Hire(BaseModel):
 
         if self.refreshCount == 3:
             return "可进行公开招募标签刷新"
-        format_time = format_timestamp(datetime.now().timestamp() - self.completeWorkTime)
+        format_time = format_timestamp(self.completeWorkTime - datetime.now().timestamp())
         return f"{format_time}后次数回满"

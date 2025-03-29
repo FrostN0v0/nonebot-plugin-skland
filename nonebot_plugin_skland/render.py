@@ -7,7 +7,7 @@ from .config import RES_DIR, TEMPLATES_DIR
 
 
 async def render_ark_card(props: ArkCard) -> bytes:
-    register_time = format_time_from_timestamp(props.status.registerTs)
+    register_time = datetime.fromtimestamp(props.status.registerTs).strftime("%Y-%m-%d")
     main_progress = props.status.mainStageProgress if props.status.mainStageProgress else "全部完成"
     for char in props.assistChars:
         if char.equip:
@@ -92,14 +92,6 @@ async def render_ark_card(props: ArkCard) -> bytes:
             "base_url": f"file://{TEMPLATES_DIR}",
         },
     )
-
-
-def format_time_from_timestamp(timestamp: int) -> str:
-    return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d")
-
-
-def restore_calc(value, max_value, last_date):
-    return min(round((datetime.now().timestamp() - last_date) / 360 + value), max_value)
 
 
 def format_timestamp(timestamp: float) -> str:

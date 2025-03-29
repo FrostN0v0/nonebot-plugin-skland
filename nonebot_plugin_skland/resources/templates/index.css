@@ -696,6 +696,9 @@
     --tw-tracking: var(--tracking-wider);
     letter-spacing: var(--tracking-wider);
   }
+  .whitespace-nowrap {
+    white-space: nowrap;
+  }
   .text-\[\#6DADDC\] {
     color: #6DADDC;
   }

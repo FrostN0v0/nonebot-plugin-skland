@@ -144,6 +144,13 @@ _✨ 通过森空岛查询游戏数据 ✨_
 |   `skland char update`    | 所有 |        无         |  更新森空岛绑定角色信息   |
 |      `skland rogue`       | 所有 |  `@` \| `topic`   |  肉鸽战绩查询(暂未完成)   |
 
+> [!NOTE]
+> Token获取相关文档还没写~~才不是懒得写~~
+>
+> 可以参考[`token获取`](https://docs.qq.com/doc/p/2f705965caafb3ef342d4a979811ff3960bb3c17)获取
+>
+> 本插件支持cred和token两种方式绑定，请勿将token提供给不信任的Bot所有者
+
 ### 🎯 快捷指令
 
 | 触发词 | 执行指令 |

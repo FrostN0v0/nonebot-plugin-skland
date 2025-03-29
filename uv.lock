@@ -726,7 +726,7 @@ wheels = [
 
 [[package]]
 name = "nonebot-plugin-skland"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

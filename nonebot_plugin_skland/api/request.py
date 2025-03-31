@@ -6,7 +6,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 import httpx
-from loguru import logger
+from nonebot import logger
 
 from ..schemas import CRED, ArkCard, RogueHistory, ArkSignResponse
 from ..exception import LoginException, RequestException, UnauthorizedException

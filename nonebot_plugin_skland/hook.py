@@ -1,5 +1,4 @@
-from nonebot import get_driver
-from nonebot.log import logger
+from nonebot import logger, get_driver
 
 from .config import config
 from .download import GameResourceDownloader

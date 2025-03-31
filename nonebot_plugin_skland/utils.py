@@ -1,4 +1,4 @@
-from nonebot.log import logger
+from nonebot import logger
 from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_orm import async_scoped_session
 

@@ -3,6 +3,7 @@ from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 
 require("nonebot_plugin_orm")
 require("nonebot_plugin_user")
+require("nonebot_plugin_argot")
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_localstore")
 require("nonebot_plugin_htmlrender")
@@ -30,8 +31,13 @@ from .render import render_ark_card
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
 from .schemas import CRED, Topics, ArkSignResponse
-from .utils import get_characters_and_bind, refresh_cred_token_if_needed, refresh_access_token_if_needed
 from .db_handler import get_arknights_characters, get_arknights_character_by_uid, get_default_arknights_character
+from .utils import (
+    get_background_image,
+    get_characters_and_bind,
+    refresh_cred_token_if_needed,
+    refresh_access_token_if_needed,
+)
 
 __plugin_meta__ = PluginMetadata(
     name="森空岛",
@@ -118,8 +124,11 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
         await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
 
     info = await get_character_info(user, str(ark_characters.uid))
-    image = await render_ark_card(info)
-    await UniMessage.image(raw=image).send()
+    background = await get_background_image()
+    image = await render_ark_card(info, background)
+    await UniMessage.image(raw=image).send(
+        argot={"name": "background", "command": "background", "content": str(background), "expire": 300}
+    )
     await session.commit()
 
 

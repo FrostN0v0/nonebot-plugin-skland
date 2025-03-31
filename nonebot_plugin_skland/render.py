@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta
 
+from pydantic import AnyUrl as Url
 from nonebot_plugin_htmlrender import template_to_pic
 
 from .schemas import ArkCard
 from .config import RES_DIR, TEMPLATES_DIR
 
 
-async def render_ark_card(props: ArkCard) -> bytes:
+async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:
     register_time = datetime.fromtimestamp(props.status.registerTs).strftime("%Y-%m-%d")
     main_progress = props.status.mainStageProgress if props.status.mainStageProgress else "全部完成"
     for char in props.assistChars:
@@ -53,6 +54,7 @@ async def render_ark_card(props: ArkCard) -> bytes:
         template_path=str(TEMPLATES_DIR),
         template_name="ark_card.html.jinja2",
         templates={
+            "background_image": bg,
             "Dr_name": props.status.name,
             "Dr_level": props.status.level,
             "Dr_avatar": props.status.avatar.url,

@@ -1,4 +1,6 @@
+import httpx
 from nonebot import logger
+from pydantic import AnyUrl as Url
 from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_orm import async_scoped_session
 
@@ -6,6 +8,7 @@ from .schemas import CRED
 from .model import User, Character
 from .db_handler import delete_characters
 from .api import SklandAPI, SklandLoginAPI
+from .config import RES_DIR, CustomSource, config
 from .exception import LoginException, RequestException, UnauthorizedException
 
 
@@ -72,3 +75,27 @@ def refresh_cred_token_if_needed(func):
             await UniMessage(f"接口请求失败,错误信息:{e}").send(at_sender=True)
 
     return wrapper
+
+
+async def get_lolicon_image() -> str:
+    async with httpx.AsyncClient() as client:
+        response = await client.get("https://api.lolicon.app/setu/v2?tag=arknights")
+    return response.json()["data"][0]["urls"]["original"]
+
+
+async def get_background_image() -> str | Url:
+    default_background = RES_DIR / "images" / "background" / "bg.jpg"
+
+    match config.background_source:
+        case "default":
+            background_image = default_background.as_uri()
+        case "Lolicon":
+            background_image = await get_lolicon_image()
+        case "random":
+            background_image = CustomSource(uri=RES_DIR / "images" / "background").to_uri()
+        case CustomSource() as cs:
+            background_image = cs.to_uri()
+        case _:
+            background_image = default_background.as_uri()
+
+    return background_image

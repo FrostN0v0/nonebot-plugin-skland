@@ -53,7 +53,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 通过森空岛查询游戏数据
 
 > [!NOTE]
-> 本插件存在大量未经验证的数据结构~~以及💩山~~
+> 本插件存在大量未经验证的数据结构~~以及 💩 山~~
 >
 > 如在使用过程中遇到问题，欢迎提 [issue](https://github.com/FrostN0v0/nonebot-plugin-skland/issues/new/choose) 帮助改进项目
 
@@ -117,14 +117,49 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 在 nonebot2 项目的`.env`文件中修改配置项
 
-|           配置项           | 必填 | 默认值 |       说明       |
-| :------------------------: | :--: | :----: | :--------------: |
-| `skland__github_proxy_url` |  否  |  `""`  | GitHub 代理 URL  |
-|   `skland__github_token`   |  否  |  `""`  |   GitHub Token   |
-| `skland__check_res_update` |  否  | `True` | 是否检查资源更新 |
+|           配置项            | 必填 |   默认值    |       说明       |
+| :-------------------------: | :--: | :---------: | :--------------: |
+| `skland__github_proxy_url`  |  否  |    `""`     | GitHub 代理 URL  |
+|   `skland__github_token`    |  否  |    `""`     |   GitHub Token   |
+| `skland__check_res_update`  |  否  |   `True`    | 是否检查资源更新 |
+| `skland__background_source` |  否  | `"default"` |   背景图片来源   |
 
 > [!TIP]
 > 以上配置项均~~没什么用~~按需填写，GitHub Token 用于解决 fetch_file_list 接口到达免费调用上限，但不会有那么频繁的更新频率，99.98%的概率是用不上的。~~只是因为我开发测试的时候上限了，所以有了这项~~
+
+### background_source
+
+`skland__background_source` 为签到背景图来源，可选值为字面量 `default` / `Lolicon` / `random` 或者结构 `CustomSource` 。 `Lolicon` 为网络请求获取随机带`arknights`tag 的背景图，`random`为从[默认签到背景目录](/nonebot_plugin_skland/resources/images/background/)中随机, `CustomSource` 用于自定义背景图。 默认为 `default`。
+
+以下是 `CustomSource` 用法
+
+在配置文件中设置 `xxx_background_source` 为 `CustomSource`结构的字典
+
+<details>
+  <summary>CustomSource配置示例</summary>
+
+- 网络链接
+
+  - `uri` 可为网络图片 API，只要返回的是图片即可
+  - `uri` 也可以为 base64 编码的图片，如 `data:image/png;base64,xxxxxx` ~~（一般也没人这么干）~~
+
+```env
+sign_background_source = '{"uri": "https://example.com/image.jpg"}'
+```
+
+- 本地图片
+
+> [!TIP]
+>
+> - `uri` 也可以为本地图片路径，如 `imgs/image.jpg`、`/path/to/image.jpg`
+> - 如果本地图片路径是相对路径，会使用 [`nonebot-plugin-localstore`](https://github.com/nonebot/plugin-localstore) 指定的 data 目录作为根目录
+> - 如果本地图片路径是目录，会随机选择目录下的一张图片作为背景图
+
+```env
+sign_background_source = '{"uri": "/imgs/image.jpg"}'
+```
+
+</details>
 
 ## 🎉 使用
 
@@ -145,21 +180,21 @@ _✨ 通过森空岛查询游戏数据 ✨_
 |      `skland rogue`       | 所有 |  `@` \| `topic`   |  肉鸽战绩查询(暂未完成)   |
 
 > [!NOTE]
-> Token获取相关文档还没写~~才不是懒得写~~
+> Token 获取相关文档还没写~~才不是懒得写~~
 >
 > 可以参考[`token获取`](https://docs.qq.com/doc/p/2f705965caafb3ef342d4a979811ff3960bb3c17)获取
 >
-> 本插件支持cred和token两种方式绑定，请勿将token提供给不信任的Bot所有者
+> 本插件支持 cred 和 token 两种方式绑定，请勿将 token 提供给不信任的 Bot 所有者
 
 ### 🎯 快捷指令
 
-| 触发词 | 执行指令 |
-|:-----:|:----:|
-| 森空岛绑定 | `skland bind` |
-| 明日方舟签到 | `skland arksign` |
-| 萨卡兹肉鸽 | `skland rogue --topic 萨卡兹` |
-| 萨米肉鸽 | `skland rogue --topic 萨米` |
-| 角色更新 | `skland char update` |
+|    触发词    |           执行指令            |
+| :----------: | :---------------------------: |
+|  森空岛绑定  |         `skland bind`         |
+| 明日方舟签到 |       `skland arksign`        |
+|  萨卡兹肉鸽  | `skland rogue --topic 萨卡兹` |
+|   萨米肉鸽   |  `skland rogue --topic 萨米`  |
+|   角色更新   |     `skland char update`      |
 
 ### 📸 效果图
 
@@ -176,7 +211,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 本插件仅供学习交流使用，数据由 [森空岛](https://skland.com/) 提供，请勿用于商业用途。
 
-使用过程中，任何涉及个人账号隐私信息（如账号token、cred 等）的数据，请勿提供给不信任的Bot所有者（尤其是token）。
+使用过程中，任何涉及个人账号隐私信息（如账号 token、cred 等）的数据，请勿提供给不信任的 Bot 所有者（尤其是 token）。
 
 ## 📋 TODO
 

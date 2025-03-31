@@ -138,9 +138,9 @@
               <span class="text-white/80 font-bold font-[Bender] text-sm ml-2 mt-0.5">线索交流</span>
               <span class="text-[#DE9A67] font-bold font-[Bender] text-sm ml-2 -mt-1">
                 {% if clue.sharing %}
-                线索交流中
+                交流中
                 {% else %}
-                {{ clue }}<span class="text-white/60 text-[10px]">/7</span>
+                {{ clue.board | length  }}<span class="text-white/60 text-[10px]">/7</span>
                 {% endif %}
               </span>
               <img src="../images/ark_card/building/meeting.png"

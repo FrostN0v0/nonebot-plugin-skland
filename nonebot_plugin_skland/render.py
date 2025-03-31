@@ -71,7 +71,7 @@ async def render_ark_card(props: ArkCard) -> bytes:
             "manu_stoke_max": stoke_max,
             "manu_stoke_count": stoke_count,
             "tired": len(props.building.tiredChars),
-            "clue": len(props.building.meeting.clue.board),
+            "clue": props.building.meeting.clue,
             "ap": props.status.ap,
             "ap_recovery": ap_recovery,
             "recruit_finished": props.recruit_finished,

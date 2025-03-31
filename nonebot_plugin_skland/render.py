@@ -40,6 +40,8 @@ async def render_ark_card(props: ArkCard) -> bytes:
     trainee_char_id = props.building.training.trainee.charId if props.building.training.trainee else ""
     if trainee_char_id in props.charInfoMap.keys():
         trainee_char_name = props.charInfoMap[trainee_char_id].name
+    else:
+        trainee_char_name = ""
 
     ap_recovery_time = format_timestamp(props.status.ap.completeRecoveryTime - datetime.now().timestamp())
     if props.status.ap.completeRecoveryTime > datetime.now().timestamp():

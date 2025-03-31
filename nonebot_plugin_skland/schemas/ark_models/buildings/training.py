@@ -31,5 +31,13 @@ class Training(BaseModel):
             if self.trainee.targetSkill == -1:
                 return "空闲中"
             else:
-                return str(self.trainee.targetSkill)
+                match self.trainee.targetSkill:
+                    case -1:
+                        return "空闲中"
+                    case 0:
+                        return "1技能"
+                    case 1:
+                        return "2技能"
+                    case 2:
+                        return "3技能"
         return "空闲中"

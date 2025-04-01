@@ -1,3 +1,7 @@
+import asyncio
+from io import BytesIO
+
+import qrcode
 from nonebot import require
 from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 
@@ -63,6 +67,7 @@ skland = on_alconna(
             Option("-u|--update|update", help_text="更新绑定的 token 或 cred"),
             help_text="绑定森空岛账号",
         ),
+        Subcommand("-q|--qrcode|qrcode", help_text="获取二维码进行扫码绑定"),
         Subcommand(
             "arksign",
             Option(
@@ -97,6 +102,7 @@ skland = on_alconna(
 )
 
 skland.shortcut("森空岛绑定", {"command": "skland bind", "fuzzy": True, "prefix": True})
+skland.shortcut("扫码绑定", {"command": "skland qrcode", "fuzzy": False, "prefix": True})
 skland.shortcut("明日方舟签到", {"command": "skland arksign --all", "fuzzy": True, "prefix": True})
 skland.shortcut("萨卡兹肉鸽", {"command": "skland rogue --topic 萨卡兹", "fuzzy": True, "prefix": True})
 skland.shortcut("萨米肉鸽", {"command": "skland rogue --topic 萨米", "fuzzy": True, "prefix": True})
@@ -190,6 +196,52 @@ async def _(
             await UniMessage("绑定成功").finish(at_sender=True)
         except RequestException as e:
             await UniMessage(f"绑定失败,错误信息:{e}").finish(at_sender=True)
+
+
+@skland.assign("qrcode")
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+):
+    """二维码绑定森空岛账号"""
+    scan_id = await SklandLoginAPI.get_scan()
+    scan_url = f"hypergryph://scan_login?scanId={scan_id}"
+    qr_code = qrcode.make(scan_url)
+    result_stream = BytesIO()
+    qr_code.save(result_stream, "PNG")
+    msg = UniMessage("请使用森空岛app扫描二维码绑定账号\n二维码有效时间两分钟，请不要扫描他人的登录二维码进行绑定~")
+    msg += UniMessage.image(raw=result_stream.getvalue())
+    await msg.send(reply_to=True)
+    retries = 0
+    scan_code = None
+    while retries < 60:
+        try:
+            scan_code = await SklandLoginAPI.get_scan_status(scan_id)
+            break
+        except RequestException:
+            retries += 1
+        await asyncio.sleep(2)
+    if scan_code:
+        token = await SklandLoginAPI.get_token_by_scan_code(scan_code)
+        grant_code = await SklandLoginAPI.get_grant_code(token)
+        cred = await SklandLoginAPI.get_cred(grant_code)
+        if user := await session.get(User, user_session.user_id):
+            user.access_token = token
+            user.cred = cred.cred
+            user.cred_token = cred.token
+        else:
+            user = User(
+                access_token=token,
+                cred=cred.cred,
+                cred_token=cred.token,
+                id=user_session.user_id,
+                user_id=cred.userId,
+            )
+            session.add(user)
+        await get_characters_and_bind(user, session)
+        await UniMessage("绑定成功").finish(at_sender=True)
+    else:
+        await UniMessage("二维码超时,请重新获取并扫码").finish(at_sender=True)
 
 
 @skland.assign("arksign")

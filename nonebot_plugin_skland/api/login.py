@@ -57,3 +57,42 @@ class SklandLoginAPI:
                 return token
             except (httpx.HTTPStatusError, httpx.ConnectError) as e:
                 raise RequestException(f"刷新token失败：{str(e)}")
+
+    @classmethod
+    async def get_scan(cls) -> str:
+        async with httpx.AsyncClient() as client:
+            get_scan_url = "https://as.hypergryph.com/general/v1/gen_scan/login"
+            response = await client.post(
+                get_scan_url,
+                json={"appCode": app_code},
+            )
+            if status := response.json().get("status"):
+                if status != 0:
+                    raise RequestException(f"获取登录二维码失败：{response.json().get('msg')}")
+            return response.json()["data"]["scanId"]
+
+    @classmethod
+    async def get_scan_status(cls, scan_id: str) -> str:
+        async with httpx.AsyncClient() as client:
+            get_scan_status_url = "https://as.hypergryph.com/general/v1/scan_status"
+            response = await client.get(
+                get_scan_status_url,
+                params={"scanId": scan_id},
+            )
+            if status := response.json().get("status"):
+                if status != 0:
+                    raise RequestException(f"获取二维码 scanCode 失败：{response.json().get('msg')}")
+            return response.json()["data"]["scanCode"]
+
+    @classmethod
+    async def get_token_by_scan_code(cls, scan_code: str) -> str:
+        async with httpx.AsyncClient() as client:
+            get_token_by_scan_code_url = "https://as.hypergryph.com/user/auth/v1/token_by_scan_code"
+            response = await client.post(
+                get_token_by_scan_code_url,
+                json={"scanCode": scan_code},
+            )
+            if status := response.json().get("status"):
+                if status != 0:
+                    raise RequestException(f"获取token失败：{response.json().get('msg')}")
+            return response.json()["data"]["token"]

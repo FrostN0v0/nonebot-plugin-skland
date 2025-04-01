@@ -53,7 +53,7 @@ __plugin_meta__ = PluginMetadata(
     supported_adapters=inherit_supported_adapters("nonebot_plugin_alconna", "nonebot_plugin_user"),
     extra={
         "author": "FrostN0v0 <1614591760@qq.com>",
-        "version": "0.1.6",
+        "version": "0.1.7",
     },
 )
 

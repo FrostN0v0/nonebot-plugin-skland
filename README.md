@@ -173,6 +173,7 @@ sign_background_source = '{"uri": "/imgs/image.jpg"}'
 |         `skland`          | 所有 |     无 or `@`     |       角色信息卡片        |
 |       `skland bind`       | 所有 | `token` or `cred` |      绑定森空岛账号       |
 |     `skland bind -u`      | 所有 | `token` or `cred` | 更新绑定的 token 或 cred  |
+|      `skland qrcode`      | 所有 |        无         |    扫码绑定森空岛账号     |
 |     `skland arksign`      | 所有 |        无         |       明日方舟签到        |
 | `skland arksign -u <uid>` | 所有 |       `uid`       | 指定绑定角色 UID 进行签到 |
 |  `skland arksign --all`   | 所有 |        无         |     签到所有绑定角色      |
@@ -184,13 +185,14 @@ sign_background_source = '{"uri": "/imgs/image.jpg"}'
 >
 > 可以参考[`token获取`](https://docs.qq.com/doc/p/2f705965caafb3ef342d4a979811ff3960bb3c17)获取
 >
-> 本插件支持 cred 和 token 两种方式绑定，请勿将 token 提供给不信任的 Bot 所有者
+> 本插件支持 cred 和 token 两种方式手动绑定，使用二维码绑定时会提供 token，请勿将 token 提供给不信任的 Bot 所有者
 
 ### 🎯 快捷指令
 
 |    触发词    |           执行指令            |
 | :----------: | :---------------------------: |
 |  森空岛绑定  |         `skland bind`         |
+|   扫码绑定   |        `skland qrcode`        |
 | 明日方舟签到 |       `skland arksign`        |
 |  萨卡兹肉鸽  | `skland rogue --topic 萨卡兹` |
 |   萨米肉鸽   |  `skland rogue --topic 萨米`  |

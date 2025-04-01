@@ -141,6 +141,10 @@ async def _(
     session: async_scoped_session,
 ):
     """绑定森空岛账号"""
+
+    if not msg_target.private:
+        await UniMessage("绑定指令只允许在私聊中使用").finish(at_sender=True)
+
     if user := await session.get(User, user_session.user_id):
         if result.find("bind.update"):
             if len(token.result) == 24:
@@ -158,9 +162,6 @@ async def _(
             await get_characters_and_bind(user, session)
             await UniMessage("更新成功").finish(at_sender=True)
         await UniMessage("已绑定过 skland 账号").finish(at_sender=True)
-
-    if not msg_target.private:
-        await UniMessage("绑定指令只允许在私聊中使用").finish(at_sender=True)
 
     if token.available:
         try:

@@ -1,5 +1,6 @@
 import asyncio
 from io import BytesIO
+from datetime import datetime, timedelta
 
 import qrcode
 from nonebot import require
@@ -213,17 +214,17 @@ async def _(
     msg = UniMessage("请使用森空岛app扫描二维码绑定账号\n二维码有效时间两分钟，请不要扫描他人的登录二维码进行绑定~")
     msg += UniMessage.image(raw=result_stream.getvalue())
     qr_msg = await msg.send(reply_to=True)
-    if qr_msg.recallable:
-        await qr_msg.recall(delay=120, index=0)
-    retries = 0
+    end_time = datetime.now() + timedelta(seconds=100)
     scan_code = None
-    while retries < 60:
+    while datetime.now() < end_time:
         try:
             scan_code = await SklandLoginAPI.get_scan_status(scan_id)
             break
         except RequestException:
-            retries += 1
+            pass
         await asyncio.sleep(2)
+    if qr_msg.recallable:
+        await qr_msg.recall(index=0)
     if scan_code:
         token = await SklandLoginAPI.get_token_by_scan_code(scan_code)
         grant_code = await SklandLoginAPI.get_grant_code(token)

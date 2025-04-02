@@ -212,7 +212,9 @@ async def _(
     qr_code.save(result_stream, "PNG")
     msg = UniMessage("请使用森空岛app扫描二维码绑定账号\n二维码有效时间两分钟，请不要扫描他人的登录二维码进行绑定~")
     msg += UniMessage.image(raw=result_stream.getvalue())
-    await msg.send(reply_to=True)
+    qr_msg = await msg.send(reply_to=True)
+    if qr_msg.recallable:
+        await qr_msg.recall(delay=120, index=0)
     retries = 0
     scan_code = None
     while retries < 60:

@@ -28,6 +28,6 @@ class Medal(BaseModel):
 
     type: str
     template: str
-    templateMedalList: list[MedalLayout]
+    templateMedalList: list[str]
     customMedalLayout: list[MedalLayout]
     total: int

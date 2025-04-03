@@ -14,7 +14,7 @@ class User(Model):
     """Skland Login Credential"""
     cred_token: Mapped[str] = mapped_column(Text)
     """Skland Login Credential Token"""
-    user_id: Mapped[int] = mapped_column(Text, nullable=True)
+    user_id: Mapped[str] = mapped_column(Text, nullable=True)
     """Skland User ID"""
 
 
@@ -23,7 +23,7 @@ class Character(Model):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     """Character ID"""
-    uid: Mapped[int] = mapped_column(primary_key=True)
+    uid: Mapped[str] = mapped_column(primary_key=True)
     """Character UID"""
     app_code: Mapped[str] = mapped_column(Text)
     """APP Code"""

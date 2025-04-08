@@ -88,7 +88,7 @@ async def get_background_image() -> str | Url:
 
     match config.background_source:
         case "default":
-            background_image = default_background.as_uri()
+            background_image = default_background.as_posix()
         case "Lolicon":
             background_image = await get_lolicon_image()
         case "random":
@@ -96,6 +96,6 @@ async def get_background_image() -> str | Url:
         case CustomSource() as cs:
             background_image = cs.to_uri()
         case _:
-            background_image = default_background.as_uri()
+            background_image = default_background.as_posix()
 
     return background_image

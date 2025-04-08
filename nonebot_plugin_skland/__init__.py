@@ -12,6 +12,7 @@ require("nonebot_plugin_argot")
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_localstore")
 require("nonebot_plugin_htmlrender")
+from nonebot_plugin_argot import Text, Image
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_alconna import (
@@ -133,8 +134,12 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
     info = await get_character_info(user, str(ark_characters.uid))
     background = await get_background_image()
     image = await render_ark_card(info, background)
+    if str(background).startswith("http"):
+        argot_seg = [Text(str(background)), Image(url=str(background))]
+    else:
+        argot_seg = Image(path=str(background))
     await UniMessage.image(raw=image).send(
-        argot={"name": "background", "command": "background", "content": str(background), "expire": 300}
+        argot={"name": "background", "command": "background", "segment": argot_seg, "expired_at": 300}
     )
     await session.commit()
 

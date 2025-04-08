@@ -27,12 +27,12 @@ class CustomSource(BaseModel):
                 # random pick a file
                 files = [f for f in uri.iterdir() if f.is_file()]
                 logger.debug(f"CustomSource: {uri} is a directory, random pick a file: {files}")
-                return Url((uri / random.choice(files)).as_uri())
+                return Url((uri / random.choice(files)).as_posix())
 
             if not uri.exists():
                 raise FileNotFoundError(f"CustomSource: {uri} not exists")
 
-            return Url(uri.as_uri())
+            return Url(uri.as_posix())
 
         return self.uri
 

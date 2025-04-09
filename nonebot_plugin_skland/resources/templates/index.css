@@ -528,9 +528,6 @@
   .rounded-\[10px\] {
     border-radius: 10px;
   }
-  .rounded-\[20px\] {
-    border-radius: 20px;
-  }
   .rounded-full {
     border-radius: calc(infinity * 1px);
   }

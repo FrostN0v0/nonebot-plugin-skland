@@ -133,7 +133,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 以下是 `CustomSource` 用法
 
-在配置文件中设置 `xxx_background_source` 为 `CustomSource`结构的字典
+在配置文件中设置 `skland_background_source` 为 `CustomSource`结构的字典
 
 <details>
   <summary>CustomSource配置示例</summary>
@@ -144,19 +144,17 @@ _✨ 通过森空岛查询游戏数据 ✨_
   - `uri` 也可以为 base64 编码的图片，如 `data:image/png;base64,xxxxxx` ~~（一般也没人这么干）~~
 
 ```env
-sign_background_source = '{"uri": "https://example.com/image.jpg"}'
+skland_background_source = '{"uri": "https://example.com/image.jpg"}'
 ```
 
 - 本地图片
 
-> [!TIP]
->
 > - `uri` 也可以为本地图片路径，如 `imgs/image.jpg`、`/path/to/image.jpg`
 > - 如果本地图片路径是相对路径，会使用 [`nonebot-plugin-localstore`](https://github.com/nonebot/plugin-localstore) 指定的 data 目录作为根目录
 > - 如果本地图片路径是目录，会随机选择目录下的一张图片作为背景图
 
 ```env
-sign_background_source = '{"uri": "/imgs/image.jpg"}'
+skland_background_source = '{"uri": "/imgs/image.jpg"}'
 ```
 
 </details>
@@ -198,6 +196,19 @@ sign_background_source = '{"uri": "/imgs/image.jpg"}'
 |   萨米肉鸽   |  `skland rogue --topic 萨米`  |
 |   角色更新   |     `skland char update`      |
 
+### 🫣 暗语表
+
+> [!NOTE]
+> 🧭 暗语使用~~指北~~
+>
+> 暗语消息来自 [nonebot-plugin-argot](https://github.com/KomoriDev/nonebot-plugin-argot) 插件
+>
+> 对暗语对象`回复对应的暗语指令`即可获取暗语消息
+
+| 暗语指令 | 对象 | 说明 |
+|:-----:|:----:|:----:|
+| `background` | [`信息卡片`](#-效果图) | 查看背景图 |
+
 ### 📸 效果图
 
 ![示例图1](docs/example.png)
@@ -208,6 +219,7 @@ sign_background_source = '{"uri": "/imgs/image.jpg"}'
 - [`NoneBot2`](https://nonebot.dev/): 跨平台 Python 异步机器人框架
 - [`yuanyan3060/ArknightsGameResource`](https://github.com/yuanyan3060/ArknightsGameResource): 明日方舟常用素材
 - [`KomoriDev/Starify`](https://github.com/KomoriDev/Starify)：超棒的 GitHub Star Trace 工具 🌟📈
+- [`nonebot-plugin-argot`](https://github.com/KomoriDev/nonebot-plugin-argot): 优秀的 NoneBot2 暗语支持
 
 ## 📢 声明
 
@@ -221,10 +233,11 @@ sign_background_source = '{"uri": "/imgs/image.jpg"}'
 - [x] 使用[`nonebot-plugin-htmlrender`](https://github.com/kexue-z/nonebot-plugin-htmlrender)渲染信息卡片
 - [x] 从[`yuanyan3060/ArknightsGameResource`](https://github.com/yuanyan3060/ArknightsGameResource)下载游戏数据、检查数据更新
 - [x] 绘制渲染粥游信息卡片
+- [x] 支持扫码绑定
 - [ ] 粥游签到自动化
 - [ ] 细化粥游信息卡片的部分信息展示
-- [ ] 其余接口获取且有明确 ID 可命名的图片，优先调用本地图片，请求后缓存到本地（例如[肉鸽物品获取](https://web.hycdn.cn/arknights/game/assets/roguelike_item/rogue_3_relic_legacy_169.png)）
+- [ ] 优化资源获取形式
 - [ ] 完善肉鸽战绩返回信息解析
 - [ ] 绘制渲染肉鸽战绩卡片
 - [ ] ~~扬了不必要的 💩~~
-- [ ] 待补充
+- [ ] 待补充，欢迎pr

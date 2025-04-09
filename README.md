@@ -133,7 +133,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 以下是 `CustomSource` 用法
 
-在配置文件中设置 `skland_background_source` 为 `CustomSource`结构的字典
+在配置文件中设置 `skland__background_source` 为 `CustomSource`结构的字典
 
 <details>
   <summary>CustomSource配置示例</summary>
@@ -144,7 +144,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
   - `uri` 也可以为 base64 编码的图片，如 `data:image/png;base64,xxxxxx` ~~（一般也没人这么干）~~
 
 ```env
-skland_background_source = '{"uri": "https://example.com/image.jpg"}'
+skland__background_source = '{"uri": "https://example.com/image.jpg"}'
 ```
 
 - 本地图片
@@ -154,7 +154,7 @@ skland_background_source = '{"uri": "https://example.com/image.jpg"}'
 > - 如果本地图片路径是目录，会随机选择目录下的一张图片作为背景图
 
 ```env
-skland_background_source = '{"uri": "/imgs/image.jpg"}'
+skland__background_source = '{"uri": "/imgs/image.jpg"}'
 ```
 
 </details>

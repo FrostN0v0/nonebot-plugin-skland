@@ -12,9 +12,9 @@ require("nonebot_plugin_argot")
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_localstore")
 require("nonebot_plugin_htmlrender")
-from nonebot_plugin_argot import Text, Image
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_user import UserSession, get_user
+from nonebot_plugin_argot import Text, Argot, Image, ArgotExtension
 from nonebot_plugin_alconna import (
     At,
     Args,
@@ -102,6 +102,7 @@ skland = on_alconna(
     skip_for_unmatch=False,
     block=True,
     use_cmd_start=True,
+    extensions=[ArgotExtension],
 )
 
 skland.shortcut("森空岛绑定", {"command": "skland bind", "fuzzy": True, "prefix": True})
@@ -143,9 +144,8 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
         argot_seg = [Text(str(background)), Image(url=str(background))]
     else:
         argot_seg = Image(path=str(background))
-    await UniMessage.image(raw=image).send(
-        argot={"name": "background", "command": "background", "segment": argot_seg, "expired_at": 300}
-    )
+    msg = UniMessage.image(raw=image) + Argot("background", argot_seg, command="background", expired_at=300)
+    await msg.send(reply_to=True)
     await session.commit()
 
 

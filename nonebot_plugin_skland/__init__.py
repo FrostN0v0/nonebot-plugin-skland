@@ -28,6 +28,7 @@ from nonebot_plugin_alconna import (
     UniMessage,
     CommandMeta,
     on_alconna,
+    message_reaction,
 )
 
 from .model import User
@@ -130,6 +131,10 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
     ark_characters = await get_default_arknights_character(user, session)
     if not ark_characters:
         await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
+    if user_session.platform == "qq":
+        await message_reaction("66")
+    else:
+        await message_reaction("❤")
 
     info = await get_character_info(user, str(ark_characters.uid))
     background = await get_background_image()
@@ -231,6 +236,10 @@ async def _(
     if qr_msg.recallable:
         await qr_msg.recall(index=0)
     if scan_code:
+        if user_session.platform == "qq":
+            await message_reaction("124")
+        else:
+            await message_reaction("👌")
         token = await SklandLoginAPI.get_token_by_scan_code(scan_code)
         grant_code = await SklandLoginAPI.get_grant_code(token)
         cred = await SklandLoginAPI.get_cred(grant_code)

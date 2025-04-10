@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from ..compat import model_validator
 from .ark_models import (
     Skin,
     Medal,
@@ -11,6 +12,7 @@ from .ark_models import (
     Routine,
     Building,
     Campaign,
+    BaseCount,
     Character,
     Equipment,
     AssistChar,
@@ -51,3 +53,43 @@ class ArkCard(BaseModel):
             return "招募已全部完成"
         format_time = format_timestamp(finish_ts - datetime.now().timestamp())
         return f"{format_time}后全部完成"
+
+    @property
+    def trainee_char(self) -> str:
+        trainee = self.building.training.trainee
+        if self.building.training.training_state == "training" and trainee:
+            return self.charInfoMap[trainee.charId].name
+        return ""
+
+    @model_validator(mode="after")
+    def inject_uniequip_uris(self) -> "ArkCard":
+        from ..config import RES_DIR
+
+        for char in self.assistChars:
+            if char.equip and (equip := self.equipmentInfoMap.get(char.equip.id)):
+                equip_id = equip.typeIcon
+            else:
+                equip_id = "original"
+            char.uniequip = (RES_DIR / "images" / "ark_card" / "uniequip" / f"{equip_id}.png").as_uri()
+        return self
+
+    @model_validator(mode="after")
+    def inject_manufacture_stoke(self) -> "ArkCard":
+        stoke_max = 0
+        stoke_count = 0
+        for manu in self.building.manufactures:
+            if manu.formulaId in self.manufactureFormulaInfoMap.keys():
+                formula_weight = self.manufactureFormulaInfoMap[manu.formulaId].weight
+                stoke_max += int(manu.capacity / formula_weight)
+                elapsed_time = datetime.now().timestamp() - manu.lastUpdateTime
+                cost_time = self.manufactureFormulaInfoMap[manu.formulaId].costPoint / manu.speed
+                additional_complete = round(elapsed_time / cost_time)
+                if datetime.now().timestamp() >= manu.completeWorkTime:
+                    stoke_count += manu.capacity // formula_weight
+                else:
+                    to_be_processed = (manu.completeWorkTime - manu.lastUpdateTime) / (cost_time / manu.speed)
+                    has_processed = to_be_processed - int(to_be_processed)
+                    additional_complete = (elapsed_time - has_processed * cost_time) / cost_time
+                    stoke_count += manu.complete + int(additional_complete) + 1
+        self.building.manufacture_stoke = BaseCount(current=stoke_count, total=stoke_max)
+        return self

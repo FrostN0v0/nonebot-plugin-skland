@@ -76,3 +76,7 @@ class Status(BaseModel):
     furnitureCnt: int
     skinCnt: int
     exp: Exp
+
+    @property
+    def register_time(self) -> str:
+        return datetime.fromtimestamp(self.registerTs).strftime("%Y-%m-%d")

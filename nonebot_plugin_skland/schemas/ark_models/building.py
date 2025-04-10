@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from .base import BaseCount
 from .buildings import (
     Hire,
     Labor,
@@ -46,6 +47,7 @@ class Building(BaseModel):
     labor: Labor
     furniture: Furniture
     control: Control
+    manufacture_stoke: BaseCount | None = None
 
     @property
     def rested_chars(self):

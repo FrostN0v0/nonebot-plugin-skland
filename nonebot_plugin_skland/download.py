@@ -9,8 +9,8 @@ from nonebot import logger
 from rich.text import Text
 from rich.panel import Panel
 from rich.table import Table
-from httpx import AsyncClient
 from pydantic import BaseModel
+from httpx import HTTPError, AsyncClient
 from rich.progress import (
     Task,
     TaskID,
@@ -24,6 +24,7 @@ from rich.progress import (
 
 from .compat import model_validator
 from .config import CACHE_DIR, config
+from .exception import RequestException
 
 
 class File(BaseModel):
@@ -93,18 +94,20 @@ class GameResourceDownloader:
     async def check_update(cls) -> bool | str:
         """检查更新"""
         url = config.github_proxy_url + cls.VERSION_URL if config.github_proxy_url else cls.VERSION_URL
-        async with AsyncClient() as client:
-            response = await client.get(url)
-            response.raise_for_status()
-            origin_version = response.content.decode()
-            version_file = CACHE_DIR.joinpath("version")
-            if not version_file.exists():
-                version_file.write_text(origin_version, encoding="utf-8")
-                return True
-            local_version = version_file.read_text(encoding="utf-8").strip()
-            if origin_version != local_version:
-                return origin_version
-            return False
+        try:
+            async with AsyncClient() as client:
+                response = await client.get(url)
+                response.raise_for_status()
+                origin_version = response.content.decode()
+                version_file = CACHE_DIR.joinpath("version")
+                if not version_file.exists():
+                    return True
+                local_version = version_file.read_text(encoding="utf-8").strip()
+                if origin_version != local_version:
+                    return origin_version
+        except HTTPError as e:
+            raise RequestException(f"检查更新失败: {type(e).__name__}: {e}")
+        return False
 
     @classmethod
     def update_version_file(cls, version: str):
@@ -118,17 +121,20 @@ class GameResourceDownloader:
         headers = {}
         if config.github_token:
             headers = {"Authorization": f"{config.github_token}"}
-        async with AsyncClient() as client:
-            response = await client.get(url, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-            route = route.rstrip("/") + "/"
-            files = [
-                File(name=item["path"].split("/")[-1], download_url=f"{dl_url}{item['path']}")
-                for item in data.get("tree", [])
-                if item["type"] == "blob" and item["path"].startswith(route)
-            ]
-            return files
+        try:
+            async with AsyncClient() as client:
+                response = await client.get(url, headers=headers)
+                response.raise_for_status()
+                data = response.json()
+                route = route.rstrip("/") + "/"
+                files = [
+                    File(name=item["path"].split("/")[-1], download_url=f"{dl_url}{item['path']}")
+                    for item in data.get("tree", [])
+                    if item["type"] == "blob" and item["path"].startswith(route)
+                ]
+                return files
+        except HTTPError as e:
+            raise RequestException(f"获取文件列表失败: {type(e).__name__}: {e}")
 
     @classmethod
     async def download_all(cls, owner: str, repo: str, route: str, branch: str = "main"):
@@ -181,11 +187,14 @@ class GameResourceDownloader:
         """下载单个文件"""
 
         file_path = save_path / file.name
-        async with client.stream("GET", file.download_url, **kwargs) as response:
-            file_size = int(response.headers.get("Content-Length", 0))
-            progress.update(task_id, total=file_size)
+        try:
+            async with client.stream("GET", file.download_url, **kwargs) as response:
+                file_size = int(response.headers.get("Content-Length", 0))
+                progress.update(task_id, total=file_size)
 
-            with file_path.open("wb") as f:
-                async for data in response.aiter_bytes(1024):
-                    f.write(data)
-                    progress.update(task_id, advance=len(data))
+                with file_path.open("wb") as f:
+                    async for data in response.aiter_bytes(1024):
+                        f.write(data)
+                        progress.update(task_id, advance=len(data))
+        except HTTPError as e:
+            raise RequestException(f"下载文件{file.name}失败: {type(e).__name__}: {e}")

@@ -23,6 +23,6 @@ async def startup():
         except RequestException as e:
             logger.error(f"下载游戏资源失败: {e}")
             return
-        if isinstance(version, str):
+        if version:
             GameResourceDownloader.update_version_file(version)
             logger.success(f"游戏资源已更新到版本：{version}")

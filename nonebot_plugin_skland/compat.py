@@ -10,7 +10,7 @@ __all__ = (
 
 
 if PYDANTIC_V2:
-    from pydantic import model_validator as model_validator
+    from pydantic import model_validator as model_validator  # type: ignore
 else:
     from pydantic import root_validator
 

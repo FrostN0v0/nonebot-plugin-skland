@@ -15,7 +15,7 @@ dependencies = [
     "nonebot-plugin-orm>=0.7.6",
     "nonebot-plugin-user>=0.4.4",
     "nonebot2>=2.4.1",
-    "qrcode[pil]>=8.0",
+    "qrcode[pil]>=7.4.2",
     "rich>=13.9.4",
 ]
 

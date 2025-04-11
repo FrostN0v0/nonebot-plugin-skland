@@ -1,3 +1,4 @@
+from typing import Any
 from datetime import datetime
 
 from pydantic import BaseModel
@@ -62,27 +63,49 @@ class ArkCard(BaseModel):
         return ""
 
     @model_validator(mode="after")
-    def inject_uniequip_uris(self) -> "ArkCard":
+    def inject_uniequip_uris(cls, values) -> Any:
         from ..config import RES_DIR
 
-        for char in self.assistChars:
-            if char.equip and (equip := self.equipmentInfoMap.get(char.equip.id)):
+        if isinstance(values, dict):
+            assist_chars = values.get("assistChars", [])
+            equipment_map = values.get("equipmentInfoMap", {})
+        else:
+            assist_chars = values.assistChars
+            equipment_map = values.equipmentInfoMap
+
+        for char in assist_chars:
+            if char.equip and (equip := equipment_map.get(char.equip.id)):
                 equip_id = equip.typeIcon
             else:
                 equip_id = "original"
+
             char.uniequip = (RES_DIR / "images" / "ark_card" / "uniequip" / f"{equip_id}.png").as_uri()
-        return self
+        if isinstance(values, dict):
+            values["assistChars"] = assist_chars
+            return values
+        else:
+            return values
 
     @model_validator(mode="after")
-    def inject_manufacture_stoke(self) -> "ArkCard":
+    def inject_manufacture_stoke(cls, values) -> Any:
+        if isinstance(values, dict):
+            building = values.get("building")
+            formula_map = values.get("manufactureFormulaInfoMap")
+        else:
+            building = values.building
+            formula_map = values.manufactureFormulaInfoMap
+
+        if not building or not formula_map:
+            return values
+
         stoke_max = 0
         stoke_count = 0
-        for manu in self.building.manufactures:
-            if manu.formulaId in self.manufactureFormulaInfoMap.keys():
-                formula_weight = self.manufactureFormulaInfoMap[manu.formulaId].weight
+        for manu in building.manufactures:
+            if manu.formulaId in formula_map:
+                formula_weight = formula_map[manu.formulaId].weight
                 stoke_max += int(manu.capacity / formula_weight)
                 elapsed_time = datetime.now().timestamp() - manu.lastUpdateTime
-                cost_time = self.manufactureFormulaInfoMap[manu.formulaId].costPoint / manu.speed
+                cost_time = formula_map[manu.formulaId].costPoint / manu.speed
                 additional_complete = round(elapsed_time / cost_time)
                 if datetime.now().timestamp() >= manu.completeWorkTime:
                     stoke_count += manu.capacity // formula_weight
@@ -91,5 +114,12 @@ class ArkCard(BaseModel):
                     has_processed = to_be_processed - int(to_be_processed)
                     additional_complete = (elapsed_time - has_processed * cost_time) / cost_time
                     stoke_count += manu.complete + int(additional_complete) + 1
-        self.building.manufacture_stoke = BaseCount(current=stoke_count, total=stoke_max)
-        return self
+
+        manufacture_stoke = BaseCount(current=stoke_count, total=stoke_max)
+
+        if isinstance(values, dict):
+            values["building"].manufacture_stoke = manufacture_stoke
+            return values
+        else:
+            values.building.manufacture_stoke = manufacture_stoke
+            return values

@@ -11,6 +11,7 @@ from rich.panel import Panel
 from rich.table import Table
 from pydantic import BaseModel
 from httpx import HTTPError, AsyncClient
+from nonebot.compat import model_validator
 from rich.progress import (
     Task,
     TaskID,
@@ -22,7 +23,6 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 
-from .compat import model_validator
 from .config import CACHE_DIR, config
 from .exception import RequestException
 

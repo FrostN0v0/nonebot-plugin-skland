@@ -2,8 +2,8 @@ from typing import Any
 from datetime import datetime
 
 from pydantic import BaseModel
+from nonebot.compat import model_validator
 
-from ..compat import model_validator
 from .ark_models import (
     Skin,
     Medal,

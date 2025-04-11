@@ -138,6 +138,8 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
         await message_reaction("❤")
 
     info = await get_character_info(user, str(ark_characters.uid))
+    if not info:
+        return
     background = await get_background_image()
     image = await render_ark_card(info, background)
     if str(background).startswith("http"):

@@ -50,9 +50,9 @@ def refresh_access_token_if_needed(func):
                 logger.info("access_token 失效，已自动刷新")
                 return await func(user, *args, **kwargs)
             except (RequestException, LoginException, UnauthorizedException) as e:
-                await UniMessage(f"接口请求失败,错误信息:{e}").send(at_sender=True)
+                await UniMessage(f"接口请求失败,{e.args[0]}").send(at_sender=True)
         except RequestException as e:
-            await UniMessage(f"接口请求失败,错误信息:{e}").send(at_sender=True)
+            await UniMessage(f"接口请求失败,{e.args[0]}").send(at_sender=True)
 
     return wrapper
 
@@ -70,9 +70,9 @@ def refresh_cred_token_if_needed(func):
                 logger.info("cred_token 失效，已自动刷新")
                 return await func(user, *args, **kwargs)
             except (RequestException, LoginException, UnauthorizedException) as e:
-                await UniMessage(f"接口请求失败,错误信息:{e}").send(at_sender=True)
+                await UniMessage(f"接口请求失败,{e.args[0]}").send(at_sender=True)
         except RequestException as e:
-            await UniMessage(f"接口请求失败,错误信息:{e}").send(at_sender=True)
+            await UniMessage(f"接口请求失败,{e.args[0]}").send(at_sender=True)
 
     return wrapper
 

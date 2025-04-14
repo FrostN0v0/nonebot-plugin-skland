@@ -229,7 +229,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 - [`NoneBot2`](https://nonebot.dev/): 跨平台 Python 异步机器人框架
 - [`yuanyan3060/ArknightsGameResource`](https://github.com/yuanyan3060/ArknightsGameResource): 明日方舟常用素材
 - [`KomoriDev/Starify`](https://github.com/KomoriDev/Starify)：超棒的 GitHub Star Trace 工具 🌟📈
-- [`nonebot-plugin-argot`](https://github.com/KomoriDev/nonebot-plugin-argot): 优秀的 NoneBot2 暗语支持
+- [`KomoriDev/nonebot-plugin-argot`](https://github.com/KomoriDev/nonebot-plugin-argot): 优秀的 NoneBot2 暗语支持
 
 ## 📢 声明
 
@@ -244,9 +244,9 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 - [x] 从[`yuanyan3060/ArknightsGameResource`](https://github.com/yuanyan3060/ArknightsGameResource)下载游戏数据、检查数据更新
 - [x] 绘制渲染粥游信息卡片
 - [x] 支持扫码绑定
+- [x] 优化资源获取形式
 - [ ] 粥游签到自动化
 - [ ] 细化粥游信息卡片的部分信息展示
-- [ ] 优化资源获取形式
 - [ ] 完善肉鸽战绩返回信息解析
 - [ ] 绘制渲染肉鸽战绩卡片
 - [ ] ~~扬了不必要的 💩~~

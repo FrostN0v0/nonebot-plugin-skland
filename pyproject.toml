@@ -1,6 +1,6 @@
 [project]
 name = "nonebot-plugin-skland"
-version = "0.2.0"
+version = "0.2.1"
 description = "通过森空岛查询游戏数据"
 readme = "README.md"
 license = { text = "MIT" }
@@ -10,7 +10,7 @@ dependencies = [
     "httpx>=0.28.1",
     "nonebot-plugin-alconna>=0.57.1",
     "nonebot-plugin-argot>=0.1.7",
-    "nonebot-plugin-htmlrender>=0.6.3",
+    "nonebot-plugin-htmlrender>=0.6.5",
     "nonebot-plugin-localstore>=0.7.3",
     "nonebot-plugin-orm>=0.7.6",
     "nonebot-plugin-user>=0.4.4",

@@ -3,7 +3,9 @@ from io import BytesIO
 from datetime import datetime, timedelta
 
 import qrcode
-from nonebot import require
+from nonebot.params import Depends
+from nonebot import logger, require
+from nonebot.permission import SuperUser
 from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 
 require("nonebot_plugin_orm")
@@ -33,10 +35,11 @@ from nonebot_plugin_alconna import (
 
 from .model import User
 from . import hook as hook
-from .config import Config
 from .render import render_ark_card
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
+from .config import RESOURCE_ROUTES, Config
+from .download import GameResourceDownloader
 from .schemas import CRED, Topics, ArkSignResponse
 from .db_handler import get_arknights_characters, get_arknights_character_by_uid, get_default_arknights_character
 from .utils import (
@@ -82,6 +85,7 @@ skland = on_alconna(
             help_text="明日方舟签到",
         ),
         Subcommand("char", Option("-u|--update|update"), help_text="更新绑定角色信息"),
+        Subcommand("sync", help_text="更新图片资源(仅超管可用)"),
         Subcommand(
             "rogue",
             Args["target?#目标", At | int],
@@ -111,6 +115,7 @@ skland.shortcut("明日方舟签到", {"command": "skland arksign --all", "fuzzy
 skland.shortcut("萨卡兹肉鸽", {"command": "skland rogue --topic 萨卡兹", "fuzzy": True, "prefix": True})
 skland.shortcut("萨米肉鸽", {"command": "skland rogue --topic 萨米", "fuzzy": True, "prefix": True})
 skland.shortcut("角色更新", {"command": "skland char update", "fuzzy": False, "prefix": True})
+skland.shortcut("资源更新", {"command": "skland sync", "fuzzy": False, "prefix": True})
 
 
 @skland.assign("$main")
@@ -319,6 +324,25 @@ async def _(user_session: UserSession, session: async_scoped_session):
 
     if user := await session.get(User, user_session.user_id):
         await refresh_characters(user)
+
+
+@skland.assign("sync")
+async def _(is_superuser: bool = Depends(SuperUser())):
+    if not is_superuser:
+        await UniMessage.text("该指令仅超管可用").finish()
+    try:
+        logger.info("开始下载游戏资源")
+        for route in RESOURCE_ROUTES:
+            logger.info(f"正在下载: {route}")
+            await GameResourceDownloader.download_all(
+                owner="yuanyan3060", repo="ArknightsGameResource", route=route, branch="main"
+            )
+        version = await GameResourceDownloader.get_version()
+        GameResourceDownloader.update_version_file(version)
+        await UniMessage.text(f"资源更新成功，版本:{version}").send()
+    except RequestException as e:
+        logger.error(f"下载游戏资源失败: {e}")
+        await UniMessage.text(f"资源更新失败：{e.args[0]}").send()
 
 
 @skland.assign("rogue")

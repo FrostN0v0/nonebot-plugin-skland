@@ -13,6 +13,7 @@ from nonebot.plugin import get_plugin_config
 RES_DIR: Path = Path(__file__).parent / "resources"
 TEMPLATES_DIR: Path = RES_DIR / "templates"
 CACHE_DIR = store.get_plugin_cache_dir()
+RESOURCE_ROUTES = ["portrait", "skill"]
 
 
 class CustomSource(BaseModel):
@@ -48,8 +49,8 @@ class ScopedConfig(BaseModel):
     """GitHub 代理 URL"""
     github_token: str = ""
     """GitHub Token"""
-    check_res_update: bool = True
-    """检查资源更新"""
+    check_res_update: bool = False
+    """启动时检查资源更新"""
     background_source: Literal["default", "Lolicon", "random"] | CustomSource = "default"
     """背景图片来源"""
 

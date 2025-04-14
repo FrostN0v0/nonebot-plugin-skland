@@ -1,3 +1,6 @@
+from urllib.parse import quote
+
+from nonebot import logger
 from pydantic import BaseModel
 
 from .base import Equip
@@ -38,6 +41,11 @@ class AssistChar(BaseModel):
                 portrait_id = self.skinId.replace(symbol, "_", 1)
                 break
         img_path = CACHE_DIR / "portrait" / f"{portrait_id}.png"
+        if not img_path.exists():
+            encoded_id = quote(self.skinId, safe="")
+            img_path = f"https://web.hycdn.cn/arknights/game/assets/char_skin/portrait/{encoded_id}.png"
+            logger.debug(f"Portrait not found locally, using URL: {img_path}")
+            return img_path
         return img_path.as_uri()
 
     @property
@@ -48,6 +56,11 @@ class AssistChar(BaseModel):
     @property
     def skill(self) -> str:
         img_path = CACHE_DIR / "skill" / f"skill_icon_{self.skillId}.png"
+        if not img_path.exists():
+            encoded_id = quote(self.skillId, safe="")
+            img_path = f"https://web.hycdn.cn/arknights/game/assets/char_skill/{encoded_id}.png"
+            logger.debug(f"Skill icon not found locally, using URL: {img_path}")
+            return img_path
         return img_path.as_uri()
 
     @property

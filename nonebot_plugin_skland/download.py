@@ -91,27 +91,33 @@ class GameResourceDownloader:
     BASE_URL = "https://api.github.com/repos/{owner}/{repo}/git/trees/{branch}?recursive=1"
 
     @classmethod
-    async def check_update(cls) -> str:
-        """检查更新"""
+    async def get_version(cls) -> str:
+        """获取最新版本"""
         url = config.github_proxy_url + cls.VERSION_URL if config.github_proxy_url else cls.VERSION_URL
         try:
             async with AsyncClient() as client:
                 response = await client.get(url)
                 response.raise_for_status()
                 origin_version = response.content.decode()
-                version_file = CACHE_DIR.joinpath("version")
-                if not version_file.exists():
-                    return origin_version
-                local_version = version_file.read_text(encoding="utf-8").strip()
-                if origin_version != local_version:
-                    return origin_version
+                return origin_version
         except HTTPError as e:
             raise RequestException(f"检查更新失败: {type(e).__name__}: {e}")
+
+    @classmethod
+    async def check_update(cls) -> str:
+        """检查更新"""
+        origin_version = await cls.get_version()
+        version_file = CACHE_DIR.joinpath("version")
+        if not version_file.exists():
+            return origin_version
+        local_version = version_file.read_text(encoding="utf-8").strip()
+        if origin_version != local_version:
+            return origin_version
         return ""
 
     @classmethod
     def update_version_file(cls, version: str):
-        """更新版本文件"""
+        """更新本地版本文件"""
         version_file = CACHE_DIR.joinpath("version")
         version_file.write_text(version, encoding="utf-8")
 

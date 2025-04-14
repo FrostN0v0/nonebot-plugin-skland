@@ -1,12 +1,10 @@
 from nonebot import logger, get_driver
 
-from .config import config
 from .exception import RequestException
+from .config import RESOURCE_ROUTES, config
 from .download import GameResourceDownloader
 
 driver = get_driver()
-
-RESOURCE_ROUTES = ["portrait", "avatar", "skill"]
 
 
 @driver.on_startup

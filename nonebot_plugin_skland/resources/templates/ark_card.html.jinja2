@@ -45,7 +45,7 @@
             <img src="../images/ark_card/career/career_1.png" class="w-24.5 h-auto opacity-60 rounded-md" />
             <span class="text-white/60 font-bold font-[Bender]">作战进度</span>
             <span class="text-white font-bold font-[Bender] text-lg whitespace-nowrap">
-              {{ status.mainStageProgress | default("全部完成") }}
+              {{ status.mainStageProgress | default("全部完成", true) }}
             </span>
           </div>
           <div class="flex-1 flex flex-col items-center justify-center">

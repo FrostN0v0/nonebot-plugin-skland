@@ -63,7 +63,10 @@ class DownloadProgress(Progress):
             status = self.STATUS_FIN if task.finished else self.STATUS_DL
             itable = Table.grid(padding=(0, 1), expand=self.expand)
             filename_column = Text(f"{task.fields['filename']}")
-            itable.add_row(filename_column, *(column(task) for column in [status, *self.STATUS_ROW]))
+            itable.add_row(
+                filename_column,
+                *(column(task) for column in [status, *self.STATUS_ROW]),
+            )
             itable.add_row(*(column(task) for column in self.PROG_ROW))
             tasks_table.add_row(itable)
             if not task.finished:
@@ -75,7 +78,14 @@ class DownloadProgress(Progress):
         if all_tasks_finished:
             return table
         else:
-            table.add_row(Panel(tasks_table, title="Downloading Files", title_align="left", padding=(1, 2)))
+            table.add_row(
+                Panel(
+                    tasks_table,
+                    title="Downloading Files",
+                    title_align="left",
+                    padding=(1, 2),
+                )
+            )
 
         return table
 
@@ -134,7 +144,10 @@ class GameResourceDownloader:
                 data = response.json()
                 route = route.rstrip("/") + "/"
                 files = [
-                    File(name=item["path"].split("/")[-1], download_url=f"{dl_url}{item['path']}")
+                    File(
+                        name=item["path"].split("/")[-1],
+                        download_url=f"{dl_url}{item['path']}",
+                    )
                     for item in data.get("tree", [])
                     if item["type"] == "blob" and item["path"].startswith(route)
                 ]
@@ -168,7 +181,14 @@ class GameResourceDownloader:
                         return
                     async with cls.SEMAPHORE:
                         task_id = progress.add_task("Downloading", filename=file.name, total=0)
-                        await cls.download_file(client, file, save_path, progress, task_id=task_id, timeout=300)
+                        await cls.download_file(
+                            client,
+                            file,
+                            save_path,
+                            progress,
+                            task_id=task_id,
+                            timeout=300,
+                        )
                         progress.remove_task(task_id)
                         cls.download_count += 1
 

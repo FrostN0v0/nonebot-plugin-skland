@@ -38,9 +38,9 @@ from . import hook as hook
 from .render import render_ark_card
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
-from .config import RESOURCE_ROUTES, Config
 from .download import GameResourceDownloader
 from .schemas import CRED, Topics, ArkSignResponse
+from .config import RESOURCE_ROUTES, Config, config
 from .db_handler import get_arknights_characters, get_arknights_character_by_uid, get_default_arknights_character
 from .utils import (
     get_background_image,
@@ -151,7 +151,9 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
         argot_seg = [Text(str(background)), Image(url=str(background))]
     else:
         argot_seg = Image(path=str(background))
-    msg = UniMessage.image(raw=image) + Argot("background", argot_seg, command="background", expired_at=300)
+    msg = UniMessage.image(raw=image) + Argot(
+        "background", argot_seg, command="background", expired_at=config.argot_expire
+    )
     await msg.send(reply_to=True)
     await session.commit()
 

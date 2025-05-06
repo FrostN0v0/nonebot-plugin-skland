@@ -129,6 +129,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 |   `skland__github_token`    |  否  |    `""`     |       GitHub Token       |
 | `skland__check_res_update`  |  否  |   `False`   | 是否在启动时检查资源更新 |
 | `skland__background_source` |  否  | `"default"` |       背景图片来源       |
+|   `skland__argot_expire`    |  否  |    `300`    |  暗语消息过期时间（秒）  |
 
 > [!TIP]
 > 以上配置项均~~没什么用~~按需填写，GitHub Token 用于解决 fetch_file_list 接口到达免费调用上限，但不会有那么频繁的更新频率，99.98%的概率是用不上的。~~只是因为我开发测试的时候上限了，所以有了这项~~,

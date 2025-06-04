@@ -207,6 +207,29 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 |  萨卡兹肉鸽  | `skland rogue --topic 萨卡兹` |
 |   萨米肉鸽   |  `skland rogue --topic 萨米`  |
 
+#### 🪄 自定义快捷指令
+
+> 该特性依赖于 [Alconna 快捷指令](https://nonebot.dev/docs/best-practice/alconna/command#command%E7%9A%84%E4%BD%BF%E7%94%A8)。自定义指令不带 `COMMAND_START`，若有必要需手动填写
+
+```bash
+# 增加
+/skland --shortcut <自定义指令> /skland
+# 删除
+/skland --shortcut delete <自定义指令>
+# 列出
+/skland --shortcut list
+```
+
+> [!NOTE]
+> 自定义指令中包含空格，需要用引号`""`包裹。
+
+例子:
+
+```bash
+user: /skland --shortcut /兔兔签到 "/skland arksign --all"
+bot: skland::skland 的快捷指令: "/兔兔签到" 添加成功
+```
+
 ### 🫣 暗语表
 
 > [!NOTE]

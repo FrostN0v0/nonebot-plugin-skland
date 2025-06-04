@@ -14,6 +14,7 @@ require("nonebot_plugin_argot")
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_localstore")
 require("nonebot_plugin_htmlrender")
+from arclet.alconna import config as alc_config
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_argot import Text, Argot, Image, ArgotExtension
@@ -26,6 +27,7 @@ from nonebot_plugin_alconna import (
     Alconna,
     Arparma,
     MsgTarget,
+    Namespace,
     Subcommand,
     UniMessage,
     CommandMeta,
@@ -63,6 +65,9 @@ __plugin_meta__ = PluginMetadata(
     },
 )
 
+ns = Namespace("skland", disable_builtin_options=set())
+alc_config.namespaces["skland"] = ns
+
 skland = on_alconna(
     Alconna(
         "skland",
@@ -91,11 +96,16 @@ skland = on_alconna(
             Args["target?#目标", At | int],
             Option(
                 "-t|--topic|topic",
-                Args["topic_name?#主题", ["萨米", "萨卡兹"], Field(completion=lambda: "请输入指定topic_id")],
+                Args[
+                    "topic_name?#主题",
+                    ["萨米", "萨卡兹"],
+                    Field(completion=lambda: "请输入指定topic_id"),
+                ],
                 help_text="指定主题进行肉鸽战绩查询",
             ),
             help_text="肉鸽战绩查询",
         ),
+        namespace=alc_config.namespaces["skland"],
         meta=CommandMeta(
             description=__plugin_meta__.description,
             usage=__plugin_meta__.usage,
@@ -112,7 +122,10 @@ skland = on_alconna(
 skland.shortcut("森空岛绑定", {"command": "skland bind", "fuzzy": True, "prefix": True})
 skland.shortcut("扫码绑定", {"command": "skland qrcode", "fuzzy": False, "prefix": True})
 skland.shortcut("明日方舟签到", {"command": "skland arksign --all", "fuzzy": True, "prefix": True})
-skland.shortcut("萨卡兹肉鸽", {"command": "skland rogue --topic 萨卡兹", "fuzzy": True, "prefix": True})
+skland.shortcut(
+    "萨卡兹肉鸽",
+    {"command": "skland rogue --topic 萨卡兹", "fuzzy": True, "prefix": True},
+)
 skland.shortcut("萨米肉鸽", {"command": "skland rogue --topic 萨米", "fuzzy": True, "prefix": True})
 skland.shortcut("角色更新", {"command": "skland char update", "fuzzy": False, "prefix": True})
 skland.shortcut("资源更新", {"command": "skland sync", "fuzzy": False, "prefix": True})
@@ -272,7 +285,12 @@ async def _(
 
 
 @skland.assign("arksign")
-async def _(user_session: UserSession, session: async_scoped_session, uid: Match[str], result: Arparma):
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+    uid: Match[str],
+    result: Arparma,
+):
     """明日方舟森空岛签到"""
 
     @refresh_cred_token_if_needed
@@ -337,7 +355,10 @@ async def _(is_superuser: bool = Depends(SuperUser())):
         for route in RESOURCE_ROUTES:
             logger.info(f"正在下载: {route}")
             await GameResourceDownloader.download_all(
-                owner="yuanyan3060", repo="ArknightsGameResource", route=route, branch="main"
+                owner="yuanyan3060",
+                repo="ArknightsGameResource",
+                route=route,
+                branch="main",
             )
         version = await GameResourceDownloader.get_version()
         GameResourceDownloader.update_version_file(version)
@@ -348,7 +369,12 @@ async def _(is_superuser: bool = Depends(SuperUser())):
 
 
 @skland.assign("rogue")
-async def _(user_session: UserSession, session: async_scoped_session, result: Arparma, target: Match[At | int]):
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+    result: Arparma,
+    target: Match[At | int],
+):
     """获取明日方舟肉鸽战绩"""
 
     # Not Finished
@@ -356,7 +382,9 @@ async def _(user_session: UserSession, session: async_scoped_session, result: Ar
     @refresh_access_token_if_needed
     async def get_rogue_info(user: User, uid: str, topic_id: str):
         return await SklandAPI.get_rogue(
-            CRED(cred=user.cred, token=user.cred_token, userId=str(user.user_id)), uid, topic_id
+            CRED(cred=user.cred, token=user.cred_token, userId=str(user.user_id)),
+            uid,
+            topic_id,
         )
 
     if target.available:

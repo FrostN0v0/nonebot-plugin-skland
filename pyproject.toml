@@ -13,7 +13,7 @@ dependencies = [
     "nonebot-plugin-htmlrender>=0.6.5",
     "nonebot-plugin-localstore>=0.7.3",
     "nonebot-plugin-orm>=0.7.6",
-    "nonebot-plugin-user>=0.4.4",
+    "nonebot-plugin-user>=0.5.0",
     "nonebot2>=2.4.2",
     "qrcode[pil]>=7.4.2",
     "rich>=13.9.4",
@@ -64,7 +64,7 @@ ignore = ["E402", "C901"]
 [tool.pyright]
 pythonVersion = "3.10"
 pythonPlatform = "All"
-typeCheckingMode = "basic"
+typeCheckingMode = "standard"
 
 [tool.pdm.scripts]
 build_css = "tailwindcss -i ./tailwind.css -o ./nonebot_plugin_skland/resources/templates/index.css -w"

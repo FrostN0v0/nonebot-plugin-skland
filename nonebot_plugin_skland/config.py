@@ -53,6 +53,8 @@ class ScopedConfig(BaseModel):
     """启动时检查资源更新"""
     background_source: Literal["default", "Lolicon", "random"] | CustomSource = "default"
     """背景图片来源"""
+    argot_expire: int = 300
+    """Argot 缓存过期时间"""
 
 
 class Config(BaseModel):

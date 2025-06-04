@@ -40,14 +40,10 @@ from . import hook as hook
 from .render import render_ark_card
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
-from .config import RESOURCE_ROUTES, Config
 from .download import GameResourceDownloader
 from .schemas import CRED, Topics, ArkSignResponse
-from .db_handler import (
-    get_arknights_characters,
-    get_arknights_character_by_uid,
-    get_default_arknights_character,
-)
+from .config import RESOURCE_ROUTES, Config, config
+from .db_handler import get_arknights_characters, get_arknights_character_by_uid, get_default_arknights_character
 from .utils import (
     get_background_image,
     get_characters_and_bind,
@@ -62,7 +58,7 @@ __plugin_meta__ = PluginMetadata(
     config=Config,
     type="application",
     homepage="https://github.com/FrostN0v0/nonebot-plugin-skland",
-    supported_adapters=inherit_supported_adapters("nonebot_plugin_alconna", "nonebot_plugin_user"),
+    supported_adapters=inherit_supported_adapters("nonebot_plugin_alconna"),
     extra={
         "author": "FrostN0v0 <1614591760@qq.com>",
         "version": "0.2.1",
@@ -154,7 +150,7 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
     ark_characters = await get_default_arknights_character(user, session)
     if not ark_characters:
         await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
-    if user_session.platform == "qq":
+    if user_session.platform == "QQClient":
         await message_reaction("66")
     else:
         await message_reaction("❤")
@@ -168,7 +164,9 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
         argot_seg = [Text(str(background)), Image(url=str(background))]
     else:
         argot_seg = Image(path=str(background))
-    msg = UniMessage.image(raw=image) + Argot("background", argot_seg, command="background", expired_at=300)
+    msg = UniMessage.image(raw=image) + Argot(
+        "background", argot_seg, command="background", expired_at=config.argot_expire
+    )
     await msg.send(reply_to=True)
     await session.commit()
 
@@ -260,7 +258,7 @@ async def _(
     if qr_msg.recallable:
         await qr_msg.recall(index=0)
     if scan_code:
-        if user_session.platform == "qq":
+        if user_session.platform == "QQClient":
             await message_reaction("124")
         else:
             await message_reaction("👌")
@@ -322,7 +320,7 @@ async def _(
 
             sign_result[character.nickname] = await sign_in(user, str(character.uid), character.channel_master_id)
 
-    if sign_result[character.nickname]:
+    if sign_result:
         await UniMessage(
             "\n".join(
                 f"角色: {nickname} 签到成功，获得了:\n"

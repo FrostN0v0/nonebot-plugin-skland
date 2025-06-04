@@ -56,7 +56,7 @@ __plugin_meta__ = PluginMetadata(
     config=Config,
     type="application",
     homepage="https://github.com/FrostN0v0/nonebot-plugin-skland",
-    supported_adapters=inherit_supported_adapters("nonebot_plugin_alconna", "nonebot_plugin_user"),
+    supported_adapters=inherit_supported_adapters("nonebot_plugin_alconna"),
     extra={
         "author": "FrostN0v0 <1614591760@qq.com>",
         "version": "0.2.1",

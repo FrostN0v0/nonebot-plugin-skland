@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 import httpx
 from nonebot import logger
 
-from ..schemas import CRED, ArkCard, RogueHistory, ArkSignResponse
+from ..schemas import CRED, ArkCard, RogueData, ArkSignResponse
 from ..exception import LoginException, RequestException, UnauthorizedException
 
 base_url = "https://zonai.skland.com/api/v1"
@@ -139,7 +139,7 @@ class SklandAPI:
                 raise RequestException(f"获取账号 userId 失败: {e}")
 
     @classmethod
-    async def get_rogue(cls, cred: CRED, uid: str, topic_id: str) -> RogueHistory:
+    async def get_rogue(cls, cred: CRED, uid: str, topic_id: str) -> RogueData:
         """获取肉鸽数据"""
         rogue_url = f"{base_url}/game/arknights/rogue?uid={uid}&targetUserId={cred.userId}&topicId={topic_id}"
         async with httpx.AsyncClient() as client:
@@ -156,6 +156,6 @@ class SklandAPI:
                         raise LoginException(f"获取肉鸽数据失败：{response.json().get('message')}")
                     if status != 0:
                         raise RequestException(f"获取肉鸽数据失败：{response.json().get('message')}")
-                return RogueHistory(**response.json()["data"]["history"])
+                return RogueData(**response.json()["data"])
             except httpx.HTTPError as e:
                 raise RequestException(f"获取肉鸽数据失败: {e}")

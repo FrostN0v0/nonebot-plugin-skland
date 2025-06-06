@@ -98,7 +98,7 @@ skland = on_alconna(
                 "-t|--topic|topic",
                 Args[
                     "topic_name?#主题",
-                    ["萨米", "萨卡兹"],
+                    ["傀影", "水月", "萨米", "萨卡兹"],
                     Field(completion=lambda: "请输入指定topic_id"),
                 ],
                 help_text="指定主题进行肉鸽战绩查询",
@@ -127,6 +127,8 @@ skland.shortcut(
     {"command": "skland rogue --topic 萨卡兹", "fuzzy": True, "prefix": True},
 )
 skland.shortcut("萨米肉鸽", {"command": "skland rogue --topic 萨米", "fuzzy": True, "prefix": True})
+skland.shortcut("水月肉鸽", {"command": "skland rogue --topic 水月", "fuzzy": True, "prefix": True})
+skland.shortcut("傀影肉鸽", {"command": "skland rogue --topic 傀影", "fuzzy": True, "prefix": True})
 skland.shortcut("角色更新", {"command": "skland char update", "fuzzy": False, "prefix": True})
 skland.shortcut("资源更新", {"command": "skland sync", "fuzzy": False, "prefix": True})
 
@@ -404,5 +406,6 @@ async def _(
     # TODO: 渲染肉鸽战绩卡片，完善指令逻辑
     rogue = await get_rogue_info(user, str(character.uid), topic_id)  # noqa: F841
     # await UniMessage(rogue.model_dump_json()).send()
-    await UniMessage("功能开发中（救命!来画渲染模板").send()
+    # await UniMessage("功能开发中（救命!来画渲染模板").send()
+    await UniMessage(rogue.model_dump_json()).send()
     await session.commit()

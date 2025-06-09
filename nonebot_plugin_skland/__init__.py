@@ -37,12 +37,12 @@ from nonebot_plugin_alconna import (
 
 from .model import User
 from . import hook as hook
-from .render import render_ark_card
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
 from .download import GameResourceDownloader
 from .schemas import CRED, Topics, ArkSignResponse
 from .config import RESOURCE_ROUTES, Config, config
+from .render import render_ark_card, render_rogue_card
 from .db_handler import get_arknights_characters, get_arknights_character_by_uid, get_default_arknights_character
 from .utils import (
     get_background_image,
@@ -404,8 +404,9 @@ async def _(
 
     topic_id = Topics(str(result.query("rogue.topic.topic_name"))).topic_id if result.find("rogue.topic") else ""
     # TODO: 渲染肉鸽战绩卡片，完善指令逻辑
-    rogue = await get_rogue_info(user, str(character.uid), topic_id)  # noqa: F841
+    rogue = await get_rogue_info(user, str(character.uid), topic_id)
+    img = await render_rogue_card(rogue)
     # await UniMessage(rogue.model_dump_json()).send()
     # await UniMessage("功能开发中（救命!来画渲染模板").send()
-    await UniMessage(rogue.model_dump_json()).send()
+    await UniMessage.image(raw=img).send(at_sender=True)
     await session.commit()

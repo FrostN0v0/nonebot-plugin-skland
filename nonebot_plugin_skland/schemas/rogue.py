@@ -21,6 +21,7 @@ class GameUserInfo(BaseModel):
     name: str
     level: int
     avatar: Avatar
+    isOfficial: bool
 
 
 class ItemInfo(BaseModel):
@@ -40,11 +41,3 @@ class RogueData(BaseModel):
     itemInfo: dict[str, ItemInfo]
     userCharInfo: dict[str, CharInfo]
     career: RogueCareer
-
-    # if PYDANTIC_V2:
-    #     model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True)
-    # else:
-
-    #     class Config:
-    #         extra = "allow"
-    #         arbitrary_types_allowed = True

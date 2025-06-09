@@ -3,9 +3,15 @@ from datetime import datetime
 from pydantic import AnyUrl as Url
 from nonebot_plugin_htmlrender import template_to_pic
 
-from .schemas import ArkCard
 from .config import TEMPLATES_DIR
-from .filters import format_timestamp, time_to_next_4am, time_to_next_monday_4am
+from .schemas import ArkCard, RogueData
+from .filters import (
+    format_timestamp,
+    time_to_next_4am,
+    charId_to_avatarUrl,
+    charId_to_portraitUrl,
+    time_to_next_monday_4am,
+)
 
 
 async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:
@@ -36,6 +42,28 @@ async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:
         },
         pages={
             "viewport": {"width": 706, "height": 1160},
+            "base_url": f"file://{TEMPLATES_DIR}",
+        },
+    )
+
+
+async def render_rogue_card(props: RogueData) -> bytes:
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="rogue.html.jinja2",
+        templates={
+            "now_ts": datetime.now().timestamp(),
+            "career": props.career,
+            "game_user_info": props.gameUserInfo,
+            "history": props.history,
+        },
+        filters={
+            "format_timestamp": format_timestamp,
+            "charId_to_avatarUrl": charId_to_avatarUrl,
+            "charId_to_portraitUrl": charId_to_portraitUrl,
+        },
+        pages={
+            "viewport": {"width": 2200, "height": 1},
             "base_url": f"file://{TEMPLATES_DIR}",
         },
     )

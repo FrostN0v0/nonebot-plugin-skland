@@ -38,3 +38,23 @@
     </div>
 </div>
 {% endmacro %}
+
+{% macro rogue_char(char) %}
+<div class="relative">
+    <img src="{{char.id | charId_to_portraitUrl}}" class="w-24 h-auto" />
+    <div class="absolute inset-0 bg-gradient-to-b from-transparent gradient-assist"></div>
+    <div class="absolute left-0.5 top-2 flex justify-between gap-1">
+        <div class="w-4 h-4 relative bg-[#080808]/45 outline-1 outline-white/80 flex items-center justify-center">
+            <img src="../images/profession/icon_profession_{{char.profession | lower}}.png" class="h-3.5" />
+        </div>
+        <img src="../images/rarity/rarity_yellow_{{char.rarity}}.png" class="h-4" />
+    </div>
+    <div class="absolute bottom-2 left-2.5 right-2.5 flex justify-between">
+        <img src="../images/ark_card/elite/elite_{{char.evolvePhase}}.png" class="w-8" />
+        <div
+            class="w-5 h-5 translate-y-1/5 bg-[#080808]/45 rounded-full outline-2 outline-[#E4DC3F]/90 flex items-center justify-center">
+            <span class="text-xs translate-y-1/16 text-white font-[Akrobat]">{{char.level}}</span>
+        </div>
+    </div>
+</div>
+{% endmacro %}

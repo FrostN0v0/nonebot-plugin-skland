@@ -1,0 +1,140 @@
+{% from 'macros.html.jinja2' import rogue_char %}
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Rogue Card</title>
+  <style>
+    {% include "index.css" %}
+  </style>
+</head>
+
+<body>
+  <div class="bg-cover bg-center bg-no-repeat p-5"
+    style="background-image: url(../images/background/rogue/pic_rogue_2_50.png)">
+    <div class="max-w-[2200px] mx-auto flex flex-col gap-5">
+      <header class="flex items-center bg-[#EFEFEF]/25 card-shadow border border-white/20 rounded-lg p-4 space-x-6">
+        <div>
+          <img src="{{ game_user_info.avatar.url }}" alt="Avatar" class="avater-shadow w-16 h-16" />
+        </div>
+        <div class="space-y-4">
+          <h2 class="text-xl font-bold text-white">Dr.{{ game_user_info.name }}</h2>
+          <div class="w-14 h-full bg-[#23BAFC]/80 rounded-lg reg-shadow-blue flex items-center justify-center">
+            <span class="text-[#080309]/80 text-sm font-bold font-[Bender]">{{'官服' if game_user_info.isOfficial else
+              'B服'}}</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="info-grid grid md:grid-cols-[400px_1fr_1fr] gap-5">
+        <div class="flex flex-col gap-6">
+          <div
+            class="bg-[#EFEFEF]/25 card-shadow border border-white/20 rounded-lg p-4 flex justify-around items-center">
+            <div class="flex flex-col items-center gap-1">
+              <div class="text-white font-bold font-[Bender]">最高达成</div>
+              <div class="flex items-center text-[#5C8BE5] font-bold font-[Bender] text-2xl">
+                <span>{{history.mode}}</span>
+                <span class="text-xs text-[#5C8BE5] mx-1">♦</span>
+                <span>{{history.modeGrade}}</span>
+              </div>
+              <div class="text-xs text-[#F0F0F0]/80 font-bold">难度</div>
+            </div>
+
+            <div class="flex flex-col items-center gap-1">
+              <div class="text-white font-bold font-[Bender]">LV.</div>
+              <div class="text-2xl text-[#5C8BE5] font-bold">{{history.bpLevel}}</div>
+              <div class="text-xs text-[#F0F0F0]/80 font-bold">等级</div>
+            </div>
+
+            <div class="flex flex-col items-center gap-1">
+              <div class="text-white font-bold font-[Bender]">RECORD</div>
+              <div class="text-2xl text-[#5C8BE5] font-bold">{{history.score}}</div>
+              <div class="text-xs text-[#F0F0F0]/80 font-bold">得分</div>
+            </div>
+          </div>
+
+          <div class="bg-[#EFEFEF]/25 card-shadow border border-white/20 rounded-lg p-4">
+            <h3 class=" font-bold mb-3 text-white font-[Bender]">常用干员</h3>
+            <div class="grid grid-cols-3 gap-8">
+
+            {% for char in history.chars %}
+            {{ rogue_char(char) }}
+            {% endfor %}
+
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-[#EFEFEF]/25 card-shadow border border-white/20 rounded-lg p-4">
+          <h3 class="text-white font-bold mb-3">个人生涯</h3>
+          <div class="text-gray-400">待完善</div>
+        </div>
+
+        <div class="bg-[#EFEFEF]/25 card-shadow border border-white/20 rounded-lg p-4">
+          <h3 class="text-white font-bold mb-3">收藏战绩</h3>
+          <div class="text-gray-400">待完善</div>
+        </div>
+      </div>
+
+      <main class="bg-[#EFEFEF]/25 card-shadow border border-white/20 rounded-lg p-4">
+        <h3 class="text-lg text-white/80 font-bold mb-4">最近战绩</h3>
+        <div class="results-grid grid grid-cols-4 items-start gap-4">
+          <div class="w-116 rounded-[10px] bg-[#f0f0f0]/40 info-content-shadow flex flex-col">
+            <div class="rounded-[10px] bg-[#98E37B]/30 info-content-shadow px-4 pt-4 pb-2">
+              <div class="flex justify-between items-start">
+                <div class="flex flex-col">
+                  <div class="flex items-center text-white font-bold font-[Bender] text-lg">
+                    <span>波涛迭起</span>
+                    <span class="text-[8px] text-white mx-1">♦</span>
+                    <span>10</span>
+                  </div>
+                  <span class="text-[#5C8BE5] font-bold font-[Bender] text-sm">得分 1516</span>
+                </div>
+                <div class="flex flex-col items-end">
+                  <span class="text-white font-bold font-[Bender] text-lg">胜利</span>
+                  <span class="text-white/60 text-sm font-[Bender]">"人之光辉"</span>
+                </div>
+
+              </div>
+              <div class="grid grid-cols-8 gap-4 mt-2">
+                <div class="relative flex items-center justify-center">
+                  <div
+                    class="w-3 h-3 absolute top-0 left-0 bg-[#080808]/45 outline-1 outline-white/80 flex items-center justify-center">
+                    <img src="../images/profession/icon_profession_sniper.png" class="h-2" />
+                  </div>
+                  <img src="../images/rarity/rarity_yellow_5.png" class="absolute bottom-0 h-3" />
+                  <img src="{{'char_249_mlyss' | charId_to_avatarUrl}}" class="w-10 h-10" />
+                </div>
+              </div>
+              <div
+                class="flex justify-between items-center mt-2 border-t border-white/10 text-white/60 text-[12px] font-[Bender]">
+                <span>ID: 11451419</span>
+                <span>2025-06-07 16:30</span>
+              </div>
+            </div>
+            <div class="rounded-b-[10px] flex items-center px-4 py-1.5">
+              <div class="h-full flex items-center justify-center space-x-1">
+                <img src="../images/rogue/band/2/rogue_2_band_14.png" class="w-4 h-4" />
+                <span class="text-white/60 text-[10px] font-[Bender]">心胜于物分队</span>
+              </div>
+
+              <div class="flex items-center space-x-1 ml-auto">
+                <div
+                  class="px-2 h-full bg-[#725CAD]/60 rounded-lg reg-shadow flex items-center justify-center space-x-1">
+                  <img src="https://bbs.hycdn.cn/asset/rogue/c1f293dd947a6a361d45cfd5dba98775.png" class="w-4 h-4" />
+                  <span class="text-white/60 text-[10px] font-[Bender]">掷骰不停</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer class="text-center text-white/80 py-4">Generated by nonebot-plugin-skland</footer>
+    </div>
+  </div>
+</body>
+
+</html>

@@ -407,5 +407,5 @@ async def _(
     rogue = await get_rogue_info(user, str(character.uid), topic_id)
     background = await get_rogue_background_image(topic_id)
     img = await render_rogue_card(rogue, background)
-    await UniMessage.image(raw=img).send(at_sender=True)
+    await UniMessage(Image(raw=img)).send()
     await session.commit()

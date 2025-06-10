@@ -47,6 +47,7 @@ from .db_handler import get_arknights_characters, get_arknights_character_by_uid
 from .utils import (
     get_background_image,
     get_characters_and_bind,
+    get_rogue_background_image,
     refresh_cred_token_if_needed,
     refresh_access_token_if_needed,
 )
@@ -403,10 +404,8 @@ async def _(
         await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
 
     topic_id = Topics(str(result.query("rogue.topic.topic_name"))).topic_id if result.find("rogue.topic") else ""
-    # TODO: 渲染肉鸽战绩卡片，完善指令逻辑
     rogue = await get_rogue_info(user, str(character.uid), topic_id)
-    img = await render_rogue_card(rogue)
-    # await UniMessage(rogue.model_dump_json()).send()
-    # await UniMessage("功能开发中（救命!来画渲染模板").send()
+    background = await get_rogue_background_image(topic_id)
+    img = await render_rogue_card(rogue, background)
     await UniMessage.image(raw=img).send(at_sender=True)
     await session.commit()

@@ -35,9 +35,31 @@ class CharInfo(BaseModel):
     evolvePhase: int
 
 
+class Topic(BaseModel):
+    id: str
+    isSelected: bool
+    name: str
+    pic: str
+
+
 class RogueData(BaseModel):
+    topics: list[Topic]
     history: RogueHistory
     gameUserInfo: GameUserInfo
     itemInfo: dict[str, ItemInfo]
     userCharInfo: dict[str, CharInfo]
     career: RogueCareer
+
+    @property
+    def topic(self) -> str:
+        for topic in self.topics:
+            if topic.isSelected:
+                return topic.id
+        return "None"
+
+    @property
+    def topic_img(self) -> str:
+        for topic in self.topics:
+            if topic.isSelected:
+                return topic.pic
+        return "None"

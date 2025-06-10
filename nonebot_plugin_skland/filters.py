@@ -38,6 +38,10 @@ def time_to_next_4am(now_ts: float) -> str:
     return format_timestamp((next_4am - now).total_seconds())
 
 
+def format_timestamp_str(stamp_str: str) -> str:
+    return datetime.fromtimestamp(float(stamp_str)).strftime("%Y-%m-%d %H:%M:%S")
+
+
 def charId_to_avatarUrl(charId: str) -> str:
     avatar_id = charId
     for symbol in ["@", "#"]:

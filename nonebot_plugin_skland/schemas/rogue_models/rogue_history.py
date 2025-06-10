@@ -71,4 +71,4 @@ class RogueHistory(BaseModel):
     chars: list[Char]
     tagList: list[Tag]
     records: list[Record]
-    favourRecords: list
+    favourRecords: list[Record]

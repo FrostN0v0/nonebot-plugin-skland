@@ -14,10 +14,12 @@ require("nonebot_plugin_argot")
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_localstore")
 require("nonebot_plugin_htmlrender")
+from nonebot_plugin_waiter import prompt
 from arclet.alconna import config as alc_config
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_user import UserSession, get_user
-from nonebot_plugin_argot import Text, Argot, Image, ArgotExtension
+from nonebot_plugin_argot.data_source import get_argot
+from nonebot_plugin_argot import Text, Argot, Image, ArgotEvent, ArgotExtension, on_argot
 from nonebot_plugin_alconna import (
     At,
     Args,
@@ -40,9 +42,9 @@ from . import hook as hook
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
 from .download import GameResourceDownloader
-from .schemas import CRED, Topics, ArkSignResponse
 from .config import RESOURCE_ROUTES, Config, config
-from .render import render_ark_card, render_rogue_card
+from .schemas import CRED, Topics, RogueData, ArkSignResponse
+from .render import render_ark_card, render_rogue_card, render_rogue_info
 from .db_handler import get_arknights_characters, get_arknights_character_by_uid, get_default_arknights_character
 from .utils import (
     get_background_image,
@@ -407,5 +409,24 @@ async def _(
     rogue = await get_rogue_info(user, str(character.uid), topic_id)
     background = await get_rogue_background_image(topic_id)
     img = await render_rogue_card(rogue, background)
-    await UniMessage(Image(raw=img)).send()
+    await UniMessage(Image(raw=img) + Argot("data", rogue.model_dump_json(), command=False) + Argot("info")).send()
     await session.commit()
+
+
+@on_argot("info")
+async def _(event: ArgotEvent):
+    """处理战绩详情的暗语事件"""
+    argot = await get_argot("data", event.parent_id)
+    if not argot:
+        await UniMessage.text("未找到该暗语或暗语已过期").finish(at_sender=True)
+    resp = await prompt("请输入战绩ID", timeout=60)
+    if not resp:
+        await UniMessage.text("未输入任何内容").finish(at_sender=True)
+    if not resp.extract_plain_text().isdigit():
+        await UniMessage.text("请输入有效的数字ID").finish(at_sender=True)
+    if data := argot.dump_segment():
+        rogue_data = RogueData.model_validate_json(UniMessage.load(data).extract_plain_text())
+        # TODO: Render rogue info card
+        background = await get_rogue_background_image(rogue_data.topic)
+        img = await render_rogue_info(rogue_data, background, int(resp.extract_plain_text()), False)
+        await event.target.send(UniMessage(Image(raw=img)))

@@ -63,7 +63,33 @@
   }
 
   .theme-color-rogue-4 {
-    color: #FFC94A;
+    color: #ffc94a;
+  }
+  .rogue-stage-linear {
+    background: linear-gradient(
+      90deg,
+      rgba(70, 28, 29, 0) 0%,
+      rgba(70, 28, 29, 0.8) 20%,
+      rgba(70, 28, 29, 0.8) 80%,
+      rgba(70, 28, 29, 0) 100%
+    );
+  }
+  .rogue-stage-linear-victory {
+    background: linear-gradient(
+      90deg,
+      rgba(31, 85, 93, 0) 0%,
+      rgba(31, 85, 93, 0.8) 20%,
+      rgba(31, 85, 93, 0.8) 80%,
+      rgba(31, 85, 93, 0) 100%
+    );
+  }
+  .gradient-upgrade-char {
+    background: linear-gradient(
+      180deg,
+      rgba(127, 55, 28, 0) 64%,
+      rgba(127, 55, 28, 0.55) 75%,
+      rgba(127, 55, 28, 0.8) 100%
+    );
   }
 }
 

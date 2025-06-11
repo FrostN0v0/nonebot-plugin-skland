@@ -82,7 +82,7 @@ theme-color-rogue-2
           <h3 class="text-white font-bold mb-3">收藏战绩</h3>
           <div class="results-grid grid grid-cols-3 items-start gap-4">
             {% for record in history.favourRecords %}
-            {{ rogue_record(record, loop.index, theme_color) }}
+            {{ rogue_record(record, loop.index, theme_color, topic) }}
             {% endfor %}
           </div>
         </div>
@@ -93,7 +93,7 @@ theme-color-rogue-2
         <div class="results-grid grid grid-cols-4 items-start gap-4">
 
           {% for record in history.records %}
-          {{ rogue_record(record, loop.index, theme_color) }}
+          {{ rogue_record(record, loop.index, theme_color, topic) }}
           {% endfor %}
         </div>
       </main>

@@ -192,6 +192,9 @@
   .inset-0 {
     inset: calc(var(--spacing) * 0);
   }
+  .inset-x-0 {
+    inset-inline: calc(var(--spacing) * 0);
+  }
   .top-0 {
     top: calc(var(--spacing) * 0);
   }
@@ -221,6 +224,9 @@
   }
   .top-\[50px\] {
     top: 50px;
+  }
+  .right-0\.5 {
+    right: calc(var(--spacing) * 0.5);
   }
   .right-2\.5 {
     right: calc(var(--spacing) * 2.5);
@@ -300,6 +306,9 @@
   .mt-0\.5 {
     margin-top: calc(var(--spacing) * 0.5);
   }
+  .mt-1 {
+    margin-top: calc(var(--spacing) * 1);
+  }
   .mt-2 {
     margin-top: calc(var(--spacing) * 2);
   }
@@ -375,8 +384,14 @@
   .h-10 {
     height: calc(var(--spacing) * 10);
   }
+  .h-12 {
+    height: calc(var(--spacing) * 12);
+  }
   .h-16 {
     height: calc(var(--spacing) * 16);
+  }
+  .h-18 {
+    height: calc(var(--spacing) * 18);
   }
   .h-18\.75 {
     height: calc(var(--spacing) * 18.75);
@@ -435,6 +450,9 @@
   .w-10 {
     width: calc(var(--spacing) * 10);
   }
+  .w-12 {
+    width: calc(var(--spacing) * 12);
+  }
   .w-13\.5 {
     width: calc(var(--spacing) * 13.5);
   }
@@ -492,6 +510,9 @@
   .w-full {
     width: 100%;
   }
+  .max-w-\[1100px\] {
+    max-width: 1100px;
+  }
   .max-w-\[2200px\] {
     max-width: 2200px;
   }
@@ -513,6 +534,10 @@
     --tw-translate-y: calc(calc(1/2 * 100%) * -1);
     translate: var(--tw-translate-x) var(--tw-translate-y);
   }
+  .-translate-y-2 {
+    --tw-translate-y: calc(var(--spacing) * -2);
+    translate: var(--tw-translate-x) var(--tw-translate-y);
+  }
   .-translate-y-4 {
     --tw-translate-y: calc(var(--spacing) * -4);
     translate: var(--tw-translate-x) var(--tw-translate-y);
@@ -531,8 +556,14 @@
   .grid-cols-4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+  .grid-cols-7 {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
   .grid-cols-8 {
     grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+  .grid-cols-10 {
+    grid-template-columns: repeat(10, minmax(0, 1fr));
   }
   .flex-col {
     flex-direction: column;
@@ -561,6 +592,9 @@
   .gap-1 {
     gap: calc(var(--spacing) * 1);
   }
+  .gap-2 {
+    gap: calc(var(--spacing) * 2);
+  }
   .gap-4 {
     gap: calc(var(--spacing) * 4);
   }
@@ -588,6 +622,13 @@
       --tw-space-y-reverse: 0;
       margin-block-start: calc(calc(var(--spacing) * 1) * var(--tw-space-y-reverse));
       margin-block-end: calc(calc(var(--spacing) * 1) * calc(1 - var(--tw-space-y-reverse)));
+    }
+  }
+  .space-y-2 {
+    :where(& > :not(:last-child)) {
+      --tw-space-y-reverse: 0;
+      margin-block-start: calc(calc(var(--spacing) * 2) * var(--tw-space-y-reverse));
+      margin-block-end: calc(calc(var(--spacing) * 2) * calc(1 - var(--tw-space-y-reverse)));
     }
   }
   .space-y-4 {
@@ -705,6 +746,9 @@
   .border-white\/20 {
     border-color: color-mix(in oklab, var(--color-white) 20%, transparent);
   }
+  .bg-\[\#0B5A80\]\/45 {
+    background-color: color-mix(in oklab, #0B5A80 45%, transparent);
+  }
   .bg-\[\#23BAFC\]\/80 {
     background-color: color-mix(in oklab, #23BAFC 80%, transparent);
   }
@@ -802,6 +846,9 @@
   .object-contain {
     object-fit: contain;
   }
+  .p-2 {
+    padding: calc(var(--spacing) * 2);
+  }
   .p-4 {
     padding: calc(var(--spacing) * 4);
   }
@@ -811,8 +858,17 @@
   .px-2 {
     padding-inline: calc(var(--spacing) * 2);
   }
+  .px-3 {
+    padding-inline: calc(var(--spacing) * 3);
+  }
   .px-4 {
     padding-inline: calc(var(--spacing) * 4);
+  }
+  .px-10 {
+    padding-inline: calc(var(--spacing) * 10);
+  }
+  .py-0\.5 {
+    padding-block: calc(var(--spacing) * 0.5);
   }
   .py-1\.5 {
     padding-block: calc(var(--spacing) * 1.5);
@@ -854,6 +910,10 @@
   .text-xl {
     font-size: var(--text-xl);
     line-height: var(--tw-leading, var(--text-xl--line-height));
+  }
+  .text-xl\/8 {
+    font-size: var(--text-xl);
+    line-height: calc(var(--spacing) * 8);
   }
   .text-xs {
     font-size: var(--text-xs);
@@ -1019,7 +1079,16 @@
     color: #5ce5b5;
   }
   .theme-color-rogue-4 {
-    color: #FFC94A;
+    color: #ffc94a;
+  }
+  .rogue-stage-linear {
+    background: linear-gradient( 90deg, rgba(70, 28, 29, 0) 0%, rgba(70, 28, 29, 0.8) 20%, rgba(70, 28, 29, 0.8) 80%, rgba(70, 28, 29, 0) 100% );
+  }
+  .rogue-stage-linear-victory {
+    background: linear-gradient( 90deg, rgba(31, 85, 93, 0) 0%, rgba(31, 85, 93, 0.8) 20%, rgba(31, 85, 93, 0.8) 80%, rgba(31, 85, 93, 0) 100% );
+  }
+  .gradient-upgrade-char {
+    background: linear-gradient( 180deg, rgba(127, 55, 28, 0) 64%, rgba(127, 55, 28, 0.55) 75%, rgba(127, 55, 28, 0.8) 100% );
   }
 }
 @font-face {

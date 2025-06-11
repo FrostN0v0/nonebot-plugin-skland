@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from pydantic import AnyUrl as Url
@@ -70,4 +71,34 @@ async def render_rogue_card(props: RogueData, bg: str | Url) -> bytes:
             "viewport": {"width": 2200, "height": 1},
             "base_url": f"file://{TEMPLATES_DIR}",
         },
+        device_scale_factor=1.5,
+    )
+
+
+async def render_rogue_info(props: RogueData, bg: str | Url, id: int, is_favored: bool) -> bytes:
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="rogue_info.html.jinja2",
+        templates={
+            "id": id,
+            "ending_text": json.loads(props.history.records[id - 1].endingText),
+            "is_favored": is_favored,
+            "background_image": bg,
+            "topic_img": props.topic_img,
+            "topic": props.topic,
+            "now_ts": datetime.now().timestamp(),
+            "career": props.career,
+            "game_user_info": props.gameUserInfo,
+            "history": props.history,
+        },
+        filters={
+            "format_timestamp_str": format_timestamp_str,
+            "charId_to_avatarUrl": charId_to_avatarUrl,
+            "charId_to_portraitUrl": charId_to_portraitUrl,
+        },
+        pages={
+            "viewport": {"width": 1100, "height": 1},
+            "base_url": f"file://{TEMPLATES_DIR}",
+        },
+        device_scale_factor=1.5,
     )

@@ -1,0 +1,136 @@
+{% macro rogue_char(char) %}
+<div class="relative">
+    <img src="{{char.id | charId_to_portraitUrl}}" class="w-24 h-auto" />
+    <div class="absolute inset-0 bg-gradient-to-b from-transparent gradient-assist"></div>
+    <div class="absolute left-0.5 top-2 flex justify-between gap-1">
+        <div class="w-4 h-4 relative bg-[#080808]/45 outline-1 outline-white/80 flex items-center justify-center">
+            <img src="../images/profession/icon_profession_{{char.profession | lower}}.png" class="h-3.5" />
+        </div>
+        <img src="../images/rarity/rarity_yellow_{{char.rarity}}.png" class="h-4" />
+    </div>
+    <div class="absolute bottom-2 left-2.5 right-2.5 flex justify-between">
+        <img src="../images/ark_card/elite/elite_{{char.evolvePhase}}.png" class="w-8" />
+        <div
+            class="w-5 h-5 translate-y-1/5 bg-[#080808]/45 rounded-full outline-2 outline-[#E4DC3F]/90 flex items-center justify-center">
+            <span class="text-xs translate-y-1/16 text-white font-[Akrobat]">{{char.level}}</span>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro rogue_info_char(char) %}
+<div class="relative w-24">
+    {% if char.type == "THIRD" %}
+    <img src="../images/rogue/node_upgrade_battle.png" class="h-4 bg-[#0B5A80]/45 px-10 py-0.5 -translate-y-2" />
+    {% endif %}
+    <img src="{{char.id | charId_to_portraitUrl}}" class="w-24 h-auto" />
+    <div
+        class="absolute inset-0 bg-gradient-to-b from-transparent {% if char.upgradePhase %}gradient-upgrade-char{% else %}gradient-assist{% endif %}">
+    </div>
+    <div class="absolute left-0.5 top-2 flex justify-between gap-1">
+        <div class="w-4 h-4 relative bg-[#080808]/45 outline-1 outline-white/80 flex items-center justify-center">
+            <img src="../images/profession/icon_profession_{{char.profession | lower}}.png" class="h-3.5" />
+        </div>
+        <img src="../images/rarity/rarity_yellow_{{char.rarity}}.png" class="h-4" />
+    </div>
+    <div class="absolute inset-x-0 bottom-2 flex flex-col items-center">
+        <img src="../images/ark_card/elite/elite_{{char.evolvePhase}}.png" class="w-8" />
+        <span class="text-white font-[Akrobat] text-xs mt-1">{{char.name}}</span>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro rogue_record(record, index, theme_color, topic) %}
+
+<div class="w-116 rounded-[10px] bg-[#f0f0f0]/40 info-content-shadow flex flex-col">
+    <div
+        class="rounded-[10px] {{ 'bg-[#98E37B]/30' if record.success else 'bg-[#360A0D]/45' }} info-content-shadow px-4 pt-4 pb-2">
+        <div class="flex justify-between items-start">
+            <div class="flex flex-col">
+                <div class="flex items-center text-white font-bold font-[Bender] text-lg">
+                    <span>{{record.mode}}</span>
+                    <span class="text-[8px] text-white mx-1">♦</span>
+                    <span>{{record.modeGrade}}</span>
+                </div>
+                <span class="{{ theme_color | trim }} font-bold font-[Bender] text-sm">得分 {{record.score}}</span>
+            </div>
+            <div class="flex flex-col items-end">
+                <span class="text-white font-bold font-[Bender] text-lg">{{'胜利' if record.success else '失败'}}</span>
+                <span class="text-white/60 text-sm font-[Bender]">
+                    {%- if record.lastStage -%}
+                    "{{ record.lastStage }}"
+                    {%- endif -%}
+                </span>
+            </div>
+
+        </div>
+        <div class="grid grid-cols-8 gap-4 mt-2">
+            {% for char in record.lastChars %}
+            {{ rogue_char_avatar(char) }}
+            {% endfor %}
+        </div>
+        <div
+            class="flex justify-between items-center mt-2 border-t border-white/10 text-white/60 text-[12px] font-[Bender]">
+            <span>ID: {{index}}</span>
+            <span>{{record.endTs | format_timestamp_str}}</span>
+        </div>
+    </div>
+    <div class="rounded-b-[10px] flex items-center px-4 py-1.5">
+        <div class="h-full flex items-center justify-center space-x-1">
+            <img src="../images/rogue/band/{{topic}}/{{record.band.id}}.png" class="w-4 h-4" />
+            <span class="text-white/60 text-[10px] font-[Bender]">{{record.band.name}}</span>
+        </div>
+        <div class="flex items-center space-x-1 ml-auto">
+            {% for tag in record.tagList %}
+            {{ rogue_tag(tag) }}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endmacro %}
+
+{% macro rogue_char_avatar(char) %}
+
+<div class="relative flex items-center justify-center">
+    <div
+        class="w-3 h-3 absolute top-0 left-0 bg-[#080808]/45 outline-1 outline-white/80 flex items-center justify-center">
+        <img src="../images/profession/icon_profession_{{char.profession | lower}}.png" class="h-2" />
+    </div>
+    <img src="../images/rarity/rarity_yellow_{{char.rarity}}.png" class="absolute bottom-0 h-3" />
+    <img src="{{char.id | charId_to_avatarUrl}}" class="w-10 h-10" />
+</div>
+
+{% endmacro %}
+
+{% macro rogue_tag(tag) %}
+
+<div class="px-2 h-full bg-[#725CAD]/60 rounded-lg reg-shadow flex items-center justify-center space-x-1">
+    <img src="{{tag.icon}}" class="w-4 h-4" />
+    <span class="text-white/60 text-[10px] font-[Bender]">{{tag.name}}</span>
+</div>
+
+{%endmacro%}
+
+{% macro rogue_totem(totem, topic) %}
+
+<div class="relative flex items-center justify-center w-12 h-12">
+    {% if topic == "rogue_1"%}
+    <img src="../images/rogue/capsule/{{totem.id}}.png" class="h-full" />
+    {% elif topic == "rogue_2"%}
+    <img src="../images/rogue/mutation/pic_{{totem.id}}.png" class="w-full h-full" />
+    {% elif topic == "rogue_3"%}
+    <img src="https://web.hycdn.cn/arknights/game/assets/roguelike_item/{{totem.id}}.png" class="w-full h-full" />
+    <div
+        class="absolute bottom-0.5 right-0.5 bg-[#080808]/45 text-white text-xs font-bold w-4 h-4 flex items-center justify-center">
+        {{ totem.count }}
+    </div>
+    {% elif topic == "rogue_4"%}
+    <img src="https://web.hycdn.cn/arknights/game/assets/roguelike_item/{{totem.id}}.png" class="w-full h-full" />
+    <div
+        class="absolute bottom-0.5 right-0.5 bg-[#080808]/45 text-white text-xs font-bold w-4 h-4 flex items-center justify-center">
+        {{ totem.count }}
+    </div>
+    {% endif %}
+</div>
+{%endmacro%}

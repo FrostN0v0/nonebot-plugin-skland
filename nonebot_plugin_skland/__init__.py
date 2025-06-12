@@ -144,7 +144,7 @@ skland.shortcut("战绩详情", {"command": "skland rginfo", "fuzzy": True, "pre
 skland.shortcut("收藏战绩详情", {"command": "skland rginfo -f", "fuzzy": True, "prefix": True})
 
 
-@skland.assign("main")
+@skland.assign("$main")
 async def _(session: async_scoped_session, user_session: UserSession, target: Match[At | int]):
     @refresh_cred_token_if_needed
     @refresh_access_token_if_needed
@@ -411,6 +411,10 @@ async def _(
     character = await get_default_arknights_character(user, session)
     if not character:
         await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
+    if user_session.platform == "QQClient":
+        await message_reaction("66")
+    else:
+        await message_reaction("❤")
 
     topic_id = Topics(str(result.query("rogue.topic.topic_name"))).topic_id if result.find("rogue.topic") else ""
     rogue = await get_rogue_info(user, str(character.uid), topic_id)
@@ -429,13 +433,21 @@ async def _(
 
 
 @skland.assign("rginfo")
-async def _(id: Match[int], msg_id: MsgId, ext: ReplyRecordExtension, result: Arparma):
+async def _(id: Match[int], msg_id: MsgId, ext: ReplyRecordExtension, result: Arparma, user_session: UserSession):
     """获取明日方舟肉鸽战绩详情"""
     if reply := ext.get_reply(msg_id):
         argot = await get_argot("data", reply.id)
         if not argot:
+            if user_session.platform == "QQClient":
+                await message_reaction("326")
+            else:
+                await message_reaction("🤖")
             await UniMessage.text("未找到该暗语或暗语已过期").finish(at_sender=True)
         if data := argot.dump_segment():
+            if user_session.platform == "QQClient":
+                await message_reaction("66")
+            else:
+                await message_reaction("❤")
             rogue_data = RogueData.model_validate_json(UniMessage.load(data).extract_plain_text())
             background = await get_rogue_background_image(rogue_data.topic)
             if result.find("rginfo.favored"):

@@ -223,6 +223,18 @@ wheels = [
 ]
 
 [[package]]
+name = "arclet-letoderea"
+version = "0.17.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tarina" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/75/42/2060edf959e3a7081ca471b367e2027d4d6909bb3424d9e8cd308f3c6cb4/arclet_letoderea-0.17.0.tar.gz", hash = "sha256:cfa464f137cb80deef16f1259f37343f8f3529f8cf1e8c3f0c4cf78ac1b0dcf3", size = 28305, upload-time = "2025-04-19T09:13:30.819Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/82/c6/0302ee5c22a0e38f9f9f358d080798731866427e07dd4df7155ac8232a34/arclet_letoderea-0.17.0-py3-none-any.whl", hash = "sha256:7be94e5d45fdf9f4793e7a4d2d1e1c7e1e23d04bc4371ae7ffc91c4a99985f67", size = 25181, upload-time = "2025-04-19T09:13:29.246Z" },
+]
+
+[[package]]
 name = "async-timeout"
 version = "5.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1034,7 +1046,7 @@ wheels = [
 
 [[package]]
 name = "nonebot-plugin-alconna"
-version = "0.57.1"
+version = "0.58.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "arclet-alconna" },
@@ -1045,9 +1057,9 @@ dependencies = [
     { name = "nonebot2" },
     { name = "tarina" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/19/e6/b9b33984e9d78581778a21567f62318246885a1d40463d912585c1759114/nonebot_plugin_alconna-0.57.1.tar.gz", hash = "sha256:8094ea4e23f3822f40b2e94cf3677ab85e6242dc463713e511ce985534f1c3e3", size = 146647, upload-time = "2025-04-09T03:21:29.892Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/d0/90d1cce950cecb15eb9c7db01521e34ec5624f2a82656fdd592e9c7967dd/nonebot_plugin_alconna-0.58.3.tar.gz", hash = "sha256:92bc06e83e65de7964783f1fee6d3d5402b0f6f487554f18a806a97020ab1bca", size = 152985, upload-time = "2025-06-07T14:55:27.166Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/88/a92274ad339152e0c9eeb217c56b94ca7543ef5765f6d6b7f8b5c4dff82f/nonebot_plugin_alconna-0.57.1-py3-none-any.whl", hash = "sha256:c89f8ad133cd9d6bcecc2088231633f30eaf96ad0ae12ffde1b0075f61de25eb", size = 202759, upload-time = "2025-04-09T03:21:27.884Z" },
+    { url = "https://files.pythonhosted.org/packages/0e/1b/5ff27d293e2a96ed548fe2de46414d5d0fccd03b2e263cf7eacec492d0ea/nonebot_plugin_alconna-0.58.3-py3-none-any.whl", hash = "sha256:d6f645c021285ffc47c659c9e6f25ee694936f299bd0bd68d037aeaa60ffdb45", size = 210867, upload-time = "2025-06-07T14:55:25.585Z" },
 ]
 
 [[package]]
@@ -1066,18 +1078,19 @@ wheels = [
 
 [[package]]
 name = "nonebot-plugin-argot"
-version = "0.1.7"
+version = "0.1.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
+    { name = "arclet-letoderea" },
     { name = "nonebot-plugin-alconna" },
     { name = "nonebot-plugin-apscheduler" },
     { name = "nonebot-plugin-localstore" },
     { name = "nonebot2" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d9/77/89e9b923d044dc4dee6f1fb0906a6d1b5239f7bcd243c25fea0de09bf410/nonebot_plugin_argot-0.1.7.tar.gz", hash = "sha256:f76c2139c9af1e2de6efdc487b728fbad84737d272bf1f600d085bbe6ed79094", size = 12326, upload-time = "2025-04-06T03:42:15.428Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3c/83/76973d25e558e4f4775173b92c2fb193833c087f6d2a9252103cfcfda79e/nonebot_plugin_argot-0.1.9.tar.gz", hash = "sha256:ba0d6d1ebd3bc192e8e26dcf48a4e78f93cfc30943e8a6f37bf9992a49ec2cba", size = 12392, upload-time = "2025-06-01T12:01:47.763Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7a/dd/210d00aedf9870644581029b83f2818ea7d891a6888238890fdfb47bf418/nonebot_plugin_argot-0.1.7-py3-none-any.whl", hash = "sha256:1af939a60967e27aff6f7ce97150d26cba8f1ef0cf216b44372cc0d8e5937204", size = 11965, upload-time = "2025-04-06T03:42:14.567Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/b5/71e664125f26ef654be6ac9d1a1594dda1b03b3e1376057757fac5da1c03/nonebot_plugin_argot-0.1.9-py3-none-any.whl", hash = "sha256:5e7b719bde8c966ca5a6ceaf8a94f49332b97ed7d48003e830d9ed41ce2179a0", size = 12584, upload-time = "2025-06-01T12:01:46.429Z" },
 ]
 
 [[package]]
@@ -1170,7 +1183,7 @@ requires-dist = [
     { name = "nonebot-adapter-onebot", marker = "extra == 'dev'", specifier = ">=2.4.6" },
     { name = "nonebot-adapter-telegram", marker = "extra == 'dev'", specifier = ">=0.1.0b20" },
     { name = "nonebot-plugin-alconna", specifier = ">=0.57.1" },
-    { name = "nonebot-plugin-argot", specifier = ">=0.1.7" },
+    { name = "nonebot-plugin-argot", specifier = ">=0.1.9" },
     { name = "nonebot-plugin-htmlrender", specifier = ">=0.6.5" },
     { name = "nonebot-plugin-localstore", specifier = ">=0.7.3" },
     { name = "nonebot-plugin-orm", specifier = ">=0.7.6" },

@@ -1,4 +1,10 @@
+import json
+from urllib.parse import quote
 from datetime import datetime, timedelta
+
+from nonebot import logger
+
+from .config import CACHE_DIR
 
 
 def format_timestamp(timestamp: float) -> str:
@@ -31,3 +37,38 @@ def time_to_next_4am(now_ts: float) -> str:
     if now > next_4am:
         next_4am += timedelta(days=1)
     return format_timestamp((next_4am - now).total_seconds())
+
+
+def format_timestamp_str(stamp_str: str) -> str:
+    return datetime.fromtimestamp(float(stamp_str)).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def charId_to_avatarUrl(charId: str) -> str:
+    avatar_id = next(
+        (charId.replace(symbol, "_", 1) for symbol in ["@", "#"] if symbol in charId),
+        charId,
+    )
+    img_path = CACHE_DIR / "avatar" / f"{avatar_id}.png"
+    if not img_path.exists():
+        img_url = f"https://web.hycdn.cn/arknights/game/assets/char/avatar/{charId}.png"
+        logger.debug(f"Avatar not found locally, using URL: {img_url}")
+        return img_url
+    return img_path.as_uri()
+
+
+def charId_to_portraitUrl(charId: str) -> str:
+    portrait_id = next(
+        (charId.replace(symbol, "_", 1) for symbol in ["@", "#"] if symbol in charId),
+        charId,
+    )
+    img_path = CACHE_DIR / "portrait" / f"{portrait_id}.png"
+    if not img_path.exists():
+        encoded_id = quote(charId, safe="")
+        img_url = f"https://web.hycdn.cn/arknights/game/assets/char/portrait/{encoded_id}.png"
+        logger.debug(f"Portrait not found locally, using URL: {img_url}")
+        return img_url
+    return img_path.as_uri()
+
+
+def loads_json(json_str: str) -> dict:
+    return json.loads(json_str)

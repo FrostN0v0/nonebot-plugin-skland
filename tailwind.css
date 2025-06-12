@@ -50,6 +50,47 @@
     background: linear-gradient(270deg, rgba(47, 168, 102, 0.6) 0%, rgba(61, 220, 132, 0.6) 100%);
     box-shadow: 0px 0px 10px 0px rgba(61, 220, 132, 0.6);
   }
+  .theme-color-rogue-1 {
+    color: #e56d5c;
+  }
+
+  .theme-color-rogue-2 {
+    color: #5c8be5;
+  }
+
+  .theme-color-rogue-3 {
+    color: #5ce5b5;
+  }
+
+  .theme-color-rogue-4 {
+    color: #FEDFD2;
+  }
+  .rogue-stage-linear {
+    background: linear-gradient(
+      90deg,
+      rgba(70, 28, 29, 0) 0%,
+      rgba(70, 28, 29, 0.8) 20%,
+      rgba(70, 28, 29, 0.8) 80%,
+      rgba(70, 28, 29, 0) 100%
+    );
+  }
+  .rogue-stage-linear-victory {
+    background: linear-gradient(
+      90deg,
+      rgba(31, 85, 93, 0) 0%,
+      rgba(31, 85, 93, 0.8) 20%,
+      rgba(31, 85, 93, 0.8) 80%,
+      rgba(31, 85, 93, 0) 100%
+    );
+  }
+  .gradient-upgrade-char {
+    background: linear-gradient(
+      180deg,
+      rgba(127, 55, 28, 0) 64%,
+      rgba(127, 55, 28, 0.55) 75%,
+      rgba(127, 55, 28, 0.8) 100%
+    );
+  }
 }
 
 @font-face {

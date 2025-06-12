@@ -99,3 +99,24 @@ async def get_background_image() -> str | Url:
             background_image = default_background.as_posix()
 
     return background_image
+
+
+async def get_rogue_background_image(rogue_id: str) -> str | Url:
+    default_background = RES_DIR / "images" / "background" / "rogue" / "kv_epoque14.png"
+    default_rogue_background_map = {
+        "rogue_1": RES_DIR / "images" / "background" / "rogue" / "pic_rogue_1_KV1.png",
+        "rogue_2": RES_DIR / "images" / "background" / "rogue" / "pic_rogue_2_50.png",
+        "rogue_3": RES_DIR / "images" / "background" / "rogue" / "pic_rogue_3_KV2.png",
+        "rogue_4": RES_DIR / "images" / "background" / "rogue" / "pic_rogue_4_47.png",
+    }
+    match config.rogue_background_source:
+        case "default":
+            background_image = default_background.as_posix()
+        case "rogue":
+            background_image = default_rogue_background_map.get(rogue_id, default_background).as_posix()
+        case "Lolicon":
+            background_image = await get_lolicon_image()
+        case CustomSource() as cs:
+            background_image = cs.to_uri()
+
+    return background_image

@@ -13,7 +13,7 @@ from nonebot.plugin import get_plugin_config
 RES_DIR: Path = Path(__file__).parent / "resources"
 TEMPLATES_DIR: Path = RES_DIR / "templates"
 CACHE_DIR = store.get_plugin_cache_dir()
-RESOURCE_ROUTES = ["portrait", "skill"]
+RESOURCE_ROUTES = ["portrait", "skill", "avatar"]
 
 
 class CustomSource(BaseModel):
@@ -53,6 +53,8 @@ class ScopedConfig(BaseModel):
     """启动时检查资源更新"""
     background_source: Literal["default", "Lolicon", "random"] | CustomSource = "default"
     """背景图片来源"""
+    rogue_background_source: Literal["default", "rogue", "Lolicon"] | CustomSource = "rogue"
+    """Rogue 战绩查询背景图片来源"""
     argot_expire: int = 300
     """Argot 缓存过期时间"""
 

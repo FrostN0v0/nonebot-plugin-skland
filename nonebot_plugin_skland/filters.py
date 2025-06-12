@@ -1,3 +1,4 @@
+import json
 from urllib.parse import quote
 from datetime import datetime, timedelta
 
@@ -69,3 +70,7 @@ def charId_to_portraitUrl(charId: str) -> str:
         logger.debug(f"Portrait not found locally, using URL: {img_url}")
         return img_url
     return img_path.as_uri()
+
+
+def loads_json(json_str: str) -> dict:
+    return json.loads(json_str)

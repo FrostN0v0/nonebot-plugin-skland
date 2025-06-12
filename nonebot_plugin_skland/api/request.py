@@ -148,7 +148,6 @@ class SklandAPI:
                     rogue_url,
                     headers=cls.get_sign_header(cred, rogue_url, method="get"),
                 )
-                logger.debug(f"肉鸽数据：{response.json()}")
                 if status := response.json().get("code"):
                     if status == 10000:
                         raise UnauthorizedException(f"获取肉鸽数据失败：{response.json().get('message')}")

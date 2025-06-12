@@ -336,9 +336,6 @@
   .ml-auto {
     margin-left: auto;
   }
-  .block {
-    display: block;
-  }
   .flex {
     display: flex;
   }
@@ -1079,7 +1076,7 @@
     color: #5ce5b5;
   }
   .theme-color-rogue-4 {
-    color: #ffc94a;
+    color: #FEDFD2;
   }
   .rogue-stage-linear {
     background: linear-gradient( 90deg, rgba(70, 28, 29, 0) 0%, rgba(70, 28, 29, 0.8) 20%, rgba(70, 28, 29, 0.8) 80%, rgba(70, 28, 29, 0) 100% );

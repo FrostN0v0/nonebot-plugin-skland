@@ -1,4 +1,3 @@
-import json
 from datetime import datetime
 
 from pydantic import AnyUrl as Url
@@ -7,6 +6,7 @@ from nonebot_plugin_htmlrender import template_to_pic
 from .config import TEMPLATES_DIR
 from .schemas import ArkCard, RogueData
 from .filters import (
+    loads_json,
     format_timestamp,
     time_to_next_4am,
     charId_to_avatarUrl,
@@ -81,7 +81,9 @@ async def render_rogue_info(props: RogueData, bg: str | Url, id: int, is_favored
         template_name="rogue_info.html.jinja2",
         templates={
             "id": id,
-            "ending_text": json.loads(props.history.records[id - 1].endingText),
+            "record": props.history.favourRecords[id - 1]
+            if is_favored and id - 1 < len(props.history.favourRecords)
+            else (props.history.records[id - 1] if id - 1 < len(props.history.records) else None),
             "is_favored": is_favored,
             "background_image": bg,
             "topic_img": props.topic_img,
@@ -95,6 +97,7 @@ async def render_rogue_info(props: RogueData, bg: str | Url, id: int, is_favored
             "format_timestamp_str": format_timestamp_str,
             "charId_to_avatarUrl": charId_to_avatarUrl,
             "charId_to_portraitUrl": charId_to_portraitUrl,
+            "loads_json": loads_json,
         },
         pages={
             "viewport": {"width": 1100, "height": 1},

@@ -157,4 +157,4 @@ class SklandAPI:
                         raise RequestException(f"获取肉鸽数据失败：{response.json().get('message')}")
                 return RogueData(**response.json()["data"])
             except httpx.HTTPError as e:
-                raise RequestException(f"获取肉鸽数据失败: {e}")
+                raise RequestException(f"获取肉鸽数据失败: {e}") from e

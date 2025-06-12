@@ -52,14 +52,8 @@ class RogueData(BaseModel):
 
     @property
     def topic(self) -> str:
-        for topic in self.topics:
-            if topic.isSelected:
-                return topic.id
-        return "None"
+        return next((topic.id for topic in self.topics if topic.isSelected), "None")
 
     @property
     def topic_img(self) -> str:
-        for topic in self.topics:
-            if topic.isSelected:
-                return topic.pic
-        return "None"
+        return next((topic.pic for topic in self.topics if topic.isSelected), "None")

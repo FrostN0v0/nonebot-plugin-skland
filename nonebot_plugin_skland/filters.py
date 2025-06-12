@@ -44,11 +44,10 @@ def format_timestamp_str(stamp_str: str) -> str:
 
 
 def charId_to_avatarUrl(charId: str) -> str:
-    avatar_id = charId
-    for symbol in ["@", "#"]:
-        if symbol in charId:
-            avatar_id = charId.replace(symbol, "_", 1)
-            break
+    avatar_id = next(
+        (charId.replace(symbol, "_", 1) for symbol in ["@", "#"] if symbol in charId),
+        charId,
+    )
     img_path = CACHE_DIR / "avatar" / f"{avatar_id}.png"
     if not img_path.exists():
         img_url = f"https://web.hycdn.cn/arknights/game/assets/char/avatar/{charId}.png"
@@ -58,11 +57,10 @@ def charId_to_avatarUrl(charId: str) -> str:
 
 
 def charId_to_portraitUrl(charId: str) -> str:
-    portrait_id = charId
-    for symbol in ["@", "#"]:
-        if symbol in charId:
-            portrait_id = charId.replace(symbol, "_", 1)
-            break
+    portrait_id = next(
+        (charId.replace(symbol, "_", 1) for symbol in ["@", "#"] if symbol in charId),
+        charId,
+    )
     img_path = CACHE_DIR / "portrait" / f"{portrait_id}.png"
     if not img_path.exists():
         encoded_id = quote(charId, safe="")

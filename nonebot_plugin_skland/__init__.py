@@ -144,7 +144,7 @@ skland.shortcut("战绩详情", {"command": "skland rginfo", "fuzzy": True, "pre
 skland.shortcut("收藏战绩详情", {"command": "skland rginfo -f", "fuzzy": True, "prefix": True})
 
 
-@skland.assign("")
+@skland.assign("main")
 async def _(session: async_scoped_session, user_session: UserSession, target: Match[At | int]):
     @refresh_cred_token_if_needed
     @refresh_access_token_if_needed

@@ -416,7 +416,15 @@ async def _(
     rogue = await get_rogue_info(user, str(character.uid), topic_id)
     background = await get_rogue_background_image(topic_id)
     img = await render_rogue_card(rogue, background)
-    await UniMessage(Image(raw=img) + Argot("data", rogue.model_dump_json(), command=False)).send()
+    if str(background).startswith("http"):
+        argot_seg = [Text(str(background)), Image(url=str(background))]
+    else:
+        argot_seg = Image(path=str(background))
+    await UniMessage(
+        Image(raw=img)
+        + Argot("data", rogue.model_dump_json(), command=False)
+        + Argot("background", argot_seg, command="background", expired_at=config.argot_expire)
+    ).send()
     await session.commit()
 
 
@@ -434,6 +442,12 @@ async def _(id: Match[int], msg_id: MsgId, ext: ReplyRecordExtension, result: Ar
                 img = await render_rogue_info(rogue_data, background, id.result, True)
             else:
                 img = await render_rogue_info(rogue_data, background, id.result, False)
-            await UniMessage(Image(raw=img)).send()
+            if str(background).startswith("http"):
+                argot_seg = [Text(str(background)), Image(url=str(background))]
+            else:
+                argot_seg = Image(path=str(background))
+            await UniMessage(
+                Image(raw=img) + Argot("background", argot_seg, command="background", expired_at=config.argot_expire)
+            ).send()
     else:
         await UniMessage.text("请回复一条肉鸽战绩").finish()

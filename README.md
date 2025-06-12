@@ -254,7 +254,17 @@ bot: skland::skland 的快捷指令: "/兔兔签到" 添加成功
 
 ### 📸 效果图
 
-![示例图1](docs/example.png)
+#### 🔮 游戏信息
+
+![示例图1](docs/example_1.png)
+
+#### 🫖 肉鸽战绩
+
+![示例图2](docs/example_2.png)
+
+#### 🏆 战绩详情
+
+![示例图3](docs/example_3.png)
 
 ## 💖 鸣谢
 

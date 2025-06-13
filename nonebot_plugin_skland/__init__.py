@@ -495,8 +495,7 @@ async def arksign_status(
     user_session: UserSession,
     session: async_scoped_session,
     bot: Bot,
-    result: Arparma,
-    all_status: bool = False,
+    result: Arparma | bool,
     is_superuser: bool = Depends(SuperUser()),
 ):
     sign_result_file = CACHE_DIR / "sign_result.json"
@@ -511,7 +510,10 @@ async def arksign_status(
             sign_result = json.load(f)
     sign_data = sign_result.get("data", {})
     sign_time = sign_result.get("timestamp", "未记录签到时间")
-    if result.find("arksign.status.all") or all_status:
+    if isinstance(result, Arparma) and result.find("arksign.status.all"):
+        if not is_superuser:
+            await UniMessage.text("该指令仅超管可用").finish()
+    elif isinstance(result, bool) and result:
         if not is_superuser:
             await UniMessage.text("该指令仅超管可用").finish()
     else:
@@ -519,7 +521,7 @@ async def arksign_status(
         if not user:
             await UniMessage("未绑定 skland 账号").finish(at_sender=True)
         chars = await get_arknights_characters(user, session)
-        char_nicknames = [char.nickname for char in chars]
+        char_nicknames = {char.nickname for char in chars}
         sign_data = {nickname: value for nickname, value in sign_data.items() if nickname in char_nicknames}
     if user_session.platform == "QQClient":
         formatted_nodes = {}
@@ -623,7 +625,7 @@ async def _(
         sign_result_file.parent.mkdir(parents=True, exist_ok=True)
     with open(sign_result_file, "w", encoding="utf-8") as f:
         json.dump(serializable_sign_result, f, ensure_ascii=False, indent=2)
-    await arksign_status(user_session, session, bot, result, True, is_superuser=is_superuser)
+    await arksign_status(user_session, session, bot, True, is_superuser=is_superuser)
 
 
 @scheduler.scheduled_job("cron", hour=0, minute=15, id="daily_arksign")

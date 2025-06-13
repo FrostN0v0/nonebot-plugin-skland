@@ -58,6 +58,7 @@ from .db_handler import (
     get_default_arknights_character,
 )
 from .utils import (
+    format_sign_result,
     get_background_image,
     get_characters_and_bind,
     get_rogue_background_image,
@@ -501,8 +502,6 @@ async def arksign_status(
     sign_result_file = CACHE_DIR / "sign_result.json"
     sign_result = {}
     sign_data = {}
-    successful_signs = 0
-    failed_signs = 0
     if not sign_result_file.exists():
         await UniMessage.text("未找到签到结果").finish()
     else:
@@ -524,37 +523,17 @@ async def arksign_status(
         char_nicknames = {char.nickname for char in chars}
         sign_data = {nickname: value for nickname, value in sign_data.items() if nickname in char_nicknames}
     if user_session.platform == "QQClient":
-        formatted_nodes = {}
         sliced_nodes = []
-        for nickname, result_data in sign_data.items():
-            if isinstance(result_data, dict):
-                awards_text = "\n".join(
-                    f"  {award['resource']['name']} x {award['count']}" for award in result_data["awards"]
-                )
-                formatted_nodes[nickname] = f"✅ 签到成功，获得了:\n📦{awards_text}"
-                successful_signs += 1
-            elif isinstance(result_data, str):
-                if "请勿重复签到" in result_data:
-                    successful_signs += 1
-                    formatted_nodes[nickname] = "ℹ️ 已签到 (无需重复签到)"
-                else:
-                    failed_signs += 1
-                    formatted_nodes[nickname] = f"❌ 签到失败: {result_data}"
-        summary_line = (
-            f"--- 签到结果概览 ---\n"
-            f"总计签到角色: {len(sign_data)}个\n"
-            f"✅ 成功签到: {successful_signs}个\n"
-            f"❌ 签到失败: {failed_signs}个\n"
-            f"⏰️ 签到时间: {sign_time}\n"
-            f"--------------------"
-        )
-        for i in range(0, len(formatted_nodes.items()), 98):
-            sliced_node_items = list(formatted_nodes.items())[i : i + 98]
+        prased_sign_result = format_sign_result(sign_data, sign_time, False)
+        NODE_SLICE_LIMIT = 98
+        formatted_nodes = {k: f"{v}\n" for k, v in prased_sign_result.results.items()}
+        for i in range(0, len(formatted_nodes.items()), NODE_SLICE_LIMIT):
+            sliced_node_items = list(formatted_nodes.items())[i : i + NODE_SLICE_LIMIT]
             sliced_nodes.append(dict(sliced_node_items))
         for index, node in enumerate(sliced_nodes):
             if index == 0:
                 await UniMessage.reference(
-                    CustomNode(bot.self_id, "签到结果", summary_line),
+                    CustomNode(bot.self_id, "签到结果", prased_sign_result.summary),
                     *[CustomNode(bot.self_id, nickname, content) for nickname, content in node.items()],
                 ).send()
             else:
@@ -562,30 +541,9 @@ async def arksign_status(
                     *[CustomNode(bot.self_id, nickname, content) for nickname, content in node.items()],
                 ).send()
     else:
-        formatted_messages = []
-        for nickname, result_data in sign_data.items():
-            if isinstance(result_data, dict):
-                awards_text = "\n".join(
-                    f"  {award['resource']['name']} x {award['count']}" for award in result_data["awards"]
-                )
-                formatted_messages.append(f"✅ 角色: {nickname} 签到成功，获得了:\n{awards_text}")
-                successful_signs += 1
-            elif isinstance(result_data, str):
-                if "请勿重复签到" in result_data:
-                    successful_signs += 1
-                    formatted_messages.append(f"ℹ️ 角色: {nickname} 已签到 (无需重复签到)")
-                else:
-                    failed_signs += 1
-                    formatted_messages.append(f"❌ 角色: {nickname} 签到失败: {result_data}")
-        summary_line = (
-            f"--- 签到结果概览 ---\n"
-            f"总计签到角色: {len(sign_data)}个\n"
-            f"✅ 成功签到: {successful_signs}个\n"
-            f"❌ 签到失败: {failed_signs}个\n"
-            f"⏰️ 签到时间: {sign_time}\n"
-            f"--------------------"
-        )
-        await UniMessage.text(summary_line + "\n".join(formatted_messages)).finish()
+        prased_sign_result = format_sign_result(sign_data, sign_time, True)
+        formatted_messages = [prased_sign_result.results[nickname] for nickname in prased_sign_result.results]
+        await UniMessage.text(prased_sign_result.summary + "\n".join(formatted_messages)).finish()
 
 
 @refresh_cred_token_with_error_return
@@ -601,7 +559,6 @@ async def _(
     user_session: UserSession,
     session: async_scoped_session,
     bot: Bot,
-    result: Arparma,
     is_superuser: bool = Depends(SuperUser()),
 ):
     """签到所有绑定角色"""
@@ -613,12 +570,9 @@ async def _(
         characters = await get_arknights_characters(user, session)
         for character in characters:
             sign_result[character.nickname] = await sign_in(user, str(character.uid), character.channel_master_id)
-    serializable_sign_result["data"] = {}
-    for nickname, res in sign_result.items():
-        if isinstance(res, ArkSignResponse):
-            serializable_sign_result["data"][nickname] = res.model_dump()
-        else:
-            serializable_sign_result["data"][nickname] = res
+    serializable_sign_result["data"] = {
+        nickname: res.model_dump() if isinstance(res, ArkSignResponse) else res for nickname, res in sign_result.items()
+    }
     serializable_sign_result["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M")
     sign_result_file = CACHE_DIR / "sign_result.json"
     if not sign_result_file.exists():
@@ -637,12 +591,9 @@ async def run_daily_arksign():
         characters = await get_arknights_characters(user, session)
         for character in characters:
             sign_result[character.nickname] = await sign_in(user, str(character.uid), character.channel_master_id)
-    serializable_sign_result["data"] = {}
-    for nickname, res in sign_result.items():
-        if isinstance(res, ArkSignResponse):
-            serializable_sign_result["data"][nickname] = res.model_dump()
-        else:
-            serializable_sign_result["data"][nickname] = res
+    serializable_sign_result["data"] = {
+        nickname: res.model_dump() if isinstance(res, ArkSignResponse) else res for nickname, res in sign_result.items()
+    }
     serializable_sign_result["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M")
     sign_result_file = CACHE_DIR / "sign_result.json"
     if not sign_result_file.exists():

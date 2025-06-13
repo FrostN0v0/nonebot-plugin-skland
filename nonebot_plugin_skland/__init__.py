@@ -1,8 +1,10 @@
+import json
 import asyncio
 from io import BytesIO
 from datetime import datetime, timedelta
 
 import qrcode
+from nonebot.adapters import Bot
 from nonebot.params import Depends
 from nonebot import logger, require
 from nonebot.permission import SuperUser
@@ -14,11 +16,13 @@ require("nonebot_plugin_argot")
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_localstore")
 require("nonebot_plugin_htmlrender")
+require("nonebot_plugin_apscheduler")
 from arclet.alconna import config as alc_config
-from nonebot_plugin_orm import async_scoped_session
+from nonebot_plugin_apscheduler import scheduler
 from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_argot.data_source import get_argot
 from nonebot_plugin_argot import Text, Argot, Image, ArgotExtension
+from nonebot_plugin_orm import get_scoped_session, async_scoped_session
 from nonebot_plugin_alconna.builtins.extensions import ReplyRecordExtension
 from nonebot_plugin_alconna import (
     At,
@@ -31,6 +35,7 @@ from nonebot_plugin_alconna import (
     Arparma,
     MsgTarget,
     Namespace,
+    CustomNode,
     Subcommand,
     UniMessage,
     CommandMeta,
@@ -43,16 +48,23 @@ from . import hook as hook
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
 from .download import GameResourceDownloader
-from .config import RESOURCE_ROUTES, Config, config
 from .schemas import CRED, Topics, RogueData, ArkSignResponse
+from .config import CACHE_DIR, RESOURCE_ROUTES, Config, config
 from .render import render_ark_card, render_rogue_card, render_rogue_info
-from .db_handler import get_arknights_characters, get_arknights_character_by_uid, get_default_arknights_character
+from .db_handler import (
+    select_all_users,
+    get_arknights_characters,
+    get_arknights_character_by_uid,
+    get_default_arknights_character,
+)
 from .utils import (
     get_background_image,
     get_characters_and_bind,
     get_rogue_background_image,
     refresh_cred_token_if_needed,
     refresh_access_token_if_needed,
+    refresh_cred_token_with_error_return,
+    refresh_access_token_with_error_return,
 )
 
 __plugin_meta__ = PluginMetadata(
@@ -85,13 +97,23 @@ skland = on_alconna(
         Subcommand("-q|--qrcode|qrcode", help_text="获取二维码进行扫码绑定"),
         Subcommand(
             "arksign",
-            Option(
-                "-u|--uid|uid",
-                Args["uid", str, Field(completion=lambda: "请输入指定绑定角色uid")],
-                help_text="指定绑定角色uid进行签到",
+            Subcommand(
+                "sign",
+                Option(
+                    "-u|--uid|uid",
+                    Args["uid", str, Field(completion=lambda: "请输入指定绑定角色uid")],
+                    help_text="指定个人绑定的角色uid进行签到",
+                ),
+                Option("--all", help_text="签到所有个人绑定的角色"),
+                help_text="个人绑定角色签到",
             ),
-            Option("--all", help_text="签到所有绑定角色"),
-            help_text="明日方舟签到",
+            Subcommand(
+                "status",
+                Option("--all", help_text="查看所有绑定角色签到状态(仅超管可用)"),
+                help_text="查看绑定角色签到状态",
+            ),
+            Option("--all", help_text="签到所有绑定角色(仅超管可用)"),
+            help_text="明日方舟森空岛签到相关功能",
         ),
         Subcommand("char", Option("-u|--update|update"), help_text="更新绑定角色信息"),
         Subcommand("sync", help_text="更新图片资源(仅超管可用)"),
@@ -130,14 +152,17 @@ skland = on_alconna(
 
 skland.shortcut("森空岛绑定", {"command": "skland bind", "fuzzy": True, "prefix": True})
 skland.shortcut("扫码绑定", {"command": "skland qrcode", "fuzzy": False, "prefix": True})
-skland.shortcut("明日方舟签到", {"command": "skland arksign --all", "fuzzy": True, "prefix": True})
+skland.shortcut("明日方舟签到", {"command": "skland arksign sign --all", "fuzzy": False, "prefix": True})
+skland.shortcut("签到详情", {"command": "skland arksign status", "fuzzy": False, "prefix": True})
+skland.shortcut("全体签到", {"command": "skland arksign --all", "fuzzy": False, "prefix": True})
+skland.shortcut("全体签到详情", {"command": "skland arksign status --all", "fuzzy": False, "prefix": True})
 skland.shortcut(
     "萨卡兹肉鸽",
-    {"command": "skland rogue --topic 萨卡兹", "fuzzy": True, "prefix": True},
+    {"command": "skland rogue --topic 萨卡兹", "fuzzy": False, "prefix": True},
 )
-skland.shortcut("萨米肉鸽", {"command": "skland rogue --topic 萨米", "fuzzy": True, "prefix": True})
-skland.shortcut("水月肉鸽", {"command": "skland rogue --topic 水月", "fuzzy": True, "prefix": True})
-skland.shortcut("傀影肉鸽", {"command": "skland rogue --topic 傀影", "fuzzy": True, "prefix": True})
+skland.shortcut("萨米肉鸽", {"command": "skland rogue --topic 萨米", "fuzzy": False, "prefix": True})
+skland.shortcut("水月肉鸽", {"command": "skland rogue --topic 水月", "fuzzy": False, "prefix": True})
+skland.shortcut("傀影肉鸽", {"command": "skland rogue --topic 傀影", "fuzzy": False, "prefix": True})
 skland.shortcut("角色更新", {"command": "skland char update", "fuzzy": False, "prefix": True})
 skland.shortcut("资源更新", {"command": "skland sync", "fuzzy": False, "prefix": True})
 skland.shortcut("战绩详情", {"command": "skland rginfo", "fuzzy": True, "prefix": True})
@@ -297,7 +322,7 @@ async def _(
         await UniMessage("二维码超时,请重新获取并扫码").finish(at_sender=True)
 
 
-@skland.assign("arksign")
+@skland.assign("arksign.sign")
 async def _(
     user_session: UserSession,
     session: async_scoped_session,
@@ -322,7 +347,7 @@ async def _(
         character = await get_arknights_character_by_uid(user, uid.result, session)
         sign_result[character.nickname] = await sign_in(user, uid.result, character.channel_master_id)
     else:
-        if result.find("arksign.all"):
+        if result.find("arksign.sign.all"):
             characters = await get_arknights_characters(user, session)
             for character in characters:
                 sign_result[character.nickname] = await sign_in(user, str(character.uid), character.channel_master_id)
@@ -463,3 +488,163 @@ async def _(id: Match[int], msg_id: MsgId, ext: ReplyRecordExtension, result: Ar
             ).send()
     else:
         await UniMessage.text("请回复一条肉鸽战绩").finish()
+
+
+@skland.assign("arksign.status")
+async def arksign_status(
+    user_session: UserSession,
+    session: async_scoped_session,
+    bot: Bot,
+    result: Arparma,
+    all_status: bool = False,
+    is_superuser: bool = Depends(SuperUser()),
+):
+    sign_result_file = CACHE_DIR / "sign_result.json"
+    sign_result = {}
+    sign_data = {}
+    successful_signs = 0
+    failed_signs = 0
+    if not sign_result_file.exists():
+        await UniMessage.text("未找到签到结果").finish()
+    else:
+        with open(sign_result_file, encoding="utf-8") as f:
+            sign_result = json.load(f)
+    sign_data = sign_result.get("data", {})
+    sign_time = sign_result.get("timestamp", "未记录签到时间")
+    if result.find("arksign.status.all") or all_status:
+        if not is_superuser:
+            await UniMessage.text("该指令仅超管可用").finish()
+    else:
+        user = await session.get(User, user_session.user_id)
+        if not user:
+            await UniMessage("未绑定 skland 账号").finish(at_sender=True)
+        chars = await get_arknights_characters(user, session)
+        char_nicknames = [char.nickname for char in chars]
+        sign_data = {nickname: value for nickname, value in sign_data.items() if nickname in char_nicknames}
+    if user_session.platform == "QQClient":
+        formatted_nodes = {}
+        sliced_nodes = []
+        for nickname, result_data in sign_data.items():
+            if isinstance(result_data, dict):
+                awards_text = "\n".join(
+                    f"  {award['resource']['name']} x {award['count']}" for award in result_data["awards"]
+                )
+                formatted_nodes[nickname] = f"✅ 签到成功，获得了:\n📦{awards_text}"
+                successful_signs += 1
+            elif isinstance(result_data, str):
+                if "请勿重复签到" in result_data:
+                    successful_signs += 1
+                    formatted_nodes[nickname] = "ℹ️ 已签到 (无需重复签到)"
+                else:
+                    failed_signs += 1
+                    formatted_nodes[nickname] = f"❌ 签到失败: {result_data}"
+        summary_line = (
+            f"--- 签到结果概览 ---\n"
+            f"总计签到角色: {len(sign_data)}个\n"
+            f"✅ 成功签到: {successful_signs}个\n"
+            f"❌ 签到失败: {failed_signs}个\n"
+            f"⏰️ 签到时间: {sign_time}\n"
+            f"--------------------"
+        )
+        for i in range(0, len(formatted_nodes.items()), 98):
+            sliced_node_items = list(formatted_nodes.items())[i : i + 98]
+            sliced_nodes.append(dict(sliced_node_items))
+        for index, node in enumerate(sliced_nodes):
+            if index == 0:
+                await UniMessage.reference(
+                    CustomNode(bot.self_id, "签到结果", summary_line),
+                    *[CustomNode(bot.self_id, nickname, content) for nickname, content in node.items()],
+                ).send()
+            else:
+                await UniMessage.reference(
+                    *[CustomNode(bot.self_id, nickname, content) for nickname, content in node.items()],
+                ).send()
+    else:
+        formatted_messages = []
+        for nickname, result_data in sign_data.items():
+            if isinstance(result_data, dict):
+                awards_text = "\n".join(
+                    f"  {award['resource']['name']} x {award['count']}" for award in result_data["awards"]
+                )
+                formatted_messages.append(f"✅ 角色: {nickname} 签到成功，获得了:\n{awards_text}")
+                successful_signs += 1
+            elif isinstance(result_data, str):
+                if "请勿重复签到" in result_data:
+                    successful_signs += 1
+                    formatted_messages.append(f"ℹ️ 角色: {nickname} 已签到 (无需重复签到)")
+                else:
+                    failed_signs += 1
+                    formatted_messages.append(f"❌ 角色: {nickname} 签到失败: {result_data}")
+        summary_line = (
+            f"--- 签到结果概览 ---\n"
+            f"总计签到角色: {len(sign_data)}个\n"
+            f"✅ 成功签到: {successful_signs}个\n"
+            f"❌ 签到失败: {failed_signs}个\n"
+            f"⏰️ 签到时间: {sign_time}\n"
+            f"--------------------"
+        )
+        await UniMessage.text(summary_line + "\n".join(formatted_messages)).finish()
+
+
+@refresh_cred_token_with_error_return
+@refresh_access_token_with_error_return
+async def sign_in(user: User, uid: str, channel_master_id: str) -> ArkSignResponse | str:
+    """执行签到逻辑"""
+    cred = CRED(cred=user.cred, token=user.cred_token)
+    return await SklandAPI.ark_sign(cred, uid, channel_master_id=channel_master_id)
+
+
+@skland.assign("arksign.all")
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+    bot: Bot,
+    result: Arparma,
+    is_superuser: bool = Depends(SuperUser()),
+):
+    """签到所有绑定角色"""
+    if not is_superuser:
+        await UniMessage.text("该指令仅超管可用").finish()
+    sign_result: dict[str, ArkSignResponse | str] = {}
+    serializable_sign_result: dict[str, dict | str] = {}
+    for user in await select_all_users(session):
+        characters = await get_arknights_characters(user, session)
+        for character in characters:
+            sign_result[character.nickname] = await sign_in(user, str(character.uid), character.channel_master_id)
+    serializable_sign_result["data"] = {}
+    for nickname, res in sign_result.items():
+        if isinstance(res, ArkSignResponse):
+            serializable_sign_result["data"][nickname] = res.model_dump()
+        else:
+            serializable_sign_result["data"][nickname] = res
+    serializable_sign_result["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    sign_result_file = CACHE_DIR / "sign_result.json"
+    if not sign_result_file.exists():
+        sign_result_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(sign_result_file, "w", encoding="utf-8") as f:
+        json.dump(serializable_sign_result, f, ensure_ascii=False, indent=2)
+    await arksign_status(user_session, session, bot, result, True, is_superuser=is_superuser)
+
+
+@scheduler.scheduled_job("cron", hour=0, minute=15, id="daily_arksign")
+async def run_daily_arksign():
+    session = get_scoped_session()
+    sign_result: dict[str, ArkSignResponse | str] = {}
+    serializable_sign_result: dict[str, dict | str] = {}
+    for user in await select_all_users(session):
+        characters = await get_arknights_characters(user, session)
+        for character in characters:
+            sign_result[character.nickname] = await sign_in(user, str(character.uid), character.channel_master_id)
+    serializable_sign_result["data"] = {}
+    for nickname, res in sign_result.items():
+        if isinstance(res, ArkSignResponse):
+            serializable_sign_result["data"][nickname] = res.model_dump()
+        else:
+            serializable_sign_result["data"][nickname] = res
+    serializable_sign_result["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    sign_result_file = CACHE_DIR / "sign_result.json"
+    if not sign_result_file.exists():
+        sign_result_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(sign_result_file, "w", encoding="utf-8") as f:
+        json.dump(serializable_sign_result, f, ensure_ascii=False, indent=2)
+    await session.close()

@@ -77,6 +77,48 @@ def refresh_cred_token_if_needed(func):
     return wrapper
 
 
+def refresh_cred_token_with_error_return(func):
+    """装饰器：如果 cred_token 失效，刷新后重试"""
+
+    async def wrapper(user: User, *args, **kwargs):
+        try:
+            return await func(user, *args, **kwargs)
+        except UnauthorizedException:
+            try:
+                new_token = await SklandLoginAPI.refresh_token(user.cred)
+                user.cred_token = new_token
+                logger.info("cred_token 失效，已自动刷新")
+                return await func(user, *args, **kwargs)
+            except (RequestException, LoginException, UnauthorizedException) as e:
+                return f"接口请求失败,{e.args[0]}"
+        except RequestException as e:
+            return f"接口请求失败,{e.args[0]}"
+
+    return wrapper
+
+
+def refresh_access_token_with_error_return(func):
+    async def wrapper(user: User, *args, **kwargs):
+        try:
+            return await func(user, *args, **kwargs)
+        except LoginException:
+            if not user.access_token:
+                await UniMessage("cred失效，用户没有绑定token，无法自动刷新cred").send(at_sender=True)
+
+            try:
+                grant_code = await SklandLoginAPI.get_grant_code(user.access_token)
+                new_cred = await SklandLoginAPI.get_cred(grant_code)
+                user.cred, user.cred_token = new_cred.cred, new_cred.token
+                logger.info("access_token 失效，已自动刷新")
+                return await func(user, *args, **kwargs)
+            except (RequestException, LoginException, UnauthorizedException) as e:
+                return f"接口请求失败,{e.args[0]}"
+        except RequestException as e:
+            return f"接口请求失败,{e.args[0]}"
+
+    return wrapper
+
+
 async def get_lolicon_image() -> str:
     async with httpx.AsyncClient() as client:
         response = await client.get("https://api.lolicon.app/setu/v2?tag=arknights")

@@ -45,3 +45,8 @@ async def get_arknights_character_by_uid(user: User, uid: str, session: async_sc
 
 async def delete_characters(user: User, session: async_scoped_session):
     await session.execute(delete(Character).where(Character.id == user.id))
+
+
+async def select_all_users(session: async_scoped_session) -> list[User]:
+    users = (await session.execute(select(User))).scalars().all()
+    return list(users)

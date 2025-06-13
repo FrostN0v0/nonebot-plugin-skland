@@ -1157,6 +1157,7 @@ source = { editable = "." }
 dependencies = [
     { name = "httpx" },
     { name = "nonebot-plugin-alconna" },
+    { name = "nonebot-plugin-apscheduler" },
     { name = "nonebot-plugin-argot" },
     { name = "nonebot-plugin-htmlrender" },
     { name = "nonebot-plugin-localstore" },
@@ -1183,6 +1184,7 @@ requires-dist = [
     { name = "nonebot-adapter-onebot", marker = "extra == 'dev'", specifier = ">=2.4.6" },
     { name = "nonebot-adapter-telegram", marker = "extra == 'dev'", specifier = ">=0.1.0b20" },
     { name = "nonebot-plugin-alconna", specifier = ">=0.57.1" },
+    { name = "nonebot-plugin-apscheduler", specifier = ">=0.5.0" },
     { name = "nonebot-plugin-argot", specifier = ">=0.1.9" },
     { name = "nonebot-plugin-htmlrender", specifier = ">=0.6.5" },
     { name = "nonebot-plugin-localstore", specifier = ">=0.7.3" },

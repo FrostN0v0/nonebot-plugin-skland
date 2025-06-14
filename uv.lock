@@ -197,16 +197,16 @@ wheels = [
 
 [[package]]
 name = "arclet-alconna"
-version = "1.8.36"
+version = "1.8.38"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "nepattern" },
     { name = "tarina" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2f/da/dd4066d90baac636267e38ce4adfd3058f8f0264ad65efe21f666ed53513/arclet_alconna-1.8.36.tar.gz", hash = "sha256:7d50b12e936ff7db37939921fc47a9bd68b90d8eee3ce0cfbbb5825248f14e70", size = 80373, upload-time = "2025-02-20T18:09:48.531Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c5/d8/d44eb4ae3bae3112a51a651f99907132feee332df7f68efd2174d7e6a868/arclet_alconna-1.8.38.tar.gz", hash = "sha256:6e85d60c7a3d00669169b18a2b375fbcbb757b8495ccf2088c7a1495139affe0", size = 80390, upload-time = "2025-06-13T12:22:42.711Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e6/e7/c64f21eca12a42b016f49d4ed71aa335b39ca7e33b214b90306a7194bcf3/arclet_alconna-1.8.36-py3-none-any.whl", hash = "sha256:05912c6639a07959096ce4c6c3c1730b82343e154ceac72f8676661f1c5594fc", size = 76970, upload-time = "2025-02-20T18:09:46.709Z" },
+    { url = "https://files.pythonhosted.org/packages/86/5a/b3335347e4799f4434cfcbf7cdaee87d80aef9e0d41c8797dbca702da7b4/arclet_alconna-1.8.38-py3-none-any.whl", hash = "sha256:ffa3e78097cf298697420b6e8e7fd90922863198056761db8a894edd63a02021", size = 76973, upload-time = "2025-06-13T12:22:41.322Z" },
 ]
 
 [[package]]
@@ -1152,9 +1152,10 @@ default = [
 
 [[package]]
 name = "nonebot-plugin-skland"
-version = "0.4.0"
+version = "0.4.1"
 source = { editable = "." }
 dependencies = [
+    { name = "arclet-alconna" },
     { name = "httpx" },
     { name = "nonebot-plugin-alconna" },
     { name = "nonebot-plugin-apscheduler" },
@@ -1179,6 +1180,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "arclet-alconna", specifier = ">=1.8.38" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "nonebot-adapter-discord", marker = "extra == 'dev'", specifier = ">=0.1.8" },
     { name = "nonebot-adapter-onebot", marker = "extra == 'dev'", specifier = ">=2.4.6" },

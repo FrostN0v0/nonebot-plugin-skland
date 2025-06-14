@@ -45,6 +45,7 @@ from nonebot_plugin_alconna import (
 
 from .model import User
 from . import hook as hook
+from .extras import extra_data
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
 from .download import GameResourceDownloader
@@ -71,7 +72,7 @@ from .utils import (
 __plugin_meta__ = PluginMetadata(
     name="森空岛",
     description="通过森空岛查询游戏数据",
-    usage="/skland",
+    usage="skland --help",
     config=Config,
     type="application",
     homepage="https://github.com/FrostN0v0/nonebot-plugin-skland",
@@ -81,6 +82,7 @@ __plugin_meta__ = PluginMetadata(
         "version": "0.4.0",
     },
 )
+__plugin_meta__.extra.update(extra_data)
 
 ns = Namespace("skland", disable_builtin_options=set())
 alc_config.namespaces["skland"] = ns

@@ -51,6 +51,7 @@ from .download import GameResourceDownloader
 from .schemas import CRED, Topics, RogueData, ArkSignResponse
 from .config import CACHE_DIR, RESOURCE_ROUTES, Config, config
 from .render import render_ark_card, render_rogue_card, render_rogue_info
+from .extras import extra_data
 from .db_handler import (
     select_all_users,
     get_arknights_characters,
@@ -71,7 +72,7 @@ from .utils import (
 __plugin_meta__ = PluginMetadata(
     name="森空岛",
     description="通过森空岛查询游戏数据",
-    usage="/skland",
+    usage="skland --help",
     config=Config,
     type="application",
     homepage="https://github.com/FrostN0v0/nonebot-plugin-skland",
@@ -81,6 +82,7 @@ __plugin_meta__ = PluginMetadata(
         "version": "0.4.0",
     },
 )
+__plugin_meta__.extra.update(extra_data)
 
 ns = Namespace("skland", disable_builtin_options=set())
 alc_config.namespaces["skland"] = ns

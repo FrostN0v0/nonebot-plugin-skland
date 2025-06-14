@@ -525,6 +525,7 @@ async def arksign_status(
         char_nicknames = {char.nickname for char in chars}
         sign_data = {nickname: value for nickname, value in sign_data.items() if nickname in char_nicknames}
     if user_session.platform == "QQClient":
+        await message_reaction("66")
         sliced_nodes = []
         prased_sign_result = format_sign_result(sign_data, sign_time, False)
         NODE_SLICE_LIMIT = 98
@@ -543,6 +544,7 @@ async def arksign_status(
                     *[CustomNode(bot.self_id, nickname, content) for nickname, content in node.items()],
                 ).send()
     else:
+        await message_reaction("❤")
         prased_sign_result = format_sign_result(sign_data, sign_time, True)
         formatted_messages = [prased_sign_result.results[nickname] for nickname in prased_sign_result.results]
         await UniMessage.text(prased_sign_result.summary + "\n".join(formatted_messages)).finish()
@@ -566,6 +568,10 @@ async def _(
     """签到所有绑定角色"""
     if not is_superuser:
         await UniMessage.text("该指令仅超管可用").finish()
+    if user_session.platform == "QQClient":
+        await message_reaction("66")
+    else:
+        await message_reaction("❤")
     sign_result: dict[str, ArkSignResponse | str] = {}
     serializable_sign_result: dict[str, dict | str] = {}
     for user in await select_all_users(session):

@@ -45,13 +45,13 @@ from nonebot_plugin_alconna import (
 
 from .model import User
 from . import hook as hook
+from .extras import extra_data
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
 from .download import GameResourceDownloader
 from .schemas import CRED, Topics, RogueData, ArkSignResponse
 from .config import CACHE_DIR, RESOURCE_ROUTES, Config, config
 from .render import render_ark_card, render_rogue_card, render_rogue_info
-from .extras import extra_data
 from .db_handler import (
     select_all_users,
     get_arknights_characters,

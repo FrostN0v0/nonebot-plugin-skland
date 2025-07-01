@@ -80,12 +80,12 @@ extra_data = {
         {
             "func": "全体签到",
             "trigger_method": "**超级用户**",
-            "trigger_condition": "**全体签到** | `skland arksign --all`",
+            "trigger_condition": "**全体签到** | `skland arksign all`",
             "brief_des": "签到所有绑定到bot的明日方舟账号。",
             "detail_des": (
                 "- **全体签到**\n\n"
                 "```bash\n"
-                "skland arksign --all\n"
+                "skland arksign all\n"
                 "```\n\n"
                 " **快捷指令** ：`全体签到`\n\n"
                 "签到所有绑定到bot的明日方舟账号。\n\n"

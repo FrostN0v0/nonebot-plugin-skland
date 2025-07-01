@@ -116,7 +116,6 @@ skland = on_alconna(
                 help_text="查看绑定角色签到状态",
             ),
             Subcommand("all", help_text="签到所有绑定角色(仅超管可用)"),
-            # Option("--all", help_text="签到所有绑定角色(仅超管可用)"),
             help_text="明日方舟森空岛签到相关功能",
         ),
         Subcommand("char", Option("-u|--update|update"), help_text="更新绑定角色信息"),

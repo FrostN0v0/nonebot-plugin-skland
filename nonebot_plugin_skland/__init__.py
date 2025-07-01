@@ -115,7 +115,7 @@ skland = on_alconna(
                 Option("--all", help_text="查看所有绑定角色签到状态(仅超管可用)"),
                 help_text="查看绑定角色签到状态",
             ),
-            Option("--all", help_text="签到所有绑定角色(仅超管可用)"),
+            Subcommand("all", help_text="签到所有绑定角色(仅超管可用)"),
             help_text="明日方舟森空岛签到相关功能",
         ),
         Subcommand("char", Option("-u|--update|update"), help_text="更新绑定角色信息"),
@@ -157,7 +157,7 @@ skland.shortcut("森空岛绑定", {"command": "skland bind", "fuzzy": True, "pr
 skland.shortcut("扫码绑定", {"command": "skland qrcode", "fuzzy": False, "prefix": True})
 skland.shortcut("明日方舟签到", {"command": "skland arksign sign --all", "fuzzy": False, "prefix": True})
 skland.shortcut("签到详情", {"command": "skland arksign status", "fuzzy": False, "prefix": True})
-skland.shortcut("全体签到", {"command": "skland arksign --all", "fuzzy": False, "prefix": True})
+skland.shortcut("全体签到", {"command": "skland arksign all", "fuzzy": False, "prefix": True})
 skland.shortcut("全体签到详情", {"command": "skland arksign status --all", "fuzzy": False, "prefix": True})
 skland.shortcut(
     "萨卡兹肉鸽",

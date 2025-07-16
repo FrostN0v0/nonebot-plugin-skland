@@ -281,6 +281,12 @@ bot: skland::skland 的快捷指令: "/兔兔签到" 添加成功
 - [`KomoriDev/Starify`](https://github.com/KomoriDev/Starify)：超棒的 GitHub Star Trace 工具 🌟📈
 - [`KomoriDev/nonebot-plugin-argot`](https://github.com/KomoriDev/nonebot-plugin-argot): 优秀的 NoneBot2 暗语支持
 
+### 贡献者们
+
+<a href="https://github.com/FrostN0v0/nonebot-plugin-skland/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=FrostN0V0/nonebot-plugin-skland&max=100" alt="contributors" />
+</a>
+
 ## 📢 声明
 
 本插件仅供学习交流使用，数据由 [森空岛](https://skland.com/) 提供，请勿用于商业用途。

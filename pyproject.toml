@@ -1,6 +1,6 @@
 [project]
 name = "nonebot-plugin-skland"
-version = "0.4.3"
+version = "0.4.4"
 description = "通过森空岛查询游戏数据"
 readme = "README.md"
 license = { text = "MIT" }

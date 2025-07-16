@@ -119,13 +119,7 @@
     <img src="../images/rogue/capsule/{{totem.id}}.png" class="h-full" />
     {% elif topic == "rogue_2"%}
     <img src="../images/rogue/mutation/pic_{{totem.id}}.png" class="w-full h-full" />
-    {% elif topic == "rogue_3"%}
-    <img src="https://web.hycdn.cn/arknights/game/assets/roguelike_item/{{totem.id}}.png" class="w-full h-full" />
-    <div
-        class="absolute bottom-0.5 right-0.5 bg-[#080808]/45 text-white text-xs font-bold w-4 h-4 flex items-center justify-center">
-        {{ totem.count }}
-    </div>
-    {% elif topic == "rogue_4"%}
+    {% else %}
     <img src="https://web.hycdn.cn/arknights/game/assets/roguelike_item/{{totem.id}}.png" class="w-full h-full" />
     <div
         class="absolute bottom-0.5 right-0.5 bg-[#080808]/45 text-white text-xs font-bold w-4 h-4 flex items-center justify-center">

@@ -129,7 +129,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 |      `skland__github_token`       |  否  |    `""`     |       GitHub Token       |
 |    `skland__check_res_update`     |  否  |   `False`   | 是否在启动时检查资源更新 |
 |    `skland__background_source`    |  否  | `"default"` |       背景图片来源       |
-| `skland__rogue_background_source` |  否  |   `"rogue"`   |   肉鸽战绩背景图片来源   |
+| `skland__rogue_background_source` |  否  |  `"rogue"`  |   肉鸽战绩背景图片来源   |
 |      `skland__argot_expire`       |  否  |    `300`    |  暗语消息过期时间（秒）  |
 
 > [!TIP]
@@ -186,10 +186,10 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 |        `skland qrcode`         |   所有   |        无         |          扫码绑定森空岛账号           |
 |     `skland arksign sign`      |   所有   |        无         |         个人角色明日方舟签到          |
 | `skland arksign sign -u <uid>` |   所有   |       `uid`       |    指定绑定的个人角色 UID 进行签到    |
-|     `skland arksign all`     | 超级用户 |        无         |      签到所有绑定到该 bot 的角色      |
+|      `skland arksign all`      | 超级用户 |        无         |      签到所有绑定到该 bot 的角色      |
 |    `skland arksign status`     |   所有   |        无         |       查询个人角色自动签到状态        |
 | `skland arksign status --all`  | 超级用户 |        无         | 查询所有绑定到该 bot 的角色的签到状态 |
-|     `skland arksign sign --all`     |   所有   |        无         |           签到所有绑定角色            |
+|  `skland arksign sign --all`   |   所有   |        无         |           签到所有绑定角色            |
 |      `skland char update`      |   所有   |        无         |        更新森空岛绑定角色信息         |
 |         `skland sync`          | 超级用户 |        无         |             本地资源更新              |
 |         `skland rogue`         |   所有   |  `@` \| `topic`   |             肉鸽战绩查询              |
@@ -211,10 +211,11 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 |   扫码绑定   |        `skland qrcode`        |
 | 明日方舟签到 |  `skland arksign sign --all`  |
 |   签到详情   |    `skland arksign status`    |
-|   全体签到   |    `skland arksign all`     |
+|   全体签到   |     `skland arksign all`      |
 | 全体签到详情 | `skland arksign status --all` |
 |   角色更新   |     `skland char update`      |
 |   资源更新   |         `skland sync`         |
+|   界园肉鸽   |  `skland rogue --topic 界园`  |
 |  萨卡兹肉鸽  | `skland rogue --topic 萨卡兹` |
 |   萨米肉鸽   |  `skland rogue --topic 萨米`  |
 |   水月肉鸽   |  `skland rogue --topic 水月`  |

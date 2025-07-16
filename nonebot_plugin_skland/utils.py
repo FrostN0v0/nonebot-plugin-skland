@@ -150,6 +150,7 @@ async def get_rogue_background_image(rogue_id: str) -> str | Url:
         "rogue_2": RES_DIR / "images" / "background" / "rogue" / "pic_rogue_2_50.png",
         "rogue_3": RES_DIR / "images" / "background" / "rogue" / "pic_rogue_3_KV2.png",
         "rogue_4": RES_DIR / "images" / "background" / "rogue" / "pic_rogue_4_47.png",
+        "rogue_5": RES_DIR / "images" / "background" / "rogue" / "pic_rogue_5_KV1.png",
     }
     match config.rogue_background_source:
         case "default":

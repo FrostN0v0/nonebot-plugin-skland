@@ -127,7 +127,7 @@ skland = on_alconna(
                 "-t|--topic|topic",
                 Args[
                     "topic_name#主题",
-                    ["傀影", "水月", "萨米", "萨卡兹"],
+                    ["傀影", "水月", "萨米", "萨卡兹", "界园"],
                     Field(completion=lambda: "请输入指定topic_id"),
                 ],
                 help_text="指定主题进行肉鸽战绩查询",
@@ -159,13 +159,14 @@ skland.shortcut("明日方舟签到", {"command": "skland arksign sign --all", "
 skland.shortcut("签到详情", {"command": "skland arksign status", "fuzzy": False, "prefix": True})
 skland.shortcut("全体签到", {"command": "skland arksign all", "fuzzy": False, "prefix": True})
 skland.shortcut("全体签到详情", {"command": "skland arksign status --all", "fuzzy": False, "prefix": True})
+skland.shortcut("界园肉鸽", {"command": "skland rogue --topic 界园", "fuzzy": True, "prefix": True})
 skland.shortcut(
     "萨卡兹肉鸽",
-    {"command": "skland rogue --topic 萨卡兹", "fuzzy": False, "prefix": True},
+    {"command": "skland rogue --topic 萨卡兹", "fuzzy": True, "prefix": True},
 )
-skland.shortcut("萨米肉鸽", {"command": "skland rogue --topic 萨米", "fuzzy": False, "prefix": True})
-skland.shortcut("水月肉鸽", {"command": "skland rogue --topic 水月", "fuzzy": False, "prefix": True})
-skland.shortcut("傀影肉鸽", {"command": "skland rogue --topic 傀影", "fuzzy": False, "prefix": True})
+skland.shortcut("萨米肉鸽", {"command": "skland rogue --topic 萨米", "fuzzy": True, "prefix": True})
+skland.shortcut("水月肉鸽", {"command": "skland rogue --topic 水月", "fuzzy": True, "prefix": True})
+skland.shortcut("傀影肉鸽", {"command": "skland rogue --topic 傀影", "fuzzy": True, "prefix": True})
 skland.shortcut("角色更新", {"command": "skland char update", "fuzzy": False, "prefix": True})
 skland.shortcut("资源更新", {"command": "skland sync", "fuzzy": False, "prefix": True})
 skland.shortcut("战绩详情", {"command": "skland rginfo", "fuzzy": True, "prefix": True})

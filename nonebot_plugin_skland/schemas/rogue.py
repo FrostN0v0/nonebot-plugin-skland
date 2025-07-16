@@ -11,7 +11,7 @@ class Topics:
     topic: str
     topic_id: str = field(init=False)
 
-    _MAPPING = {"傀影": "rogue_1", "水月": "rogue_2", "萨米": "rogue_3", "萨卡兹": "rogue_4"}
+    _MAPPING = {"傀影": "rogue_1", "水月": "rogue_2", "萨米": "rogue_3", "萨卡兹": "rogue_4", "界园": "rogue_5"}
 
     def __post_init__(self):
         self.topic_id = self._MAPPING[self.topic]

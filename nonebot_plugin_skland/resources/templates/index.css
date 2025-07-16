@@ -6,7 +6,6 @@
       "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
       "Courier New", monospace;
-    --color-gray-400: oklch(0.707 0.022 261.325);
     --color-white: #fff;
     --spacing: 0.25rem;
     --text-xs: 0.75rem;
@@ -387,9 +386,6 @@
   .h-16 {
     height: calc(var(--spacing) * 16);
   }
-  .h-18 {
-    height: calc(var(--spacing) * 18);
-  }
   .h-18\.75 {
     height: calc(var(--spacing) * 18.75);
   }
@@ -506,9 +502,6 @@
   }
   .w-full {
     width: 100%;
-  }
-  .max-w-\[1100px\] {
-    max-width: 1100px;
   }
   .max-w-\[2200px\] {
     max-width: 2200px;
@@ -936,9 +929,6 @@
   .whitespace-nowrap {
     white-space: nowrap;
   }
-  .text-\[\#5C8BE5\] {
-    color: #5C8BE5;
-  }
   .text-\[\#6DADDC\] {
     color: #6DADDC;
   }
@@ -962,9 +952,6 @@
   }
   .text-\[\#F0F0F0\]\/80 {
     color: color-mix(in oklab, #F0F0F0 80%, transparent);
-  }
-  .text-gray-400 {
-    color: var(--color-gray-400);
   }
   .text-white {
     color: var(--color-white);
@@ -1011,11 +998,6 @@
   .md\:grid-cols-\[400px_1fr\] {
     @media (width >= 48rem) {
       grid-template-columns: 400px 1fr;
-    }
-  }
-  .md\:grid-cols-\[400px_1fr_1fr\] {
-    @media (width >= 48rem) {
-      grid-template-columns: 400px 1fr 1fr;
     }
   }
   .md\:justify-between {
@@ -1077,6 +1059,9 @@
   }
   .theme-color-rogue-4 {
     color: #FEDFD2;
+  }
+  .theme-color-rogue-5 {
+    color: #BFEED1;
   }
   .rogue-stage-linear {
     background: linear-gradient( 90deg, rgba(70, 28, 29, 0) 0%, rgba(70, 28, 29, 0.8) 20%, rgba(70, 28, 29, 0.8) 80%, rgba(70, 28, 29, 0) 100% );

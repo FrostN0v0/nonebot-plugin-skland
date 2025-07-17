@@ -326,7 +326,11 @@
               {% if building.training.training_state == "空闲中" %}
               空闲中
               {% else %}
-              {{ building.training.remainSecs | format_timestamp }}后训练结束
+                {% if building.training.remainSecs != 0%}
+                  {{ building.training.remainSecs | format_timestamp }}后训练结束
+                {% else %}
+                  训练完成
+                {% endif %}
               {% endif %}
             </span>
           </div>

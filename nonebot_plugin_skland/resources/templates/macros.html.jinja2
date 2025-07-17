@@ -10,6 +10,9 @@
             {% else %}
             <img src="{{ char.uniequip }}"
                 class="absolute h-8 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 object-contain" />
+            <div class="absolute bg-[#080808]/45 text-white text-[10px] w-3.5 h-3.5 flex items-center justify-center">
+                {{ char.equip.level }}
+            </div>
             {% endif %}
             <img src="{{ char.potential }}" class="absolute top-[-33px] h-6 left-1/2 -translate-x-1/2" />
         </div>

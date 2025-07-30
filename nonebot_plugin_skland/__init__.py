@@ -79,7 +79,7 @@ __plugin_meta__ = PluginMetadata(
     supported_adapters=inherit_supported_adapters("nonebot_plugin_alconna"),
     extra={
         "author": "FrostN0v0 <1614591760@qq.com>",
-        "version": "0.4.4",
+        "version": "0.4.5",
     },
 )
 __plugin_meta__.extra.update(extra_data)
@@ -147,6 +147,7 @@ skland = on_alconna(
             example="/skland",
         ),
     ),
+    aliases={"sk"},
     comp_config={"lite": True},
     skip_for_unmatch=False,
     use_cmd_start=True,

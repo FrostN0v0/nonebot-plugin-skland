@@ -63,10 +63,10 @@
   }
 
   .theme-color-rogue-4 {
-    color: #FEDFD2;
+    color: #fedfd2;
   }
   .theme-color-rogue-5 {
-    color: #BFEED1;
+    color: #bfeed1;
   }
   .rogue-stage-linear {
     background: linear-gradient(
@@ -93,6 +93,17 @@
       rgba(127, 55, 28, 0.55) 75%,
       rgba(127, 55, 28, 0.8) 100%
     );
+  }
+  .found-clue-glow {
+    filter: drop-shadow(0 0 12px rgba(76, 175, 80, 0.7))
+            drop-shadow(0 0 4px rgba(102, 255, 102, 0.8));
+  }
+  .missing-clue-glow {
+    filter: drop-shadow(0 0 10px rgba(220, 20, 60, 0.6))
+            drop-shadow(0 0 3px rgba(139, 0, 0, 0.75));
+  }
+  .rotate-\[-20deg\] {
+    rotate: -20deg;
   }
 }
 

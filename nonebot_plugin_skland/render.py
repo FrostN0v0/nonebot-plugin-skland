@@ -4,7 +4,7 @@ from pydantic import AnyUrl as Url
 from nonebot_plugin_htmlrender import template_to_pic
 
 from .config import TEMPLATES_DIR
-from .schemas import ArkCard, RogueData
+from .schemas import Clue, ArkCard, RogueData
 from .filters import (
     loads_json,
     format_timestamp,
@@ -98,6 +98,21 @@ async def render_rogue_info(props: RogueData, bg: str | Url, id: int, is_favored
             "charId_to_avatarUrl": charId_to_avatarUrl,
             "charId_to_portraitUrl": charId_to_portraitUrl,
             "loads_json": loads_json,
+        },
+        pages={
+            "viewport": {"width": 1100, "height": 1},
+            "base_url": f"file://{TEMPLATES_DIR}",
+        },
+        device_scale_factor=1.5,
+    )
+
+
+async def render_clue_board(props: Clue):
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="clue.html.jinja2",
+        templates={
+            "clue": props,
         },
         pages={
             "viewport": {"width": 1100, "height": 1},

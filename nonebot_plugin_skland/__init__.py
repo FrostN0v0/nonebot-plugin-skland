@@ -21,7 +21,7 @@ from arclet.alconna import config as alc_config
 from nonebot_plugin_apscheduler import scheduler
 from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_argot.data_source import get_argot
-from nonebot_plugin_argot import Text, Argot, Image, ArgotExtension
+from nonebot_plugin_argot import Text, Argot, Image, ArgotExtension, on_argot, ArgotEvent
 from nonebot_plugin_orm import get_scoped_session, async_scoped_session
 from nonebot_plugin_alconna.builtins.extensions import ReplyRecordExtension
 from nonebot_plugin_alconna import (
@@ -49,9 +49,9 @@ from .extras import extra_data
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
 from .download import GameResourceDownloader
-from .schemas import CRED, Topics, RogueData, ArkSignResponse
+from .schemas import CRED, Topics, RogueData, ArkSignResponse, Clue
 from .config import CACHE_DIR, RESOURCE_ROUTES, Config, config
-from .render import render_ark_card, render_rogue_card, render_rogue_info
+from .render import render_ark_card, render_rogue_card, render_rogue_info, render_clue_board
 from .db_handler import (
     select_all_users,
     get_arknights_characters,
@@ -207,11 +207,23 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
         argot_seg = [Text(str(background)), Image(url=str(background))]
     else:
         argot_seg = Image(path=str(background))
-    msg = UniMessage.image(raw=image) + Argot(
-        "background", argot_seg, command="background", expired_at=config.argot_expire
+    msg = (
+        UniMessage.image(raw=image)
+        + Argot("background", argot_seg, command="background", expired_at=config.argot_expire)
+        + Argot("clue", info.building.meeting.clue.model_dump_json(), expired_at=config.argot_expire)
     )
     await msg.send(reply_to=True)
     await session.commit()
+
+
+@on_argot("clue")
+async def _(event: ArgotEvent):
+    argot = event.data.dump_segment()
+    if isinstance(argot, list):
+        argot_text = json.loads(argot[0]["text"])
+        clue = Clue(**argot_text)
+        img = await render_clue_board(clue)
+        await event.target.send(UniMessage.image(raw=img))
 
 
 @skland.assign("bind")

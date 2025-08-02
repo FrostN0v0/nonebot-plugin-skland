@@ -69,4 +69,4 @@ pythonPlatform = "All"
 typeCheckingMode = "standard"
 
 [tool.pdm.scripts]
-build_css = "tailwindcss -i ./tailwind.css -o ./nonebot_plugin_skland/resources/templates/index.css -w"
+build_css = "npx tailwindcss -i ./tailwind.css -o ./nonebot_plugin_skland/resources/templates/index.css -w"

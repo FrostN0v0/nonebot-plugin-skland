@@ -10,6 +10,7 @@ class Char(BaseModel):
     evolvePhase: int
     level: int
     name: str
+    isCandle: bool
 
 
 class Tag(BaseModel):

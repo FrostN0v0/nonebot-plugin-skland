@@ -102,9 +102,42 @@
     filter: drop-shadow(0 0 10px rgba(220, 20, 60, 0.6))
             drop-shadow(0 0 3px rgba(139, 0, 0, 0.75));
   }
-  .rotate-\[-20deg\] {
+  .clue-1 {
+    top: 10%;
+    left: 8%;
+    rotate: -5deg;
+  }
+  .clue-2 {
+    top: 25%;
+    left: 28%;
+    rotate: 8deg;
+  }
+  .clue-3 {
+    top: 8%;
+    left: 48%;
+    rotate: -2deg;
+  }
+  .clue-4 {
+    top: 15%;
+    left: 75%;
+    rotate: 10deg;
+  }
+  .clue-5 {
+    top: 60%;
+    left: 45%;
+    rotate: 10deg;
+  }
+  .clue-6{
+    top: 55%;
+    left: 68%;
+    rotate: 3deg;
+  }
+  .clue-7 {
+    top: 60%;
+    left: 15%;
     rotate: -20deg;
   }
+
 }
 
 @font-face {

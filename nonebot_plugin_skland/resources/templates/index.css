@@ -7,14 +7,9 @@
       "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
       "Courier New", monospace;
-    --color-red-600: oklch(57.7% 0.245 27.325);
     --color-yellow-400: oklch(85.2% 0.199 91.936);
     --color-slate-600: oklch(44.6% 0.043 257.281);
     --color-slate-800: oklch(27.9% 0.041 260.031);
-    --color-gray-300: oklch(87.2% 0.01 258.338);
-    --color-gray-700: oklch(37.3% 0.034 259.733);
-    --color-gray-800: oklch(27.8% 0.033 256.848);
-    --color-gray-900: oklch(21% 0.034 264.665);
     --color-black: #000;
     --color-white: #fff;
     --spacing: 0.25rem;
@@ -189,9 +184,6 @@
   }
 }
 @layer utilities {
-  .pointer-events-none {
-    pointer-events: none;
-  }
   .absolute {
     position: absolute;
   }
@@ -237,29 +229,8 @@
   .top-\[-33px\] {
     top: -33px;
   }
-  .top-\[8\%\] {
-    top: 8%;
-  }
-  .top-\[10\%\] {
-    top: 10%;
-  }
-  .top-\[15\%\] {
-    top: 15%;
-  }
-  .top-\[25\%\] {
-    top: 25%;
-  }
   .top-\[50px\] {
     top: 50px;
-  }
-  .top-\[55\%\] {
-    top: 55%;
-  }
-  .top-\[60\%\] {
-    top: 60%;
-  }
-  .top-\[65\%\] {
-    top: 65%;
   }
   .right-0\.5 {
     right: calc(var(--spacing) * 0.5);
@@ -318,23 +289,8 @@
   .left-22 {
     left: calc(var(--spacing) * 22);
   }
-  .left-\[8\%\] {
-    left: 8%;
-  }
-  .left-\[15\%\] {
-    left: 15%;
-  }
-  .left-\[28\%\] {
-    left: 28%;
-  }
   .left-\[30\%\] {
     left: 30%;
-  }
-  .left-\[45\%\] {
-    left: 45%;
-  }
-  .left-\[48\%\] {
-    left: 48%;
   }
   .left-\[50\%\] {
     left: 50%;
@@ -342,23 +298,11 @@
   .left-\[50px\] {
     left: 50px;
   }
-  .left-\[68\%\] {
-    left: 68%;
-  }
   .left-\[70\%\] {
     left: 70%;
   }
-  .left-\[75\%\] {
-    left: 75%;
-  }
   .z-10 {
     z-index: 10;
-  }
-  .z-\[5\] {
-    z-index: 5;
-  }
-  .z-\[6\] {
-    z-index: 6;
   }
   .mx-1 {
     margin-inline: calc(var(--spacing) * 1);
@@ -410,9 +354,6 @@
   }
   .grid {
     display: grid;
-  }
-  .hidden {
-    display: none;
   }
   .table {
     display: table;
@@ -637,27 +578,6 @@
     --tw-translate-y: calc(1/16 * 100%);
     translate: var(--tw-translate-x) var(--tw-translate-y);
   }
-  .rotate-\[-2deg\] {
-    rotate: -2deg;
-  }
-  .rotate-\[-5deg\] {
-    rotate: -5deg;
-  }
-  .rotate-\[-7deg\] {
-    rotate: -7deg;
-  }
-  .rotate-\[3deg\] {
-    rotate: 3deg;
-  }
-  .rotate-\[5deg\] {
-    rotate: 5deg;
-  }
-  .rotate-\[8deg\] {
-    rotate: 8deg;
-  }
-  .rotate-\[10deg\] {
-    rotate: 10deg;
-  }
   .grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -859,12 +779,6 @@
   .border-\[\#E9CF63\] {
     border-color: #E9CF63;
   }
-  .border-gray-300 {
-    border-color: var(--color-gray-300);
-  }
-  .border-gray-700 {
-    border-color: var(--color-gray-700);
-  }
   .border-slate-600 {
     border-color: var(--color-slate-600);
   }
@@ -925,12 +839,6 @@
       background-color: color-mix(in oklab, var(--color-black) 80%, transparent);
     }
   }
-  .bg-gray-800 {
-    background-color: var(--color-gray-800);
-  }
-  .bg-gray-900 {
-    background-color: var(--color-gray-900);
-  }
   .bg-slate-800 {
     background-color: var(--color-slate-800);
   }
@@ -965,9 +873,6 @@
   .bg-gradient-to-r {
     --tw-gradient-position: to right in oklab;
     background-image: linear-gradient(var(--tw-gradient-stops));
-  }
-  .bg-\[linear-gradient\(to_right\,rgba\(255\,255\,255\,0\.07\)_1px\,transparent_1px\)\,linear-gradient\(to_bottom\,rgba\(255\,255\,255\,0\.07\)_1px\,transparent_1px\)\] {
-    background-image: linear-gradient(to right,rgba(255,255,255,0.07) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,0.07) 1px,transparent 1px);
   }
   .from-\[\#6DADDC\]\/40 {
     --tw-gradient-from: color-mix(in oklab, #6DADDC 40%, transparent);
@@ -1004,20 +909,11 @@
   .bg-cover {
     background-size: cover;
   }
-  .bg-size-\[25px_25px\] {
-    background-size: 25px 25px;
-  }
   .bg-center {
     background-position: center;
   }
   .bg-no-repeat {
     background-repeat: no-repeat;
-  }
-  .stroke-red-600\/70 {
-    stroke: color-mix(in srgb, oklch(57.7% 0.245 27.325) 70%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      stroke: color-mix(in oklab, var(--color-red-600) 70%, transparent);
-    }
   }
   .object-contain {
     object-fit: contain;
@@ -1069,9 +965,6 @@
   }
   .font-\[Bender\] {
     font-family: Bender;
-  }
-  .font-sans {
-    font-family: var(--font-sans);
   }
   .text-2xl {
     font-size: var(--text-2xl);
@@ -1172,26 +1065,6 @@
   .shadow-\[0_0_5px_theme\(colors\.yellow\.400\)\] {
     --tw-shadow: 0 0 5px var(--tw-shadow-color, oklch(85.2% 0.199 91.936));
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-  }
-  .shadow-inner {
-    --tw-shadow: inset 0 2px 4px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.05));
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-  }
-  .shadow-lg {
-    --tw-shadow: 0 10px 15px -3px var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 4px 6px -4px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-  }
-  .shadow-black\/40 {
-    --tw-shadow-color: color-mix(in srgb, #000 40%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-black) 40%, transparent) var(--tw-shadow-alpha), transparent);
-    }
-  }
-  .shadow-black\/50 {
-    --tw-shadow-color: color-mix(in srgb, #000 50%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-black) 50%, transparent) var(--tw-shadow-alpha), transparent);
-    }
   }
   .outline-1 {
     outline-style: var(--tw-outline-style);
@@ -1309,7 +1182,39 @@
   .missing-clue-glow {
     filter: drop-shadow(0 0 10px rgba(220, 20, 60, 0.6)) drop-shadow(0 0 3px rgba(139, 0, 0, 0.75));
   }
-  .rotate-\[-20deg\] {
+  .clue-1 {
+    top: 10%;
+    left: 8%;
+    rotate: -5deg;
+  }
+  .clue-2 {
+    top: 25%;
+    left: 28%;
+    rotate: 8deg;
+  }
+  .clue-3 {
+    top: 8%;
+    left: 48%;
+    rotate: -2deg;
+  }
+  .clue-4 {
+    top: 15%;
+    left: 75%;
+    rotate: 10deg;
+  }
+  .clue-5 {
+    top: 60%;
+    left: 45%;
+    rotate: 10deg;
+  }
+  .clue-6 {
+    top: 55%;
+    left: 68%;
+    rotate: 3deg;
+  }
+  .clue-7 {
+    top: 60%;
+    left: 15%;
     rotate: -20deg;
   }
 }

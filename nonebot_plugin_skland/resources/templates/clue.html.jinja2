@@ -39,17 +39,17 @@
     <div class="w-[90vw] max-w-5xl aspect-video p-5 relative">
         <div class="relative w-full h-full rounded-md">
             {% set clue_layout_map = {
-            "RHINE": {"id": 1, "name": "莱茵科技", "x": 8, "y": 10, "r": -5},
-            "PENGUIN": {"id": 2, "name": "企鹅物流", "x": 28, "y": 25, "r": 8},
-            "BLACKSTEEL": {"id": 3, "name": "黑钢国际", "x": 48, "y": 8, "r": -2},
-            "URSUS": {"id": 4, "name": "乌萨斯", "x": 75, "y": 15, "r": 10},
-            "GLASGOW": {"id": 5, "name": "格拉斯哥帮", "x": 45, "y": 60, "r": 10},
-            "KJERAG": {"id": 6, "name": "谢拉格", "x": 68, "y": 55, "r": 3},
-            "RHODES": {"id": 7, "name": "罗德岛", "x": 15, "y": 60, "r": -20},
+            "RHINE": {"id": 1, "name": "莱茵科技"},
+            "PENGUIN": {"id": 2, "name": "企鹅物流"},
+            "BLACKSTEEL": {"id": 3, "name": "黑钢国际"},
+            "URSUS": {"id": 4, "name": "乌萨斯"},
+            "GLASGOW": {"id": 5, "name": "格拉斯哥帮"},
+            "KJERAG": {"id": 6, "name": "谢拉格"},
+            "RHODES": {"id": 7, "name": "罗德岛"},
             } %}
 
             {% for clue_name, clue_data in clue_layout_map.items() %}
-            <div class="absolute p-1 origin-center w-[160px] h-[200px] top-[{{ clue_data.y }}%] left-[{{ clue_data.x }}%] rotate-[{{ clue_data.r }}deg]
+            <div class="absolute p-1 origin-center w-[160px] h-[200px] clue-{{ clue_data.id }}
                 {% if clue_name not in clue.board %}opacity-45{% endif %}">
                 <div
                     class="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-black/80 text-white py-0.5 px-3 rounded-full text-xs font-bold z-10">

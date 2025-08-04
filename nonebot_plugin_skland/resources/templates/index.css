@@ -556,9 +556,6 @@
     --tw-translate-y: calc(1/16 * 100%);
     translate: var(--tw-translate-x) var(--tw-translate-y);
   }
-  .rotate-180 {
-    rotate: 180deg;
-  }
   .grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

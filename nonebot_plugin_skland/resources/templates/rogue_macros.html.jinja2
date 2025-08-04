@@ -34,7 +34,11 @@
         <img src="../images/rarity/rarity_yellow_{{char.rarity}}.png" class="h-4" />
     </div>
     <div class="absolute inset-x-0 bottom-2 flex flex-col items-center">
-        <img src="../images/ark_card/elite/elite_{{char.evolvePhase}}.png" class="w-8" />
+        {% if char.isCandle %}
+        <img src="../images/rogue/sprite_card_char_in_candle.png" alt="candle"
+            class="w-6.5 translate-y-1/2 opacity-85" />
+        {% endif %}
+        <img src="../images/ark_card/elite/elite_{{char.evolvePhase}}.png" class="w-8 z-2" />
         <span class="text-white font-[Akrobat] text-xs mt-1">{{char.name}}</span>
     </div>
 </div>
@@ -99,6 +103,10 @@
     </div>
     <img src="../images/rarity/rarity_yellow_{{char.rarity}}.png" class="absolute bottom-0 h-3" />
     <img src="{{char.id | charId_to_avatarUrl}}" class="w-10 h-10" />
+    {% if char.isCandle %}
+    <img src="../images/rogue/sprite_card_char_in_candle.png" alt="candle"
+        class="absolute top-0 right-0 w-3" />
+    {% endif %}
 </div>
 
 {% endmacro %}

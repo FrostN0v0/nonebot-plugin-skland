@@ -175,13 +175,14 @@ extra_data = {
         {
             "func": "暗语",
             "trigger_method": "**回复一条该插件渲染的图片消息**",
-            "trigger_condition": "**background**",
-            "brief_des": "获取背景图片的暗语指令。",
+            "trigger_condition": "**background** | **clue**",
+            "brief_des": "获取暗语消息。",
             "detail_des": (
                 "- 目前暗语列表：\n\n"
                 "|   暗语指令   |      对象      |    说明    |\n"
                 "| :----------: | :------------: | :--------: |\n"
                 "| `background` | `插件渲染卡片` | 查看背景图 |\n"
+                "|    `clue`    | `游戏信息卡片` | 查看线索板 |\n"
             ),
         },
         {

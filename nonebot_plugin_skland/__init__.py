@@ -210,7 +210,12 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
     msg = (
         UniMessage.image(raw=image)
         + Argot("background", argot_seg, command="background", expired_at=config.argot_expire)
-        + Argot("clue", info.building.meeting.clue.model_dump_json(), expired_at=config.argot_expire)
+        + Argot(
+            "clue",
+            command="clue",
+            expired_at=config.argot_expire,
+            extra={"data": info.building.meeting.clue.model_dump_json()},
+        )
     )
     await msg.send(reply_to=True)
     await session.commit()
@@ -218,12 +223,9 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
 
 @on_argot("clue")
 async def _(event: ArgotEvent):
-    argot = event.data.dump_segment()
-    if isinstance(argot, list):
-        argot_text = json.loads(argot[0]["text"])
-        clue = Clue(**argot_text)
-        img = await render_clue_board(clue)
-        await event.target.send(UniMessage.image(raw=img))
+    argot_data = json.loads(event.extra["data"])
+    img = await render_clue_board(Clue(**argot_data))
+    await event.target.send(UniMessage.image(raw=img))
 
 
 @skland.assign("bind")

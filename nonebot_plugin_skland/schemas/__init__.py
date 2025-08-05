@@ -1,5 +1,6 @@
 from .cred import CRED as CRED
 from .rogue import Topics as Topics
+from .ark_models import Clue as Clue
 from .ark_card import ArkCard as ArkCard
 from .rogue import RogueData as RogueData
 from .ark_models import AssistChar as AssistChar

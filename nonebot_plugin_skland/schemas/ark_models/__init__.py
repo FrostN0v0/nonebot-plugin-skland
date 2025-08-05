@@ -1,6 +1,7 @@
 from .skins import Skin as Skin
 from .medal import Medal as Medal
 from .tower import Tower as Tower
+from .buildings import Clue as Clue
 from .status import Avatar as Avatar
 from .status import Status as Status
 from .recruit import Recruit as Recruit

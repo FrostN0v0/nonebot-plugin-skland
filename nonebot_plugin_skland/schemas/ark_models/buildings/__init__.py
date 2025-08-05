@@ -1,5 +1,6 @@
 from .hire import Hire as Hire
 from .base import Labor as Labor
+from .meeting import Clue as Clue
 from .power import Power as Power
 from .control import Control as Control
 from .meeting import Meeting as Meeting

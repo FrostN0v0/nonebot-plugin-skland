@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 
 [[package]]
@@ -1078,7 +1078,7 @@ wheels = [
 
 [[package]]
 name = "nonebot-plugin-argot"
-version = "0.1.9"
+version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -1088,9 +1088,9 @@ dependencies = [
     { name = "nonebot-plugin-localstore" },
     { name = "nonebot2" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3c/83/76973d25e558e4f4775173b92c2fb193833c087f6d2a9252103cfcfda79e/nonebot_plugin_argot-0.1.9.tar.gz", hash = "sha256:ba0d6d1ebd3bc192e8e26dcf48a4e78f93cfc30943e8a6f37bf9992a49ec2cba", size = 12392, upload-time = "2025-06-01T12:01:47.763Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/15/cc/87dcb611f581cec63cbc62ec1b2050cac0b9237438dafe8a272be1b71ba2/nonebot_plugin_argot-0.2.1.tar.gz", hash = "sha256:24b32cd620904d8c05f74b3d87ac962821f2636d00f05d91354570dea7cf78a4", size = 12677, upload-time = "2025-08-05T04:04:28.099Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e8/b5/71e664125f26ef654be6ac9d1a1594dda1b03b3e1376057757fac5da1c03/nonebot_plugin_argot-0.1.9-py3-none-any.whl", hash = "sha256:5e7b719bde8c966ca5a6ceaf8a94f49332b97ed7d48003e830d9ed41ce2179a0", size = 12584, upload-time = "2025-06-01T12:01:46.429Z" },
+    { url = "https://files.pythonhosted.org/packages/a0/ab/2fa18f1a69a6c86879e940859fa3e99494440c1c1d4c5c8db003a03c187b/nonebot_plugin_argot-0.2.1-py3-none-any.whl", hash = "sha256:11e2f3bea0c63541b3faf923270bc7ca5f61dcd28b267a8a23df99a7199baac8", size = 12874, upload-time = "2025-08-05T04:04:27.3Z" },
 ]
 
 [[package]]
@@ -1187,7 +1187,7 @@ requires-dist = [
     { name = "nonebot-adapter-telegram", marker = "extra == 'dev'", specifier = ">=0.1.0b20" },
     { name = "nonebot-plugin-alconna", specifier = ">=0.57.1" },
     { name = "nonebot-plugin-apscheduler", specifier = ">=0.5.0" },
-    { name = "nonebot-plugin-argot", specifier = ">=0.1.9" },
+    { name = "nonebot-plugin-argot", specifier = ">=0.2.1" },
     { name = "nonebot-plugin-htmlrender", specifier = ">=0.6.5" },
     { name = "nonebot-plugin-localstore", specifier = ">=0.7.3" },
     { name = "nonebot-plugin-orm", specifier = ">=0.7.6" },

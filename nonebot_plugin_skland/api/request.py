@@ -8,8 +8,8 @@ from urllib.parse import urlparse
 import httpx
 from nonebot import logger
 
-from ..schemas import CRED, ArkCard, RogueData, ArkSignResponse
 from ..exception import LoginException, RequestException, UnauthorizedException
+from ..schemas import CRED, ArkCard, GachaCate, RogueData, GachaResponse, ArkSignResponse
 
 base_url = "https://zonai.skland.com/api/v1"
 
@@ -158,3 +158,66 @@ class SklandAPI:
                 return RogueData(**response.json()["data"])
             except httpx.HTTPError as e:
                 raise RequestException(f"获取肉鸽数据失败: {e}") from e
+
+    @classmethod
+    async def get_gacha_categories(cls, uid: str, role_token: str, token: str, ak_cookie: str) -> list[GachaCate]:
+        """获取卡池类别"""
+        gacha_categories_url = f"https://ak.hypergryph.com/user/api/inquiry/gacha/cate?uid={uid}"
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    gacha_categories_url,
+                    headers={"X-Account-Token": token, "X-Role-Token": role_token},
+                    cookies={"ak-user-center": ak_cookie},
+                )
+                if status := response.json().get("code"):
+                    if status == 10000:
+                        raise UnauthorizedException(f"获取抽卡类别失败：{response.json().get('message')}")
+                    elif status == 10002:
+                        raise LoginException(f"获取抽卡类别失败：{response.json().get('message')}")
+                    if status != 0:
+                        raise RequestException(f"获取抽卡类别失败：{response.json().get('message')}")
+                return [GachaCate(**item) for item in response.json().get("data", [])]
+            except httpx.HTTPError as e:
+                raise RequestException(f"获取抽卡类别失败: {e}") from e
+
+    @classmethod
+    async def get_gacha_history(
+        cls,
+        uid: str,
+        role_token: str,
+        token: str,
+        ak_cookie: str,
+        category: str,
+        size: int = 100,
+        gachaTs: str | None = None,
+        pos: int | None = None,
+    ) -> GachaResponse:
+        """获取抽卡记录"""
+        gacha_history_url = "https://ak.hypergryph.com/user/api/inquiry/gacha/history"
+        query_params = {
+            "uid": uid,
+            "category": category,
+            "size": size,
+        }
+        if gachaTs and pos is not None:
+            query_params["gachaTs"] = gachaTs
+            query_params["pos"] = pos
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    gacha_history_url,
+                    headers={"X-Account-Token": token, "X-Role-Token": role_token},
+                    cookies={"ak-user-center": ak_cookie},
+                    params=query_params,
+                )
+                if status := response.json().get("code"):
+                    if status == 10000:
+                        raise UnauthorizedException(f"获取抽卡记录失败：{response.json().get('message')}")
+                    elif status == 10002:
+                        raise LoginException(f"获取抽卡记录失败：{response.json().get('message')}")
+                    if status != 0:
+                        raise RequestException(f"获取抽卡记录失败：{response.json().get('message')}")
+                return GachaResponse(**response.json()["data"])
+            except httpx.HTTPError as e:
+                raise RequestException(f"获取抽卡记录失败: {e}") from e

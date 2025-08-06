@@ -61,6 +61,7 @@ from .db_handler import (
 from .utils import (
     format_sign_result,
     get_background_image,
+    get_all_gacha_records,
     get_characters_and_bind,
     get_rogue_background_image,
     refresh_cred_token_if_needed,
@@ -140,6 +141,7 @@ skland = on_alconna(
             Option("-f|--favored|favored", help_text="是否查询收藏的战绩"),
             help_text="查询单局肉鸽战绩详情",
         ),
+        Subcommand("gacha", help_text="查询明日方舟抽卡记录（开发中）"),
         namespace=alc_config.namespaces["skland"],
         meta=CommandMeta(
             description=__plugin_meta__.description,
@@ -244,7 +246,7 @@ async def _(
     if user := await session.get(User, user_session.user_id):
         if result.find("bind.update"):
             if len(token.result) == 24:
-                grant_code = await SklandLoginAPI.get_grant_code(token.result)
+                grant_code = await SklandLoginAPI.get_grant_code(token.result, 0)
                 cred = await SklandLoginAPI.get_cred(grant_code)
                 user.access_token = token.result
                 user.cred = cred.cred
@@ -262,7 +264,7 @@ async def _(
     if token.available:
         try:
             if len(token.result) == 24:
-                grant_code = await SklandLoginAPI.get_grant_code(token.result)
+                grant_code = await SklandLoginAPI.get_grant_code(token.result, 0)
                 cred = await SklandLoginAPI.get_cred(grant_code)
                 user = User(
                     access_token=token.result,
@@ -320,7 +322,7 @@ async def _(
         else:
             await message_reaction("👌")
         token = await SklandLoginAPI.get_token_by_scan_code(scan_code)
-        grant_code = await SklandLoginAPI.get_grant_code(token)
+        grant_code = await SklandLoginAPI.get_grant_code(token, 0)
         cred = await SklandLoginAPI.get_cred(grant_code)
         if user := await session.get(User, user_session.user_id):
             user.access_token = token
@@ -625,3 +627,42 @@ async def run_daily_arksign():
     with open(sign_result_file, "w", encoding="utf-8") as f:
         json.dump(serializable_sign_result, f, ensure_ascii=False, indent=2)
     await session.close()
+
+
+@skland.assign("gacha")
+async def _(user_session: UserSession, session: async_scoped_session):
+    """查询明日方舟抽卡记录（开发中）"""
+    user = await session.get(User, user_session.user_id)
+    if not user:
+        await UniMessage("未绑定 skland 账号").finish(at_sender=True)
+    character = await get_default_arknights_character(user, session)
+    if not character:
+        await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
+    if user_session.platform == "QQClient":
+        await message_reaction("66")
+    else:
+        await message_reaction("❤")
+    token = user.access_token
+    grant_code = await SklandLoginAPI.get_grant_code(token, 1)
+    role_token = await SklandLoginAPI.get_role_token_by_uid(character.uid, grant_code)
+    logger.info(f"获取到的role_roken: {role_token}")
+    ak_cookie = await SklandLoginAPI.get_ak_cookie(role_token)
+    categories = await SklandAPI.get_gacha_categories(character.uid, role_token, user.access_token, ak_cookie)
+    all_gacha_records_flat = []
+
+    for cate in categories:
+        count_before = len(all_gacha_records_flat)
+        async for record in get_all_gacha_records(character, cate, user.access_token, role_token, ak_cookie):
+            all_gacha_records_flat.append(record)
+        count_after = len(all_gacha_records_flat)
+        new_records_count = count_after - count_before
+        cate_name = cate.name.replace("\n", "")
+        logger.debug(
+            f"正在获取角色：{character.nickname} 的抽卡记录，"
+            f"卡池类别：{cate_name}, 本次新增记录条数: {new_records_count}"
+        )
+
+    logger.info(f"角色：{character.nickname} 共获取到{len(all_gacha_records_flat)}条抽卡记录")
+    # TODO：将获取到的抽卡记录信息存储数据库
+    # await UniMessage(f"抽卡记录：\n{all_gacha_records_flat}").send()
+    await session.commit()

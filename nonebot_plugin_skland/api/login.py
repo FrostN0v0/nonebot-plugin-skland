@@ -3,7 +3,8 @@ import httpx
 from ..schemas import CRED
 from ..exception import RequestException
 
-app_code = "4ca99fa6b56cc2ba"
+skland_app_code = "4ca99fa6b56cc2ba"
+web_app_code = "be36d44aa36bfb5b"
 
 
 class SklandLoginAPI:
@@ -14,18 +15,18 @@ class SklandLoginAPI:
     }
 
     @classmethod
-    async def get_grant_code(cls, token: str) -> str:
+    async def get_grant_code(cls, token: str, grant_type: int) -> str:
         async with httpx.AsyncClient() as client:
+            code = skland_app_code if grant_type == 0 else web_app_code
             response = await client.post(
                 "https://as.hypergryph.com/user/oauth2/v2/grant",
-                json={"appCode": app_code, "token": token, "type": 0},
+                json={"appCode": code, "token": token, "type": grant_type},
                 headers={**cls._headers},
             )
-
             if status := response.json().get("status"):
                 if status != 0:
                     raise RequestException(f"使用token获得认证代码失败：{response.json().get('msg')}")
-            return response.json()["data"]["code"]
+            return response.json()["data"]["code"] if grant_type == 0 else response.json()["data"]["token"]
 
     @classmethod
     async def get_cred(cls, grant_code: str) -> CRED:
@@ -64,7 +65,7 @@ class SklandLoginAPI:
             get_scan_url = "https://as.hypergryph.com/general/v1/gen_scan/login"
             response = await client.post(
                 get_scan_url,
-                json={"appCode": app_code},
+                json={"appCode": skland_app_code},
             )
             if status := response.json().get("status"):
                 if status != 0:
@@ -96,3 +97,34 @@ class SklandLoginAPI:
                 if status != 0:
                     raise RequestException(f"获取token失败：{response.json().get('msg')}")
             return response.json()["data"]["token"]
+
+    @classmethod
+    async def get_role_token_by_uid(cls, uid: str, grant_code: str) -> str:
+        """获取role_token"""
+        async with httpx.AsyncClient() as client:
+            get_role_token_url = "https://binding-api-account-prod.hypergryph.com/account/binding/v1/u8_token_by_uid"
+            response = await client.post(
+                get_role_token_url, json={"uid": uid, "token": grant_code}, headers={"content-type": "application/json"}
+            )
+            if status := response.json().get("status"):
+                if status != 0:
+                    raise RequestException(f"获取role token失败：{response.json().get('msg')}")
+            return response.json()["data"]["token"]
+
+    @classmethod
+    async def get_ak_cookie(cls, role_token: str) -> str:
+        """获取官网cookie"""
+        async with httpx.AsyncClient() as client:
+            get_cookie_url = "https://ak.hypergryph.com/user/api/role/login"
+            response = await client.post(
+                get_cookie_url,
+                headers={"content-type": "application/json", "accept": "application/json"},
+                json={"token": role_token},
+            )
+            if status := response.json().get("status"):
+                if status != 0:
+                    raise RequestException(f"获取cookie失败：{response.json().get('msg')}")
+            cookie = response.cookies.get("ak-user-center")
+            if not cookie:
+                raise RequestException("获取cookie失败：未能获取到 ak-user-center cookie")
+            return cookie

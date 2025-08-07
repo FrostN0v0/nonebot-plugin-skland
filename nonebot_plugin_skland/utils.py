@@ -4,15 +4,15 @@ from pydantic import AnyUrl as Url
 from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_orm import async_scoped_session
 
-from .model import User, Character
-from .schemas import CRED, ArkSignResult
+from .model import SkUser, Character
 from .db_handler import delete_characters
 from .api import SklandAPI, SklandLoginAPI
 from .config import RES_DIR, CustomSource, config
+from .schemas import CRED, GachaCate, ArkSignResult
 from .exception import LoginException, RequestException, UnauthorizedException
 
 
-async def get_characters_and_bind(user: User, session: async_scoped_session):
+async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
     await delete_characters(user, session)
 
     cred = CRED(cred=user.cred, token=user.cred_token)
@@ -36,7 +36,7 @@ async def get_characters_and_bind(user: User, session: async_scoped_session):
 def refresh_access_token_if_needed(func):
     """装饰器：如果 access_token 失效，刷新后重试"""
 
-    async def wrapper(user: User, *args, **kwargs):
+    async def wrapper(user: SkUser, *args, **kwargs):
         try:
             return await func(user, *args, **kwargs)
         except LoginException:
@@ -44,7 +44,7 @@ def refresh_access_token_if_needed(func):
                 await UniMessage("cred失效，用户没有绑定token，无法自动刷新cred").send(at_sender=True)
 
             try:
-                grant_code = await SklandLoginAPI.get_grant_code(user.access_token)
+                grant_code = await SklandLoginAPI.get_grant_code(user.access_token, 0)
                 new_cred = await SklandLoginAPI.get_cred(grant_code)
                 user.cred, user.cred_token = new_cred.cred, new_cred.token
                 logger.info("access_token 失效，已自动刷新")
@@ -60,7 +60,7 @@ def refresh_access_token_if_needed(func):
 def refresh_cred_token_if_needed(func):
     """装饰器：如果 cred_token 失效，刷新后重试"""
 
-    async def wrapper(user: User, *args, **kwargs):
+    async def wrapper(user: SkUser, *args, **kwargs):
         try:
             return await func(user, *args, **kwargs)
         except UnauthorizedException:
@@ -80,7 +80,7 @@ def refresh_cred_token_if_needed(func):
 def refresh_cred_token_with_error_return(func):
     """装饰器：如果 cred_token 失效，刷新后重试"""
 
-    async def wrapper(user: User, *args, **kwargs):
+    async def wrapper(user: SkUser, *args, **kwargs):
         try:
             return await func(user, *args, **kwargs)
         except UnauthorizedException:
@@ -98,7 +98,7 @@ def refresh_cred_token_with_error_return(func):
 
 
 def refresh_access_token_with_error_return(func):
-    async def wrapper(user: User, *args, **kwargs):
+    async def wrapper(user: SkUser, *args, **kwargs):
         try:
             return await func(user, *args, **kwargs)
         except LoginException:
@@ -106,7 +106,7 @@ def refresh_access_token_with_error_return(func):
                 await UniMessage("cred失效，用户没有绑定token，无法自动刷新cred").send(at_sender=True)
 
             try:
-                grant_code = await SklandLoginAPI.get_grant_code(user.access_token)
+                grant_code = await SklandLoginAPI.get_grant_code(user.access_token, 0)
                 new_cred = await SklandLoginAPI.get_cred(grant_code)
                 user.cred, user.cred_token = new_cred.cred, new_cred.token
                 logger.info("access_token 失效，已自动刷新")
@@ -206,3 +206,37 @@ def format_sign_result(sign_data: dict, sign_time: str, is_text: bool) -> ArkSig
             f"--------------------"
         ),
     )
+
+
+async def get_all_gacha_records(char: Character, cate: GachaCate, access_token: str, role_token: str, ak_cookie: str):
+    """一个异步生成器，用于获取并逐条产出指定分类下的所有抽卡记录。
+
+    此函数会自动处理分页，持续从森空岛(Skland)API请求数据，直到获取到
+    指定卡池的全部抽卡记录为止。
+
+    Args:
+        uid (str): 用户的游戏角色唯一标识 (UID)。
+        cate_id (str): 要查询的卡池类别ID，例如：'anniver_fest', 'summer_fest'。
+        access_token (str): 用于验证 Skland API 的访问令牌 (access_token)。
+        role_token (str): 用于验证的特定游戏角色令牌 (role_token)。
+        ak_cookie (str): 所需的会话 Cookie 字符串。
+
+    Yields:
+        GachaInfo: 产出一个代表单次抽卡记录的对象。
+                     其具体类型取决于 `SklandAPI.get_gacha_history` 返回结果中
+                     `gacha_list` 内元素的结构。
+    """
+    page = await SklandAPI.get_gacha_history(char.uid, role_token, access_token, ak_cookie, cate.id)
+    prev_ts, prev_pos = None, None
+
+    while page and page.gacha_list:
+        for record in page.gacha_list:
+            yield record
+        if not page.hasMore:
+            break
+        if (page.next_ts, page.next_pos) == (prev_ts, prev_pos):
+            break
+        prev_ts, prev_pos = page.next_ts, page.next_pos
+        page = await SklandAPI.get_gacha_history(
+            char.uid, role_token, access_token, ak_cookie, cate.id, gachaTs=page.next_ts, pos=page.next_pos
+        )

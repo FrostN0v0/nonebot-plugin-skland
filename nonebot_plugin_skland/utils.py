@@ -208,7 +208,7 @@ def format_sign_result(sign_data: dict, sign_time: str, is_text: bool) -> ArkSig
     )
 
 
-async def get_all_gacha_records(char: Character, cate: GachaCate, access_token: str, role_roken: str, ak_cookie: str):
+async def get_all_gacha_records(char: Character, cate: GachaCate, access_token: str, role_token: str, ak_cookie: str):
     """一个异步生成器，用于获取并逐条产出指定分类下的所有抽卡记录。
 
     此函数会自动处理分页，持续从森空岛(Skland)API请求数据，直到获取到
@@ -226,13 +226,17 @@ async def get_all_gacha_records(char: Character, cate: GachaCate, access_token: 
                      其具体类型取决于 `SklandAPI.get_gacha_history` 返回结果中
                      `gacha_list` 内元素的结构。
     """
-    page = await SklandAPI.get_gacha_history(char.uid, role_roken, access_token, ak_cookie, cate.id)
+    page = await SklandAPI.get_gacha_history(char.uid, role_token, access_token, ak_cookie, cate.id)
+    prev_ts, prev_pos = None, None
 
     while page and page.gacha_list:
         for record in page.gacha_list:
             yield record
         if not page.hasMore:
             break
+        if (page.next_ts, page.next_pos) == (prev_ts, prev_pos):
+            break
+        prev_ts, prev_pos = page.next_ts, page.next_pos
         page = await SklandAPI.get_gacha_history(
-            char.uid, role_roken, access_token, ak_cookie, cate.id, gachaTs=page.next_ts, pos=page.next_pos
+            char.uid, role_token, access_token, ak_cookie, cate.id, gachaTs=page.next_ts, pos=page.next_pos
         )

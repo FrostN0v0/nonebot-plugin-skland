@@ -124,7 +124,7 @@ class SklandLoginAPI:
             if status := response.json().get("status"):
                 if status != 0:
                     raise RequestException(f"获取cookie失败：{response.json().get('msg')}")
-            cookie = response.cookies.get("ak-user-center")
-            if not cookie:
+            if not (cookie := response.cookies.get("ak-user-center")):
                 raise RequestException("获取cookie失败：未能获取到 ak-user-center cookie")
-            return cookie
+            else:
+                return cookie

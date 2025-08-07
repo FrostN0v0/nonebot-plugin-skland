@@ -645,7 +645,7 @@ async def _(user_session: UserSession, session: async_scoped_session):
     token = user.access_token
     grant_code = await SklandLoginAPI.get_grant_code(token, 1)
     role_token = await SklandLoginAPI.get_role_token_by_uid(character.uid, grant_code)
-    logger.info(f"获取到的role_roken: {role_token}")
+    logger.info(f"获取到的role_token: {role_token}")
     ak_cookie = await SklandLoginAPI.get_ak_cookie(role_token)
     categories = await SklandAPI.get_gacha_categories(character.uid, role_token, user.access_token, ak_cookie)
     all_gacha_records_flat = []

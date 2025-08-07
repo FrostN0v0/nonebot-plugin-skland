@@ -200,7 +200,7 @@ class SklandAPI:
             "category": category,
             "size": size,
         }
-        if gachaTs and pos is not None:
+        if gachaTs is not None and pos is not None:
             query_params["gachaTs"] = gachaTs
             query_params["pos"] = pos
         async with httpx.AsyncClient() as client:

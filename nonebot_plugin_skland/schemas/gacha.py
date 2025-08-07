@@ -10,7 +10,7 @@ class GachaCate(BaseModel):
     """目录名称"""
 
 
-class GachaRecord(BaseModel):
+class GachaInfo(BaseModel):
     """抽卡记录"""
 
     poolId: str
@@ -34,7 +34,7 @@ class GachaRecord(BaseModel):
 class GachaResponse(BaseModel):
     """Gacha Response Schema"""
 
-    gacha_list: list[GachaRecord] = Field(default=[], alias="list")
+    gacha_list: list[GachaInfo] = Field(default=[], alias="list")
     hasMore: bool
 
     @property

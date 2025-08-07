@@ -4,7 +4,7 @@ from pydantic import AnyUrl as Url
 from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_orm import async_scoped_session
 
-from .model import User, Character
+from .model import SkUser, Character
 from .db_handler import delete_characters
 from .api import SklandAPI, SklandLoginAPI
 from .config import RES_DIR, CustomSource, config
@@ -12,7 +12,7 @@ from .schemas import CRED, GachaCate, ArkSignResult
 from .exception import LoginException, RequestException, UnauthorizedException
 
 
-async def get_characters_and_bind(user: User, session: async_scoped_session):
+async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
     await delete_characters(user, session)
 
     cred = CRED(cred=user.cred, token=user.cred_token)
@@ -36,7 +36,7 @@ async def get_characters_and_bind(user: User, session: async_scoped_session):
 def refresh_access_token_if_needed(func):
     """装饰器：如果 access_token 失效，刷新后重试"""
 
-    async def wrapper(user: User, *args, **kwargs):
+    async def wrapper(user: SkUser, *args, **kwargs):
         try:
             return await func(user, *args, **kwargs)
         except LoginException:
@@ -60,7 +60,7 @@ def refresh_access_token_if_needed(func):
 def refresh_cred_token_if_needed(func):
     """装饰器：如果 cred_token 失效，刷新后重试"""
 
-    async def wrapper(user: User, *args, **kwargs):
+    async def wrapper(user: SkUser, *args, **kwargs):
         try:
             return await func(user, *args, **kwargs)
         except UnauthorizedException:
@@ -80,7 +80,7 @@ def refresh_cred_token_if_needed(func):
 def refresh_cred_token_with_error_return(func):
     """装饰器：如果 cred_token 失效，刷新后重试"""
 
-    async def wrapper(user: User, *args, **kwargs):
+    async def wrapper(user: SkUser, *args, **kwargs):
         try:
             return await func(user, *args, **kwargs)
         except UnauthorizedException:
@@ -98,7 +98,7 @@ def refresh_cred_token_with_error_return(func):
 
 
 def refresh_access_token_with_error_return(func):
-    async def wrapper(user: User, *args, **kwargs):
+    async def wrapper(user: SkUser, *args, **kwargs):
         try:
             return await func(user, *args, **kwargs)
         except LoginException:
@@ -222,7 +222,7 @@ async def get_all_gacha_records(char: Character, cate: GachaCate, access_token: 
         ak_cookie (str): 所需的会话 Cookie 字符串。
 
     Yields:
-        GachaRecord: 产出一个代表单次抽卡记录的对象。
+        GachaInfo: 产出一个代表单次抽卡记录的对象。
                      其具体类型取决于 `SklandAPI.get_gacha_history` 返回结果中
                      `gacha_list` 内元素的结构。
     """

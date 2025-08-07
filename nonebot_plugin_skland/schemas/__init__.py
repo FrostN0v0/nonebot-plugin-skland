@@ -3,8 +3,8 @@ from .rogue import Topics as Topics
 from .ark_models import Clue as Clue
 from .ark_card import ArkCard as ArkCard
 from .gacha import GachaCate as GachaCate
+from .gacha import GachaInfo as GachaInfo
 from .rogue import RogueData as RogueData
-from .gacha import GachaRecord as GachaRecord
 from .ark_models import AssistChar as AssistChar
 from .gacha import GachaResponse as GachaResponse
 from .ark_sign import ArkSignResult as ArkSignResult

@@ -43,24 +43,26 @@ from nonebot_plugin_alconna import (
     message_reaction,
 )
 
-from .model import User
 from . import hook as hook
 from .extras import extra_data
+from .model import SkUser, GachaRecord
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
 from .download import GameResourceDownloader
 from .config import CACHE_DIR, RESOURCE_ROUTES, Config, config
-from .schemas import CRED, Clue, Topics, RogueData, ArkSignResponse
+from .schemas import CRED, Clue, Topics, GachaInfo, RogueData, ArkSignResponse
 from .render import render_ark_card, render_clue_board, render_rogue_card, render_rogue_info
 from .db_handler import (
     select_all_users,
     get_arknights_characters,
+    select_all_gacha_records,
     get_arknights_character_by_uid,
     get_default_arknights_character,
 )
 from .utils import (
     format_sign_result,
     get_background_image,
+    get_all_gacha_records,
     get_characters_and_bind,
     get_rogue_background_image,
     refresh_cred_token_if_needed,
@@ -140,6 +142,7 @@ skland = on_alconna(
             Option("-f|--favored|favored", help_text="是否查询收藏的战绩"),
             help_text="查询单局肉鸽战绩详情",
         ),
+        Subcommand("gacha", help_text="查询明日方舟抽卡记录（开发中）"),
         namespace=alc_config.namespaces["skland"],
         meta=CommandMeta(
             description=__plugin_meta__.description,
@@ -178,7 +181,7 @@ skland.shortcut("收藏战绩详情", {"command": "skland rginfo -f", "fuzzy": T
 async def _(session: async_scoped_session, user_session: UserSession, target: Match[At | int]):
     @refresh_cred_token_if_needed
     @refresh_access_token_if_needed
-    async def get_character_info(user: User, uid: str):
+    async def get_character_info(user: SkUser, uid: str):
         return await SklandAPI.ark_card(CRED(cred=user.cred, token=user.cred_token), uid)
 
     if target.available:
@@ -187,7 +190,7 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
     else:
         target_id = user_session.user_id
 
-    user = await session.get(User, target_id)
+    user = await session.get(SkUser, target_id)
     if not user:
         await UniMessage("未绑定 skland 账号").finish(at_sender=True)
     ark_characters = await get_default_arknights_character(user, session)
@@ -241,10 +244,10 @@ async def _(
     if not msg_target.private:
         await UniMessage("绑定指令只允许在私聊中使用").finish(at_sender=True)
 
-    if user := await session.get(User, user_session.user_id):
+    if user := await session.get(SkUser, user_session.user_id):
         if result.find("bind.update"):
             if len(token.result) == 24:
-                grant_code = await SklandLoginAPI.get_grant_code(token.result)
+                grant_code = await SklandLoginAPI.get_grant_code(token.result, 0)
                 cred = await SklandLoginAPI.get_cred(grant_code)
                 user.access_token = token.result
                 user.cred = cred.cred
@@ -262,9 +265,9 @@ async def _(
     if token.available:
         try:
             if len(token.result) == 24:
-                grant_code = await SklandLoginAPI.get_grant_code(token.result)
+                grant_code = await SklandLoginAPI.get_grant_code(token.result, 0)
                 cred = await SklandLoginAPI.get_cred(grant_code)
-                user = User(
+                user = SkUser(
                     access_token=token.result,
                     cred=cred.cred,
                     cred_token=cred.token,
@@ -274,7 +277,7 @@ async def _(
             elif len(token.result) == 32:
                 cred_token = await SklandLoginAPI.refresh_token(token.result)
                 user_id = await SklandAPI.get_user_ID(CRED(cred=token.result, token=cred_token))
-                user = User(
+                user = SkUser(
                     cred=token.result,
                     cred_token=cred_token,
                     id=user_session.user_id,
@@ -320,14 +323,14 @@ async def _(
         else:
             await message_reaction("👌")
         token = await SklandLoginAPI.get_token_by_scan_code(scan_code)
-        grant_code = await SklandLoginAPI.get_grant_code(token)
+        grant_code = await SklandLoginAPI.get_grant_code(token, 0)
         cred = await SklandLoginAPI.get_cred(grant_code)
-        if user := await session.get(User, user_session.user_id):
+        if user := await session.get(SkUser, user_session.user_id):
             user.access_token = token
             user.cred = cred.cred
             user.cred_token = cred.token
         else:
-            user = User(
+            user = SkUser(
                 access_token=token,
                 cred=cred.cred,
                 cred_token=cred.token,
@@ -352,12 +355,12 @@ async def _(
 
     @refresh_cred_token_if_needed
     @refresh_access_token_if_needed
-    async def sign_in(user: User, uid: str, channel_master_id: str):
+    async def sign_in(user: SkUser, uid: str, channel_master_id: str):
         """执行签到逻辑"""
         cred = CRED(cred=user.cred, token=user.cred_token)
         return await SklandAPI.ark_sign(cred, uid, channel_master_id=channel_master_id)
 
-    user = await session.get(User, user_session.user_id)
+    user = await session.get(SkUser, user_session.user_id)
     if not user:
         await UniMessage("未绑定 skland 账号").finish(at_sender=True)
 
@@ -395,11 +398,11 @@ async def _(user_session: UserSession, session: async_scoped_session):
 
     @refresh_cred_token_if_needed
     @refresh_access_token_if_needed
-    async def refresh_characters(user: User):
+    async def refresh_characters(user: SkUser):
         await get_characters_and_bind(user, session)
         await UniMessage("更新成功").send(at_sender=True)
 
-    if user := await session.get(User, user_session.user_id):
+    if user := await session.get(SkUser, user_session.user_id):
         await refresh_characters(user)
 
 
@@ -436,7 +439,7 @@ async def _(
 
     @refresh_cred_token_if_needed
     @refresh_access_token_if_needed
-    async def get_rogue_info(user: User, uid: str, topic_id: str):
+    async def get_rogue_info(user: SkUser, uid: str, topic_id: str):
         return await SklandAPI.get_rogue(
             CRED(cred=user.cred, token=user.cred_token, userId=str(user.user_id)),
             uid,
@@ -449,7 +452,7 @@ async def _(
     else:
         target_id = user_session.user_id
 
-    user = await session.get(User, target_id)
+    user = await session.get(SkUser, target_id)
     if not user:
         await UniMessage("未绑定 skland 账号").finish(at_sender=True)
     character = await get_default_arknights_character(user, session)
@@ -534,7 +537,7 @@ async def arksign_status(
         if not is_superuser:
             await UniMessage.text("该指令仅超管可用").finish()
     else:
-        user = await session.get(User, user_session.user_id)
+        user = await session.get(SkUser, user_session.user_id)
         if not user:
             await UniMessage("未绑定 skland 账号").finish(at_sender=True)
         chars = await get_arknights_characters(user, session)
@@ -568,7 +571,7 @@ async def arksign_status(
 
 @refresh_cred_token_with_error_return
 @refresh_access_token_with_error_return
-async def sign_in(user: User, uid: str, channel_master_id: str) -> ArkSignResponse | str:
+async def sign_in(user: SkUser, uid: str, channel_master_id: str) -> ArkSignResponse | str:
     """执行签到逻辑"""
     cred = CRED(cred=user.cred, token=user.cred_token)
     return await SklandAPI.ark_sign(cred, uid, channel_master_id=channel_master_id)
@@ -625,3 +628,58 @@ async def run_daily_arksign():
     with open(sign_result_file, "w", encoding="utf-8") as f:
         json.dump(serializable_sign_result, f, ensure_ascii=False, indent=2)
     await session.close()
+
+
+@skland.assign("gacha")
+async def _(user_session: UserSession, session: async_scoped_session):
+    """查询明日方舟抽卡记录（开发中）"""
+    user = await session.get(SkUser, user_session.user_id)
+    if not user:
+        await UniMessage("未绑定 skland 账号").finish(at_sender=True)
+    character = await get_default_arknights_character(user, session)
+    if not character:
+        await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
+    if user_session.platform == "QQClient":
+        await message_reaction("66")
+    else:
+        await message_reaction("❤")
+    token = user.access_token
+    grant_code = await SklandLoginAPI.get_grant_code(token, 1)
+    role_token = await SklandLoginAPI.get_role_token_by_uid(character.uid, grant_code)
+    logger.info(f"获取到的role_token: {role_token}")
+    ak_cookie = await SklandLoginAPI.get_ak_cookie(role_token)
+    categories = await SklandAPI.get_gacha_categories(character.uid, role_token, user.access_token, ak_cookie)
+    all_gacha_records_flat: list[GachaInfo] = []
+
+    for cate in categories:
+        count_before = len(all_gacha_records_flat)
+        async for record in get_all_gacha_records(character, cate, user.access_token, role_token, ak_cookie):
+            all_gacha_records_flat.append(record)
+        count_after = len(all_gacha_records_flat)
+        new_records_count = count_after - count_before
+        cate_name = cate.name.replace("\n", "")
+        logger.debug(
+            f"正在获取角色：{character.nickname} 的抽卡记录，"
+            f"卡池类别：{cate_name}, 本次新增记录条数: {new_records_count}"
+        )
+    records = await select_all_gacha_records(user, character.uid, session)
+    existing_records_set = {(r.gacha_ts, r.pos) for r in records}
+    for gacha_record in all_gacha_records_flat:
+        if (int(gacha_record.gachaTs), gacha_record.pos) in existing_records_set:
+            continue
+
+        record = GachaRecord(
+            uid=user.id,
+            char_uid=character.uid,
+            pool_id=gacha_record.poolId,
+            pool_name=gacha_record.poolName,
+            char_id=gacha_record.charId,
+            char_name=gacha_record.charName,
+            rarity=gacha_record.rarity,
+            is_new=gacha_record.isNew,
+            gacha_ts=int(gacha_record.gachaTs),
+            pos=gacha_record.pos,
+        )
+        session.add(record)
+
+    await session.commit()

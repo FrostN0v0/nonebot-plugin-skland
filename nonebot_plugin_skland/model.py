@@ -1,9 +1,9 @@
-from sqlalchemy import Text
 from nonebot_plugin_orm import Model
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, relationship, mapped_column
+from sqlalchemy import VARCHAR, Text, BigInteger, ForeignKey, UniqueConstraint
 
 
-class User(Model):
+class SkUser(Model):
     __tablename__ = "skland_user"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -16,6 +16,8 @@ class User(Model):
     """Skland Login Credential Token"""
     user_id: Mapped[str] = mapped_column(Text, nullable=True)
     """Skland User ID"""
+
+    gacha_records: Mapped[list["GachaRecord"]] = relationship("GachaRecord", back_populates="user")
 
 
 class Character(Model):
@@ -32,3 +34,39 @@ class Character(Model):
     nickname: Mapped[str] = mapped_column(Text)
     """Character Nickname"""
     isdefault: Mapped[bool] = mapped_column(default=False)
+
+    gacha_records: Mapped[list["GachaRecord"]] = relationship("GachaRecord", back_populates="character")
+
+
+class GachaRecord(Model):
+    __tablename__ = "skland_gacha_record"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    """Gacha Record ID"""
+    uid: Mapped[int] = mapped_column(ForeignKey("skland_user.id"), comment="关联的用户ID")
+    """关联的用户ID"""
+    char_uid: Mapped[str] = mapped_column(VARCHAR, ForeignKey("skland_characters.uid"), comment="关联的角色UID")
+    """关联的角色UID"""
+    user: Mapped["SkUser"] = relationship("SkUser", back_populates="gacha_records")
+    """关联的用户"""
+    character: Mapped["Character"] = relationship("Character", back_populates="gacha_records")
+    """关联的角色"""
+    pool_id: Mapped[str] = mapped_column(Text)
+    """Gacha Pool ID"""
+    pool_name: Mapped[str] = mapped_column(Text)
+    """Gacha Pool Name"""
+    char_id: Mapped[str] = mapped_column(Text)
+    """Character ID"""
+    char_name: Mapped[str] = mapped_column(Text)
+    """Character Name"""
+    rarity: Mapped[int]
+    """Character Rarity"""
+    is_new: Mapped[bool]
+    """Is New Character"""
+    gacha_ts: Mapped[BigInteger] = mapped_column(BigInteger, comment="Gacha Timestamp")
+
+    """Gacha Timestamp"""
+    pos: Mapped[int]
+    """Gacha Position"""
+
+    __table_args__ = (UniqueConstraint("char_id", "gacha_ts", "pos", name="_character_ts_pos_uc"),)

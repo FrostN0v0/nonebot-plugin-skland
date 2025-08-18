@@ -663,8 +663,11 @@ async def _(user_session: UserSession, session: async_scoped_session):
             f"卡池类别：{cate_name}, 本次新增记录条数: {new_records_count}"
         )
     records = await select_all_gacha_records(user, character.uid, session)
-
+    existing_records_set = {(r.gacha_ts, r.pos) for r in records}
     for gacha_record in all_gacha_records_flat:
+        if (int(gacha_record.gachaTs), gacha_record.pos) in existing_records_set:
+            continue
+
         record = GachaRecord(
             uid=user.id,
             char_uid=character.uid,
@@ -677,8 +680,6 @@ async def _(user_session: UserSession, session: async_scoped_session):
             gacha_ts=int(gacha_record.gachaTs),
             pos=gacha_record.pos,
         )
-        # TODO：目前不可行，需跳过冲突数据，添加新数据
-        if record not in records:
-            session.add(record)
+        session.add(record)
 
     await session.commit()

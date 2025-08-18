@@ -52,9 +52,9 @@ async def select_all_users(session: async_scoped_session) -> list[SkUser]:
     return list(users)
 
 
-async def select_all_gacha_records(user: SkUser, char_id: str, session: async_scoped_session) -> list[GachaRecord]:
+async def select_all_gacha_records(user: SkUser, char_uid: str, session: async_scoped_session) -> list[GachaRecord]:
     records = (
-        (await session.execute(select(GachaRecord).where(GachaRecord.uid == user.id, GachaRecord.char_id == char_id)))
+        (await session.execute(select(GachaRecord).where(GachaRecord.uid == user.id, GachaRecord.char_uid == char_uid)))
         .scalars()
         .all()
     )

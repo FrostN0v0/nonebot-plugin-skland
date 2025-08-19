@@ -142,14 +142,22 @@ class GameResourceDownloader:
                 response = await client.get(url, headers=headers)
                 response.raise_for_status()
                 data = response.json()
-                route = route.rstrip("/") + "/"
+                is_file_path = "." in route.split("/")[-1]
+
+                if is_file_path:
+                    def path_filter(path):
+                        return path == route
+                else:
+                    dir_route = route.rstrip("/") + "/"
+                    def path_filter(path):
+                        return path.startswith(dir_route)
                 files = [
                     File(
                         name=item["path"].split("/")[-1],
                         download_url=f"{dl_url}{item['path']}",
                     )
                     for item in data.get("tree", [])
-                    if item["type"] == "blob" and item["path"].startswith(route)
+                    if item["type"] == "blob" and path_filter(item["path"])
                 ]
                 return files
         except HTTPError as e:
@@ -163,7 +171,10 @@ class GameResourceDownloader:
         url = cls.BASE_URL.format(owner=owner, repo=repo, branch=branch)
         dl_url = cls.RAW_BASE_URL.format(owner=owner, repo=repo, branch=branch)
         files = await cls.fetch_file_list(url=url, dl_url=dl_url, route=route)
+        is_file_path = "." in route.split("/")[-1]
         save_path = CACHE_DIR / route
+        if is_file_path:
+            save_path = save_path.parent
         save_path.mkdir(parents=True, exist_ok=True)
 
         async with AsyncClient() as client:

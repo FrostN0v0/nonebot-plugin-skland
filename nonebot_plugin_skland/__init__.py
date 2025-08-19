@@ -660,7 +660,7 @@ async def _(user_session: UserSession, session: async_scoped_session):
         cate_name = cate.name.replace("\n", "")
         logger.debug(
             f"正在获取角色：{character.nickname} 的抽卡记录，"
-            f"卡池类别：{cate_name}, 本次新增记录条数: {new_records_count}"
+            f"卡池类别：{cate_name}, 本次获取记录条数: {new_records_count}"
         )
     records = await select_all_gacha_records(user, character.uid, session)
     existing_records_set = {(r.gacha_ts, r.pos) for r in records}

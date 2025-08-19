@@ -16,6 +16,16 @@ class SklandLoginAPI:
 
     @classmethod
     async def get_grant_code(cls, token: str, grant_type: int) -> str:
+        """
+        获取认证代码或token。
+
+        Args:
+            token (str): 用户token
+            grant_type (int): 授权类型。0 返回森空岛认证代码(code)，1 返回官网通行证token。
+
+        Returns:
+            str: grant_type 为 0 时返回森空岛认证代码(code)，grant_type 为 1 时返回官网通行证 token。
+        """
         async with httpx.AsyncClient() as client:
             code = skland_app_code if grant_type == 0 else web_app_code
             response = await client.post(

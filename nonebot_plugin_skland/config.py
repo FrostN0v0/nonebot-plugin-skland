@@ -13,7 +13,7 @@ from nonebot.plugin import get_plugin_config
 RES_DIR: Path = Path(__file__).parent / "resources"
 TEMPLATES_DIR: Path = RES_DIR / "templates"
 CACHE_DIR = store.get_plugin_cache_dir()
-RESOURCE_ROUTES = ["portrait", "skill", "avatar"]
+RESOURCE_ROUTES = ["portrait", "skill", "avatar", "gamedata/excel/gacha_table.json"]
 
 
 class CustomSource(BaseModel):

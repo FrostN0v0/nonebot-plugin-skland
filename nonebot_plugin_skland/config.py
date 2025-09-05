@@ -1,7 +1,10 @@
+import json
 import random
+import asyncio
 from pathlib import Path
 from typing import Any, Literal
 
+import httpx
 from nonebot import logger
 from pydantic import Field
 from pydantic import BaseModel
@@ -13,7 +16,72 @@ from nonebot.plugin import get_plugin_config
 RES_DIR: Path = Path(__file__).parent / "resources"
 TEMPLATES_DIR: Path = RES_DIR / "templates"
 CACHE_DIR = store.get_plugin_cache_dir()
-RESOURCE_ROUTES = ["portrait", "skill", "avatar", "gamedata/excel/gacha_table.json"]
+DATA_DIR = store.get_plugin_data_dir()
+RESOURCE_ROUTES = ["portrait", "skill", "avatar"]
+DATA_ROUTES = ["gamedata/excel/gacha_table.json"]
+GACHA_DATA_PATH = DATA_DIR / "gamedata" / "excel"
+
+
+class GachaTableData:
+    def __init__(self) -> None:
+        from .schemas import GachaTable, GachaDetails
+
+        self.version: str = (
+            DATA_DIR.joinpath("version").read_text(encoding="utf-8").strip()
+            if DATA_DIR.joinpath("version").exists()
+            else ""
+        )
+        self.origin_version: str = ""
+        self.gacha_table: list[GachaTable] = []
+        self.gacha_details: list[GachaDetails] = []
+
+        self.load()
+
+    def load(self):
+        from .schemas import GachaTable
+
+        asyncio.get_event_loop().run_until_complete(self.get_version())
+        if not DATA_DIR.joinpath("version").exists():
+            DATA_DIR.joinpath("version").write_text(self.origin_version, encoding="utf-8")
+        if GACHA_DATA_PATH.joinpath("gacha_table.json").exists():
+            if self.version != self.origin_version and self.origin_version:
+                logger.info("检测到卡池数据版本更新，正在重新下载卡池数据...")
+                asyncio.get_event_loop().run_until_complete(self.get_gacha_table())
+                self.version = self.origin_version
+            gacha_json = json.loads(GACHA_DATA_PATH.joinpath("gacha_table.json").read_text(encoding="utf-8"))
+            self.gacha_table = [GachaTable(**item) for item in gacha_json.get("gachaPoolClient", [])]
+        else:
+            asyncio.get_event_loop().run_until_complete(self.get_gacha_table())
+        asyncio.get_event_loop().run_until_complete(self.get_gacha_details())
+
+    async def get_gacha_details(self):
+        from .schemas import GachaDetails
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get("https://weedy.prts.wiki/gacha_table.json")
+            response.raise_for_status()
+            data = response.json()["gachaPoolClient"]
+            self.gacha_details = [GachaDetails(**item) for item in data]
+
+    async def get_version(self):
+        from .download import GameResourceDownloader
+
+        self.origin_version = await GameResourceDownloader.check_update(DATA_DIR)
+
+    async def get_gacha_table(self):
+        from .download import GameResourceDownloader
+
+        self.version = await GameResourceDownloader.check_update(DATA_DIR)
+        for route in DATA_ROUTES:
+            logger.info(f"正在下载: {route}")
+            await GameResourceDownloader.download_all(
+                owner="yuanyan3060",
+                repo="ArknightsGameResource",
+                route=route,
+                save_dir=DATA_DIR,
+                branch="main",
+                update=True,
+            )
 
 
 class CustomSource(BaseModel):
@@ -64,3 +132,4 @@ class Config(BaseModel):
 
 
 config = get_plugin_config(Config).skland
+gacha_table_data = GachaTableData()

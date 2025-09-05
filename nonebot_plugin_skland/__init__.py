@@ -51,7 +51,7 @@ from .api import SklandAPI, SklandLoginAPI
 from .download import GameResourceDownloader
 from .config import CACHE_DIR, RESOURCE_ROUTES, Config, config
 from .schemas import CRED, Clue, Topics, GachaInfo, RogueData, ArkSignResponse
-from .render import render_ark_card, render_clue_board, render_rogue_card, render_rogue_info
+from .render import render_ark_card, render_clue_board, render_rogue_card, render_rogue_info, render_gacha_history
 from .db_handler import (
     select_all_users,
     get_arknights_characters,
@@ -61,6 +61,7 @@ from .db_handler import (
 )
 from .utils import (
     format_sign_result,
+    group_gacha_records,
     get_background_image,
     get_all_gacha_records,
     get_characters_and_bind,
@@ -142,7 +143,6 @@ skland = on_alconna(
             Option("-f|--favored|favored", help_text="是否查询收藏的战绩"),
             help_text="查询单局肉鸽战绩详情",
         ),
-        Subcommand("gacha", help_text="查询明日方舟抽卡记录（开发中）"),
         namespace=alc_config.namespaces["skland"],
         meta=CommandMeta(
             description=__plugin_meta__.description,
@@ -418,6 +418,7 @@ async def _(is_superuser: bool = Depends(SuperUser())):
                 owner="yuanyan3060",
                 repo="ArknightsGameResource",
                 route=route,
+                save_dir=CACHE_DIR,
                 branch="main",
             )
         version = await GameResourceDownloader.get_version()
@@ -633,6 +634,12 @@ async def run_daily_arksign():
 @skland.assign("gacha")
 async def _(user_session: UserSession, session: async_scoped_session):
     """查询明日方舟抽卡记录（开发中）"""
+
+    @refresh_cred_token_if_needed
+    @refresh_access_token_if_needed
+    async def get_user_info(user: SkUser, uid: str):
+        return await SklandAPI.ark_card(CRED(cred=user.cred, token=user.cred_token), uid)
+
     user = await session.get(SkUser, user_session.user_id)
     if not user:
         await UniMessage("未绑定 skland 账号").finish(at_sender=True)
@@ -664,10 +671,9 @@ async def _(user_session: UserSession, session: async_scoped_session):
         )
     records = await select_all_gacha_records(user, character.uid, session)
     existing_records_set = {(r.gacha_ts, r.pos) for r in records}
+    gacha_record_list: list[GachaRecord] = []
+    record_to_save: list[GachaRecord] = []
     for gacha_record in all_gacha_records_flat:
-        if (int(gacha_record.gachaTs), gacha_record.pos) in existing_records_set:
-            continue
-
         record = GachaRecord(
             uid=user.id,
             char_uid=character.uid,
@@ -680,6 +686,13 @@ async def _(user_session: UserSession, session: async_scoped_session):
             gacha_ts=int(gacha_record.gachaTs),
             pos=gacha_record.pos,
         )
-        session.add(record)
+        gacha_record_list.append(record)
+        if (int(gacha_record.gachaTs), gacha_record.pos) in existing_records_set:
+            continue
+        record_to_save.append(record)
 
+    gacha_data_grouped = group_gacha_records(gacha_record_list)
+    user_info = await get_user_info(user, character.uid)
+    await UniMessage.image(raw=await render_gacha_history(gacha_data_grouped, character, user_info.status)).send()
+    session.add_all(record_to_save)
     await session.commit()

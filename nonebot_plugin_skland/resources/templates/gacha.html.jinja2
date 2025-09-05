@@ -1,0 +1,180 @@
+{% from "gacha_macros.html.jinja2" import gacha_pool %}
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>GachaHistory</title>
+    <style>
+        {% include "index.css" %}
+    </style>
+</head>
+
+<body>
+    <div class="relative w-180 h-auto flex flex-col p-6 gap-5 bg-[#303030]">
+        <div class="left-6 top-4">
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <img src="{{status.avatar.url}}" class="avater-shadow w-18.75 h-18.75" />
+                    <div
+                        class="absolute top-[-20px] right-[-20px] w-10 h-10 bg-[#080309]/80 rounded-full rank-shadow flex items-center justify-center">
+                        <span class="text-white font-[Akrobat] text-lg">{{status.level}}</span>
+                    </div>
+                </div>
+                <div>
+                    <h1 class="text-xl text-white font-bold font-[Akrobat] mb-2">{{character.nickname}}</h1>
+                    <div
+                        class="w-15 h-full bg-[#23BAFC]/80 rounded-lg reg-shadow-blue flex items-center justify-center">
+                        <span class="text-[#080309]/80 text-sm font-[Bender]">{{'官服' if character.channel_master_id == '1'
+                            else
+                            'B服'}}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="left-6 w-168 h-74.25 bg-[#151515] rounded-2xl gacha-info-shadow">
+            <div class="flex flex-col justify-between items-start gap-4 py-4">
+                <div
+                    class="flex py-1 px-4 items-center justify-center rounded-r-[5px] bg-[#01CC9D] font-[Akrobat] font-bold text-2xl">
+                    传说级欧皇(头衔未完工)
+                </div>
+                <div class="flex flex-row w-full gap-4 px-4">
+                    <div class="flex flex-col w-full bg-[#333333] rounded-lg py-3.5">
+                        <span class="text-white font-[Akrobat] font-bold text-2xl text-center">限定</span>
+                        <div class="px-1 text-center">
+                            <span class="text-white font-[Akrobat] font-bold text-5xl">{{ record.limit_total_pulls }}<span
+                                    class="text-2xl">抽</span></span>
+                        </div>
+                        <div class="flex justify-center">
+                            <div class="h-0.75 w-3/4 bg-[#3E3E3E] rounded-full"></div>
+                        </div>
+                        <div class="flex flex-row justify-center pt-3 gap-1">
+                            <div class="flex flex-col items-center w-full">
+                                <span class="text-white font-[Akrobat] font-bold text-xl">{{ record.limit_total_six }} / <span
+                                        class="text-[#C04855]">{{ record.limit_six_spook }}</span></span>
+                                <span class="text-white font-[Akrobat] text-[10px]">出卡数/<span
+                                        class="text-[#C04855]">歪</span></span>
+                            </div>
+                            <div class="flex flex-col items-center w-full">
+                                <span class="text-white font-[Akrobat] font-bold text-xl">{{ record.limit_six_avg }}</span>
+                                <span class="text-white font-[Akrobat] text-[10px]">UP平均</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col w-full bg-[#333333] rounded-lg py-3.5">
+                        <span class="text-white font-[Akrobat] font-bold text-2xl text-center">常驻</span>
+                        <div class="px-1 text-center">
+                            <span class="text-white font-[Akrobat] font-bold text-5xl">{{ record.norm_total_pulls}}<span
+                                    class="text-2xl">抽</span></span>
+                        </div>
+                        <div class="flex justify-center">
+                            <div class="h-0.75 w-3/4 bg-[#3E3E3E] rounded-full"></div>
+                        </div>
+                        <div class="flex flex-row justify-center pt-3 gap-1">
+                            <div class="flex flex-col items-center w-full">
+                                <span class="text-white font-[Akrobat] font-bold text-xl">{{ record.norm_total_six }} / <span
+                                        class="text-[#C04855]">{{ record.norm_six_spook }}</span></span>
+                                <span class="text-white font-[Akrobat] text-[10px]">出卡数/<span
+                                        class="text-[#C04855]">歪</span></span>
+                            </div>
+                            <div class="flex flex-col items-center w-full">
+                                <span class="text-white font-[Akrobat] font-bold text-xl">{{ record.norm_six_avg }}</span>
+                                <span class="text-white font-[Akrobat] text-[10px]">UP平均</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col w-full bg-[#333333] rounded-lg py-2">
+                        <span class="text-white font-[Akrobat] font-bold text-2xl text-center">中坚</span>
+                        <div class="px-1 text-center">
+                            <span class="text-white font-[Akrobat] font-bold text-5xl">{{ record.doub_total_pulls}}<span
+                                    class="text-2xl">抽</span></span>
+                        </div>
+                        <div class="flex justify-center">
+                            <div class="h-0.75 w-3/4 bg-[#3E3E3E] rounded-full"></div>
+                        </div>
+                        <div class="flex flex-row justify-center pt-3 gap-1">
+                            <div class="flex flex-col items-center w-full">
+                                <span class="text-white font-[Akrobat] font-bold text-xl">{{ record.doub_total_six }} / <span
+                                        class="text-[#C04855]">{{ record.doub_six_spook }}</span></span>
+                                <span class="text-white font-[Akrobat] text-[10px]">出卡数/<span
+                                        class="text-[#C04855]">歪</span></span>
+                            </div>
+                            <div class="flex flex-col items-center w-full">
+                                <span class="text-white font-[Akrobat] font-bold text-xl">{{ record.doub_six_avg }}</span>
+                                <span class="text-white font-[Akrobat] text-[10px]">UP平均</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="left-6 w-168 bg-[#3F3F3F] rounded-xl gacha-info-shadow">
+            <div class="flex flex-row items-center">
+                <div class="flex flex-col items-center justify-between gap-2 py-4 w-full">
+                    <span class="text-white/60 font-[Akrobat] font-bold text-xs">限定已垫</span>
+                    <div class="w-37.5 h-5 bottom-2.5 bg-[#343434] rounded-[10px] backdrop-blur-xs overflow-hidden">
+                        <div class="h-full rounded-[10px] green-blur-bar" style="width: {{ record.limit_pity }}%;">
+                        </div>
+                        <span
+                            class="absolute inset-0 flex items-center justify-center text-white text-xs font-semibold">
+                            {{ record.limit_pity }}/99
+                        </span>
+                    </div>
+                    {% set extra_pity = 0 %}
+                    {% if record.limit_pity > 50 %}
+                        {% set extra_pity = (record.limit_pity - 50) * 2 %}
+                    {% endif %}
+                    <span class="text-white/60 pt-0.5 px-4 font-[Akrobat] font-bold text-sm text-center grey-linear">
+                        当前概率{{2 + extra_pity}}%
+                    </span>
+                </div>
+                <div class="flex flex-col items-center justify-between gap-2 py-4 w-full">
+                    <span class="text-white/60 font-[Akrobat] font-bold text-xs">常驻已垫</span>
+                    <div class="w-37.5 h-5 bottom-2.5 bg-[#343434] rounded-[10px] backdrop-blur-xs overflow-hidden">
+                        <div class="h-full rounded-[10px] green-blur-bar" style="width: {{ record.norm_pity }}%;">
+                        </div>
+                        <span
+                            class="absolute inset-0 flex items-center justify-center text-white text-xs font-semibold">
+                            {{ record.norm_pity }}/99
+                        </span>
+                    </div>
+                    {% set extra_pity = 0 %}
+                    {% if record.norm_pity > 50 %}
+                        {% set extra_pity = (record.norm_pity - 50) * 2 %}
+                    {% endif %}
+                    <span class="text-white/60 pt-0.5 px-4 font-[Akrobat] font-bold text-sm text-center grey-linear">
+                        当前概率{{2 + extra_pity}}%
+                    </span>
+                </div>
+                <div class="flex flex-col items-center justify-between gap-2 py-4 w-full">
+                    <span class="text-white/60 font-[Akrobat] font-bold text-xs">中坚已垫</span>
+                    <div class="w-37.5 h-5 bottom-2.5 bg-[#343434] rounded-[10px] backdrop-blur-xs overflow-hidden">
+                        <div class="h-full rounded-[10px] green-blur-bar" style="width: {{ record.doub_pity }}%;">
+                        </div>
+                        <span
+                            class="absolute inset-0 flex items-center justify-center text-white text-xs font-semibold">
+                            {{ record.doub_pity }}/99
+                        </span>
+                    </div>
+                    {% set extra_pity = 0 %}
+                    {% if record.doub_pity > 50 %}
+                    {% set extra_pity = (record.doub_pity - 50) * 2 %}
+                    {% endif %}
+                    <span class="text-white/60 pt-0.5 px-4 font-[Akrobat] font-bold text-sm text-center grey-linear">
+                        当前概率{{2 + extra_pity}}%
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        {% for pool in record.pools %}
+        {{ gacha_pool(pool) }}
+        {% endfor %}
+        <footer class="text-center text-white/80">Generated by nonebot-plugin-skland</footer>
+    </div>
+</body>
+
+</html>

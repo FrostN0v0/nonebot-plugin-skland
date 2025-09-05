@@ -23,7 +23,6 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 
-from .config import CACHE_DIR, config
 from .exception import RequestException
 
 
@@ -33,6 +32,8 @@ class File(BaseModel):
 
     @model_validator(mode="before")
     def modify_download_url(cls, values):
+        from .config import config
+
         values["download_url"] = quote(values["download_url"], safe="/:")
         if config.github_proxy_url:
             values["download_url"] = f"{config.github_proxy_url}{values['download_url']}"
@@ -103,6 +104,8 @@ class GameResourceDownloader:
     @classmethod
     async def get_version(cls) -> str:
         """获取最新版本"""
+        from .config import config
+
         url = config.github_proxy_url + cls.VERSION_URL if config.github_proxy_url else cls.VERSION_URL
         try:
             async with AsyncClient() as client:
@@ -114,10 +117,10 @@ class GameResourceDownloader:
             raise RequestException(f"检查更新失败: {type(e).__name__}: {e}")
 
     @classmethod
-    async def check_update(cls) -> str:
+    async def check_update(cls, dir: Path) -> str:
         """检查更新"""
         origin_version = await cls.get_version()
-        version_file = CACHE_DIR.joinpath("version")
+        version_file = dir.joinpath("version")
         if not version_file.exists():
             return origin_version
         local_version = version_file.read_text(encoding="utf-8").strip()
@@ -128,12 +131,16 @@ class GameResourceDownloader:
     @classmethod
     def update_version_file(cls, version: str):
         """更新本地版本文件"""
+        from .config import CACHE_DIR
+
         version_file = CACHE_DIR.joinpath("version")
         version_file.write_text(version, encoding="utf-8")
 
     @classmethod
     async def fetch_file_list(cls, url: str, dl_url: str, route: str) -> list[File]:
         """获取 GitHub 仓库下的所有文件，并返回可下载的 URL"""
+        from .config import config
+
         headers = {}
         if config.github_token:
             headers = {"Authorization": f"{config.github_token}"}
@@ -145,12 +152,15 @@ class GameResourceDownloader:
                 is_file_path = "." in route.split("/")[-1]
 
                 if is_file_path:
+
                     def path_filter(path):
                         return path == route
                 else:
                     dir_route = route.rstrip("/") + "/"
+
                     def path_filter(path):
                         return path.startswith(dir_route)
+
                 files = [
                     File(
                         name=item["path"].split("/")[-1],
@@ -164,7 +174,9 @@ class GameResourceDownloader:
             raise RequestException(f"获取文件列表失败: {type(e).__name__}: {e}")
 
     @classmethod
-    async def download_all(cls, owner: str, repo: str, route: str, branch: str = "main"):
+    async def download_all(
+        cls, owner: str, repo: str, route: str, save_dir: Path, branch: str = "main", update: bool = False
+    ):
         """并行下载 GitHub 目录下的所有文件"""
         cls.download_count = 0
         cls.download_time = datetime.now()
@@ -172,7 +184,7 @@ class GameResourceDownloader:
         dl_url = cls.RAW_BASE_URL.format(owner=owner, repo=repo, branch=branch)
         files = await cls.fetch_file_list(url=url, dl_url=dl_url, route=route)
         is_file_path = "." in route.split("/")[-1]
-        save_path = CACHE_DIR / route
+        save_path = save_dir / route
         if is_file_path:
             save_path = save_path.parent
         save_path.mkdir(parents=True, exist_ok=True)
@@ -188,8 +200,9 @@ class GameResourceDownloader:
 
                 async def worker(file: File):
                     """每个文件下载任务"""
-                    if (save_path / file.name).exists():
-                        return
+                    if not update:
+                        if (save_path / file.name).exists():
+                            return
                     async with cls.SEMAPHORE:
                         task_id = progress.add_task("Downloading", filename=file.name, total=0)
                         await cls.download_file(
@@ -206,9 +219,9 @@ class GameResourceDownloader:
                 await asyncio.gather(*(worker(file) for file in files))
         time_consumed = datetime.now() - cls.download_time
         if cls.download_count == 0:
-            logger.info(f"资源 {route} 无新增文件")
+            logger.info(f"✅ 资源 {route} 无新增文件")
         else:
-            logger.success(f"资源 {route} 下载完成，共下载 {cls.download_count} 个文件,耗时 {time_consumed}")
+            logger.success(f"🎉 资源 {route} 下载完成，共下载 {cls.download_count} 个文件,耗时 {time_consumed}")
 
     @classmethod
     async def download_file(

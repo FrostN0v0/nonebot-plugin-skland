@@ -27,6 +27,10 @@
     box-shadow: 0px 2px 1px 0px rgba(0, 0, 0, 0.09), 0px 4px 2px 0px rgba(0, 0, 0, 0.09),
       0px 8px 4px 0px rgba(0, 0, 0, 0.09), 0px 16px 8px 0px rgba(0, 0, 0, 0.09), 0px 32px 16px 0px rgba(0, 0, 0, 0.09);
   }
+  .gacha-info-shadow {
+    box-shadow: 0px 1px 1px 0px rgba(0, 0, 0, 0.25), 0px 2px 8px 0px rgba(0, 0, 0, 0.25),
+      inset 0px 0px 0px 1px rgba(255, 255, 255, 0.1);
+  }
   .gradient-assist {
     background: linear-gradient(180deg, rgba(0, 0, 0, 0) 64%, rgba(0, 0, 0, 0.55) 75%, rgba(0, 0, 0, 0.8) 100%);
   }
@@ -49,6 +53,28 @@
   .green-bar {
     background: linear-gradient(270deg, rgba(47, 168, 102, 0.6) 0%, rgba(61, 220, 132, 0.6) 100%);
     box-shadow: 0px 0px 10px 0px rgba(61, 220, 132, 0.6);
+  }
+  .green-stripe-bar {
+    background-image: repeating-linear-gradient(110deg, #01cc9d 0px, #01cc9d 16px, #01b78e 16px, #01b78e 32px);
+  }
+  .yellow-stripe-bar {
+    background-image: repeating-linear-gradient(110deg, #eec867 0px, #eec867 16px, #ecc256 16px, #ecc256 32px);
+  }
+  .red-stripe-bar {
+    background-image: repeating-linear-gradient(110deg, #ef6853 0px, #ef6853 16px, #ed573f 16px, #ed573f 32px);
+  }
+  .green-blur-bar {
+    background: linear-gradient(270deg, rgba(1, 204, 157, 0.6) 0%, rgba(95, 251, 122, 0.6) 100%);
+    box-shadow: 0px 0px 10px 0px rgba(1, 204, 157, 0.6);
+  }
+  .grey-linear {
+    background: linear-gradient(
+      90deg,
+      rgba(112, 112, 112, 0.1) 5%,
+      rgba(112, 112, 112, 0.8) 56%,
+      rgba(112, 112, 112, 0.1) 91%,
+      rgba(35, 186, 252, 0) 100%
+    );
   }
   .theme-color-rogue-1 {
     color: #e56d5c;
@@ -95,12 +121,10 @@
     );
   }
   .found-clue-glow {
-    filter: drop-shadow(0 0 12px rgba(76, 175, 80, 0.7))
-            drop-shadow(0 0 4px rgba(102, 255, 102, 0.8));
+    filter: drop-shadow(0 0 12px rgba(76, 175, 80, 0.7)) drop-shadow(0 0 4px rgba(102, 255, 102, 0.8));
   }
   .missing-clue-glow {
-    filter: drop-shadow(0 0 10px rgba(220, 20, 60, 0.6))
-            drop-shadow(0 0 3px rgba(139, 0, 0, 0.75));
+    filter: drop-shadow(0 0 10px rgba(220, 20, 60, 0.6)) drop-shadow(0 0 3px rgba(139, 0, 0, 0.75));
   }
   .clue-1 {
     top: 10%;
@@ -127,7 +151,7 @@
     left: 45%;
     rotate: 10deg;
   }
-  .clue-6{
+  .clue-6 {
     top: 55%;
     left: 68%;
     rotate: 3deg;

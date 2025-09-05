@@ -1,15 +1,25 @@
+from collections import defaultdict
+
 import httpx
 from nonebot import logger
 from pydantic import AnyUrl as Url
 from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_orm import async_scoped_session
 
-from .model import SkUser, Character
 from .db_handler import delete_characters
 from .api import SklandAPI, SklandLoginAPI
-from .config import RES_DIR, CustomSource, config
-from .schemas import CRED, GachaCate, ArkSignResult
+from .model import SkUser, Character, GachaRecord
+from .config import RES_DIR, CustomSource, config, gacha_table_data
 from .exception import LoginException, RequestException, UnauthorizedException
+from .schemas import (
+    CRED,
+    GachaCate,
+    GachaPool,
+    GachaPull,
+    GachaGroup,
+    ArkSignResult,
+    GroupedGachaRecord,
+)
 
 
 async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
@@ -240,3 +250,68 @@ async def get_all_gacha_records(char: Character, cate: GachaCate, access_token: 
         page = await SklandAPI.get_gacha_history(
             char.uid, role_token, access_token, ak_cookie, cate.id, gachaTs=page.next_ts, pos=page.next_pos
         )
+
+
+def group_gacha_records(records: list[GachaRecord]) -> GroupedGachaRecord:
+    """将抽卡记录按卡池分组"""
+    temp_grouped_records = defaultdict(lambda: defaultdict(list))
+    for record in records:
+        temp_grouped_records[record.pool_id][record.gacha_ts].append(record)
+    final_pools_data: list[GachaPool] = []
+    for pool_id, ts_dict in temp_grouped_records.items():
+        up_five_chars = []
+        up_six_chars = []
+        open_time = end_time = gacha_rule_type = 0
+        for gacha_detail in gacha_table_data.gacha_details:
+            if gacha_detail.gachaPoolId == pool_id:
+                up_char = gacha_detail.gachaPoolDetail.detailInfo.upCharInfo
+                avail_char = gacha_detail.gachaPoolDetail.detailInfo.availCharInfo
+                if up_char is not None and hasattr(up_char, "perCharList") and len(up_char.perCharList) > 0:
+                    for up_char_item in up_char.perCharList:
+                        if up_char_item.rarityRank == 4:
+                            up_five_chars = up_char_item.charIdList
+                        elif up_char_item.rarityRank == 5:
+                            up_six_chars = up_char_item.charIdList
+                elif (
+                    avail_char is not None and hasattr(avail_char, "perAvailList") and len(avail_char.perAvailList) > 0
+                ):
+                    for avail_char_item in avail_char.perAvailList:
+                        if avail_char_item.rarityRank == 4:
+                            up_five_chars = avail_char_item.charIdList
+                        elif avail_char_item.rarityRank == 5:
+                            up_six_chars = avail_char_item.charIdList
+        for gacha_table in gacha_table_data.gacha_table:
+            if gacha_table.gachaPoolId == pool_id:
+                open_time = gacha_table.openTime
+                end_time = gacha_table.endTime
+                gacha_rule_type = gacha_table.gachaRuleType
+
+        gacha_groups: list[GachaGroup] = []
+
+        for gacha_ts, pulls in ts_dict.items():
+            gacha_pulls: list[GachaPull] = []
+            for p in pulls:
+                gacha_pulls.append(
+                    GachaPull(
+                        pool_name=p.pool_name,
+                        char_id=p.char_id,
+                        char_name=p.char_name,
+                        rarity=p.rarity,
+                        is_new=p.is_new,
+                        pos=p.pos,
+                    )
+                )
+            gacha_group = GachaGroup(gacha_ts=gacha_ts, pulls=gacha_pulls)
+            gacha_groups.append(gacha_group)
+        gacha_pool = GachaPool(
+            gachaPoolId=pool_id,
+            gachaPoolName=gacha_groups[0].pulls[0].pool_name,
+            openTime=open_time,
+            endTime=end_time,
+            up_five_chars=up_five_chars,
+            up_six_chars=up_six_chars,
+            gachaRuleType=gacha_rule_type,
+            records=gacha_groups,
+        )
+        final_pools_data.append(gacha_pool)
+    return GroupedGachaRecord(pools=final_pools_data)

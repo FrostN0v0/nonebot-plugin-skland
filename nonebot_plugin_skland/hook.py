@@ -15,7 +15,7 @@ async def startup():
     logger.debug("Skland shortcuts cache loaded")
     if config.check_res_update:
         try:
-            if version := await GameResourceDownloader.check_update():
+            if version := await GameResourceDownloader.check_update(CACHE_DIR):
                 logger.info("开始下载游戏资源")
                 for route in RESOURCE_ROUTES:
                     logger.info(f"正在下载: {route}")
@@ -23,6 +23,7 @@ async def startup():
                         owner="yuanyan3060",
                         repo="ArknightsGameResource",
                         route=route,
+                        save_dir=CACHE_DIR,
                         branch="main",
                     )
         except RequestException as e:

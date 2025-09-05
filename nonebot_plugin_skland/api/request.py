@@ -9,7 +9,7 @@ import httpx
 from nonebot import logger
 
 from ..exception import LoginException, RequestException, UnauthorizedException
-from ..schemas import CRED, ArkCard, GachaCate, RogueData, GachaResponse, ArkSignResponse
+from ..schemas import CRED, Status, ArkCard, GachaCate, RogueData, GachaResponse, ArkSignResponse
 
 base_url = "https://zonai.skland.com/api/v1"
 

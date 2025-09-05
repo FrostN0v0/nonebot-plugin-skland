@@ -43,6 +43,13 @@ def format_timestamp_str(stamp_str: str) -> str:
     return datetime.fromtimestamp(float(stamp_str)).strftime("%Y-%m-%d %H:%M:%S")
 
 
+def format_timestamp_md(ms: int) -> str:
+    if ms > 1e10:
+        return datetime.fromtimestamp(ms / 1000).strftime("%m-%d")
+    else:
+        return datetime.fromtimestamp(ms).strftime("%m-%d")
+
+
 def charId_to_avatarUrl(charId: str) -> str:
     avatar_id = next(
         (charId.replace(symbol, "_", 1) for symbol in ["@", "#"] if symbol in charId),

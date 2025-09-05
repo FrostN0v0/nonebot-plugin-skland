@@ -43,15 +43,17 @@ class GachaRecord(Model):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     """Gacha Record ID"""
-    uid: Mapped[int] = mapped_column(ForeignKey("skland_user.id"), comment="关联的用户ID")
+    uid: Mapped[int] = mapped_column(ForeignKey("skland_user.id"), comment="关联的用户ID", index=True)
     """关联的用户ID"""
-    char_uid: Mapped[str] = mapped_column(VARCHAR, ForeignKey("skland_characters.uid"), comment="关联的角色UID")
+    char_uid: Mapped[str] = mapped_column(
+        VARCHAR, ForeignKey("skland_characters.uid"), comment="关联的角色UID", index=True
+    )
     """关联的角色UID"""
     user: Mapped["SkUser"] = relationship("SkUser", back_populates="gacha_records")
     """关联的用户"""
     character: Mapped["Character"] = relationship("Character", back_populates="gacha_records")
     """关联的角色"""
-    pool_id: Mapped[str] = mapped_column(Text)
+    pool_id: Mapped[str] = mapped_column(Text, index=True)
     """Gacha Pool ID"""
     pool_name: Mapped[str] = mapped_column(Text)
     """Gacha Pool Name"""
@@ -64,7 +66,6 @@ class GachaRecord(Model):
     is_new: Mapped[bool]
     """Is New Character"""
     gacha_ts: Mapped[BigInteger] = mapped_column(BigInteger, comment="Gacha Timestamp")
-
     """Gacha Timestamp"""
     pos: Mapped[int]
     """Gacha Position"""

@@ -143,6 +143,7 @@ skland = on_alconna(
             Option("-f|--favored|favored", help_text="是否查询收藏的战绩"),
             help_text="查询单局肉鸽战绩详情",
         ),
+        Subcommand("gacha", help_text="查询明日方舟抽卡记录"),
         namespace=alc_config.namespaces["skland"],
         meta=CommandMeta(
             description=__plugin_meta__.description,

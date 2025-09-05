@@ -3,7 +3,7 @@ from nonebot_plugin_alconna import command_manager
 
 from .exception import RequestException
 from .download import GameResourceDownloader
-from .config import CACHE_DIR, RESOURCE_ROUTES, config
+from .config import CACHE_DIR, RESOURCE_ROUTES, config, gacha_table_data
 
 driver = get_driver()
 shortcut_cache = CACHE_DIR / "shortcut.db"
@@ -11,6 +11,8 @@ shortcut_cache = CACHE_DIR / "shortcut.db"
 
 @driver.on_startup
 async def startup():
+    await gacha_table_data.load()
+    logger.debug("Skland gacha table data loaded")
     command_manager.load_cache(shortcut_cache)
     logger.debug("Skland shortcuts cache loaded")
     if config.check_res_update:

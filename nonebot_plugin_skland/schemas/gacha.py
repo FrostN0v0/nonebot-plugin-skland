@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import Field, BaseModel
 from nonebot.compat import model_validator
@@ -127,16 +127,17 @@ class GachaPool(GachaTable):
         all_pulls_chronological = []
         for record in reversed(self.records):
             all_pulls_chronological.extend(reversed(record.pulls))
-        last_six_star_index = -1
-        for i in range(len(all_pulls_chronological) - 1, -1, -1):
-            if all_pulls_chronological[i].rarity == 5:
-                last_six_star_index = i
-                break
+        last_six_star_index = next(
+            (i for i in range(len(all_pulls_chronological) - 1, -1, -1) if all_pulls_chronological[i].rarity == 5),
+            -1,
+        )
         return last_six_star_index + 1
 
 
 class GroupedGachaRecord(BaseModel):
     """分组后的抽卡记录"""
+
+    GACHA_RULE_TYPES: ClassVar[dict[str, list[int]]] = {"limit": [1, 2, 3, 8], "norm": [0, 5, 9], "doub": [4, 6, 7, 10]}
 
     pools: list[GachaPool]
 
@@ -146,167 +147,87 @@ class GroupedGachaRecord(BaseModel):
             values["pools"] = sorted(values["pools"], key=lambda x: x.openTime, reverse=True)
         return values
 
+    def _sum_by(self, attr: str, group: str) -> int:
+        ids = self.GACHA_RULE_TYPES[group]
+        return sum(getattr(pool, attr) for pool in self.pools if pool.gachaRuleType in ids)
+
+    def _iter_pulls(self, group: str):
+        ids = self.GACHA_RULE_TYPES[group]
+        for pool in self.pools:
+            if pool.gachaRuleType in ids:
+                for grp in pool.records:
+                    yield from grp.pulls
+
+    def _pity(self, group: str) -> int:
+        count = 0
+        for pull in self._iter_pulls(group):
+            if pull.rarity == 5:
+                break
+            count += 1
+        return count
+
     @property
     def limit_total_pulls(self) -> int:
-        """限定池总抽卡数"""
-        total_pulls = 0
-        for pool in self.pools:
-            if pool.gachaRuleType in [1, 2, 3, 8]:
-                total_pulls += pool.total_pulls
-        return total_pulls
+        return self._sum_by("total_pulls", "limit")
 
     @property
     def norm_total_pulls(self) -> int:
-        """标准池总抽卡数"""
-        total_pulls = 0
-        for pool in self.pools:
-            if pool.gachaRuleType in [0, 5, 9]:
-                total_pulls += pool.total_pulls
-        return total_pulls
+        return self._sum_by("total_pulls", "norm")
 
     @property
     def doub_total_pulls(self) -> int:
-        """中坚总抽卡数"""
-        total_pulls = 0
-        for pool in self.pools:
-            if pool.gachaRuleType in [4, 6, 7, 10]:
-                total_pulls += pool.total_pulls
-        return total_pulls
+        return self._sum_by("total_pulls", "doub")
 
     @property
     def limit_pity(self) -> int:
-        """限定池当前已垫"""
-        all_limited_pulls = (
-            pull
-            for pool in self.pools
-            if pool.gachaRuleType in [1, 2, 3, 8]
-            for group in pool.records
-            for pull in group.pulls
-        )
-        pity_count = 0
-        for pull in all_limited_pulls:
-            if pull.rarity == 5:
-                break
-            pity_count += 1
-
-        return pity_count
+        return self._pity("limit")
 
     @property
     def norm_pity(self) -> int:
-        """标准池当前已垫"""
-        all_normal_pulls = (
-            pull
-            for pool in self.pools
-            if pool.gachaRuleType in [0, 5, 9]
-            for group in pool.records
-            for pull in group.pulls
-        )
-        pity_count = 0
-        for pull in all_normal_pulls:
-            if pull.rarity == 5:
-                break
-            pity_count += 1
-
-        return pity_count
+        return self._pity("norm")
 
     @property
     def doub_pity(self) -> int:
-        """中坚当前已垫"""
-        all_doujin_pulls = (
-            pull
-            for pool in self.pools
-            if pool.gachaRuleType in [4, 6, 7, 10]
-            for group in pool.records
-            for pull in group.pulls
-        )
-        pity_count = 0
-        for pull in all_doujin_pulls:
-            if pull.rarity == 5:
-                break
-            pity_count += 1
-
-        return pity_count
+        return self._pity("doub")
 
     @property
     def limit_total_six(self) -> int:
-        """限定池总六星数"""
-        total_six_stars = 0
-        for pool in self.pools:
-            if pool.gachaRuleType in [1, 2, 3, 8]:
-                total_six_stars += pool.total_six_stars
-        return total_six_stars
+        return self._sum_by("total_six_stars", "limit")
 
     @property
     def norm_total_six(self) -> int:
-        """标准池总六星数"""
-        total_six_stars = 0
-        for pool in self.pools:
-            if pool.gachaRuleType in [0, 5, 9]:
-                total_six_stars += pool.total_six_stars
-        return total_six_stars
+        return self._sum_by("total_six_stars", "norm")
 
     @property
     def doub_total_six(self) -> int:
-        """中坚总六星数"""
-        total_six_stars = 0
-        for pool in self.pools:
-            if pool.gachaRuleType in [4, 6, 7, 10]:
-                total_six_stars += pool.total_six_stars
-        return total_six_stars
+        return self._sum_by("total_six_stars", "doub")
 
     @property
     def limit_six_spook(self) -> int:
-        """限定池六星歪数"""
-        total_six_spook = 0
-        for pool in self.pools:
-            if pool.gachaRuleType in [1, 2, 3, 8]:
-                total_six_spook += pool.total_six_spook
-        return total_six_spook
+        return self._sum_by("total_six_spook", "limit")
 
     @property
     def norm_six_spook(self) -> int:
-        """标准池六星歪数"""
-        total_six_spook = 0
-        for pool in self.pools:
-            if pool.gachaRuleType in [0, 5, 9]:
-                total_six_spook += pool.total_six_spook
-        return total_six_spook
+        return self._sum_by("total_six_spook", "norm")
 
     @property
     def doub_six_spook(self) -> int:
-        """中坚六星歪数"""
-        total_six_spook = 0
-        for pool in self.pools:
-            if pool.gachaRuleType in [4, 6, 7, 10]:
-                total_six_spook += pool.total_six_spook
-        return total_six_spook
+        return self._sum_by("total_six_spook", "doub")
 
     @property
     def limit_six_avg(self) -> float:
-        """限定池六星UP平均"""
-        bare_six_consume = 0
-        for pool in self.pools:
-            if pool.gachaRuleType in [1, 2, 3, 8]:
-                bare_six_consume += pool.bare_six_consume
-        return round(bare_six_consume / self.limit_total_six, 1) if self.limit_total_six > 0 else 0.0
+        total = self.limit_total_six
+        return round(self._sum_by("bare_six_consume", "limit") / total, 1) if total else 0.0
 
     @property
     def norm_six_avg(self) -> float:
-        """标准池六星UP平均"""
-        bare_six_consume = 0
-        for pool in self.pools:
-            if pool.gachaRuleType in [0, 5, 9]:
-                bare_six_consume += pool.bare_six_consume
-        return round(bare_six_consume / self.norm_total_six, 1) if self.norm_total_six > 0 else 0.0
+        total = self.norm_total_six
+        return round(self._sum_by("bare_six_consume", "norm") / total, 1) if total else 0.0
 
     @property
     def doub_six_avg(self) -> float:
-        """中坚六星UP平均"""
-        bare_six_consume = 0
-        for pool in self.pools:
-            if pool.gachaRuleType in [4, 6, 7, 10]:
-                bare_six_consume += pool.bare_six_consume
-        return round(bare_six_consume / self.doub_total_six, 1) if self.doub_total_six > 0 else 0.0
+        total = self.doub_total_six
+        return round(self._sum_by("bare_six_consume", "doub") / total, 1) if total else 0.0
 
 
 class PerChar(BaseModel):

@@ -11,7 +11,7 @@
                         format_timestamp_md}}</span></span>
                 <div class="flex h-6 w-[108px] flex-row gap-1">
                     {% for char in pool.up_six_chars %}
-                    <img src="https://web.hycdn.cn/arknights/game/assets/char/avatar/{{ char }}.png"
+                    <img src="{{ char | charId_to_avatarUrl }}"
                         class="w-6 h-6 bg-[#646464] rounded-sm" />
                     {% endfor %}
                 </div>
@@ -33,7 +33,7 @@
             <div class="flex flex-col items-start pr-8">
                 <div class="flex flex-row items-center w-full">
                     <div class="flex flex-col">
-                        <img src="https://web.hycdn.cn/arknights/game/assets/char/avatar/{{ pull.char_id }}.png"
+                        <img src="{{ pull.char_id | charId_to_avatarUrl }}"
                             class="w-12 h-12 bg-[#646464] rounded-sm" />
                         {% set bar_class = 'green-stripe-bar' %}
                         {% if stats.pity_count >= 60 %}
@@ -71,7 +71,7 @@
 
                         <div class="flex ml-4 h-6 w-full flex-row gap-1">
                             {% for char_id in stats.five_stars %}
-                            <img src="https://web.hycdn.cn/arknights/game/assets/char/avatar/{{ char_id }}.png"
+                            <img src="{{ char_id | charId_to_avatarUrl }}"
                                 class="w-6 h-6 bg-[#646464] rounded-sm" />
                             {% endfor %}
                         </div>

@@ -200,9 +200,8 @@ class GameResourceDownloader:
 
                 async def worker(file: File):
                     """每个文件下载任务"""
-                    if not update:
-                        if (save_path / file.name).exists():
-                            return
+                    if not update and (save_path / file.name).exists():
+                        return
                     async with cls.SEMAPHORE:
                         task_id = progress.add_task("Downloading", filename=file.name, total=0)
                         await cls.download_file(

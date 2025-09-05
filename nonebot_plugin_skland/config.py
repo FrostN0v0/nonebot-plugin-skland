@@ -1,6 +1,5 @@
 import json
 import random
-import asyncio
 from pathlib import Path
 from typing import Any, Literal
 
@@ -35,25 +34,6 @@ class GachaTableData:
         self.gacha_table: list[GachaTable] = []
         self.gacha_details: list[GachaDetails] = []
 
-        self.load()
-
-    def load(self):
-        from .schemas import GachaTable
-
-        asyncio.get_event_loop().run_until_complete(self.get_version())
-        if not DATA_DIR.joinpath("version").exists():
-            DATA_DIR.joinpath("version").write_text(self.origin_version, encoding="utf-8")
-        if GACHA_DATA_PATH.joinpath("gacha_table.json").exists():
-            if self.version != self.origin_version and self.origin_version:
-                logger.info("检测到卡池数据版本更新，正在重新下载卡池数据...")
-                asyncio.get_event_loop().run_until_complete(self.get_gacha_table())
-                self.version = self.origin_version
-            gacha_json = json.loads(GACHA_DATA_PATH.joinpath("gacha_table.json").read_text(encoding="utf-8"))
-            self.gacha_table = [GachaTable(**item) for item in gacha_json.get("gachaPoolClient", [])]
-        else:
-            asyncio.get_event_loop().run_until_complete(self.get_gacha_table())
-        asyncio.get_event_loop().run_until_complete(self.get_gacha_details())
-
     async def get_gacha_details(self):
         from .schemas import GachaDetails
 
@@ -82,6 +62,24 @@ class GachaTableData:
                 branch="main",
                 update=True,
             )
+
+    async def load(self) -> None:
+        from .schemas import GachaTable
+
+        await self.get_version()
+        if not DATA_DIR.joinpath("version").exists():
+            DATA_DIR.joinpath("version").write_text(self.origin_version, encoding="utf-8")
+        if GACHA_DATA_PATH.joinpath("gacha_table.json").exists():
+            if self.version != self.origin_version and self.origin_version:
+                logger.info("检测到卡池数据版本更新，正在重新下载卡池数据...")
+                await self.get_gacha_table()
+                self.version = self.origin_version
+                DATA_DIR.joinpath("version").write_text(self.origin_version, encoding="utf-8")
+            gacha_json = json.loads(GACHA_DATA_PATH.joinpath("gacha_table.json").read_text(encoding="utf-8"))
+            self.gacha_table = [GachaTable(**item) for item in gacha_json.get("gachaPoolClient", [])]
+        else:
+            await self.get_gacha_table()
+        await self.get_gacha_details()
 
 
 class CustomSource(BaseModel):

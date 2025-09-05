@@ -252,6 +252,37 @@ async def get_all_gacha_records(char: Character, cate: GachaCate, access_token: 
         )
 
 
+def _get_up_chars(pool_id):
+    """获取up五星和六星角色列表"""
+    up_five_chars, up_six_chars = [], []
+    for gacha_detail in gacha_table_data.gacha_details:
+        if gacha_detail.gachaPoolId != pool_id:
+            continue
+        up_char = gacha_detail.gachaPoolDetail.detailInfo.upCharInfo
+        avail_char = gacha_detail.gachaPoolDetail.detailInfo.availCharInfo
+        if up_char and hasattr(up_char, "perCharList") and up_char.perCharList:
+            for up_char_item in up_char.perCharList:
+                if up_char_item.rarityRank == 4:
+                    up_five_chars = up_char_item.charIdList
+                elif up_char_item.rarityRank == 5:
+                    up_six_chars = up_char_item.charIdList
+        elif avail_char and hasattr(avail_char, "perAvailList") and avail_char.perAvailList:
+            for avail_char_item in avail_char.perAvailList:
+                if avail_char_item.rarityRank == 4:
+                    up_five_chars = avail_char_item.charIdList
+                elif avail_char_item.rarityRank == 5:
+                    up_six_chars = avail_char_item.charIdList
+    return up_five_chars, up_six_chars
+
+
+def _get_pool_info(pool_id):
+    """获取卡池开放时间、结束时间和规则类型"""
+    for gacha_table in gacha_table_data.gacha_table:
+        if gacha_table.gachaPoolId == pool_id:
+            return gacha_table.openTime, gacha_table.endTime, gacha_table.gachaRuleType
+    return 0, 0, 0
+
+
 def group_gacha_records(records: list[GachaRecord]) -> GroupedGachaRecord:
     """将抽卡记录按卡池分组"""
     temp_grouped_records = defaultdict(lambda: defaultdict(list))
@@ -259,39 +290,12 @@ def group_gacha_records(records: list[GachaRecord]) -> GroupedGachaRecord:
         temp_grouped_records[record.pool_id][record.gacha_ts].append(record)
     final_pools_data: list[GachaPool] = []
     for pool_id, ts_dict in temp_grouped_records.items():
-        up_five_chars = []
-        up_six_chars = []
-        open_time = end_time = gacha_rule_type = 0
-        for gacha_detail in gacha_table_data.gacha_details:
-            if gacha_detail.gachaPoolId == pool_id:
-                up_char = gacha_detail.gachaPoolDetail.detailInfo.upCharInfo
-                avail_char = gacha_detail.gachaPoolDetail.detailInfo.availCharInfo
-                if up_char is not None and hasattr(up_char, "perCharList") and len(up_char.perCharList) > 0:
-                    for up_char_item in up_char.perCharList:
-                        if up_char_item.rarityRank == 4:
-                            up_five_chars = up_char_item.charIdList
-                        elif up_char_item.rarityRank == 5:
-                            up_six_chars = up_char_item.charIdList
-                elif (
-                    avail_char is not None and hasattr(avail_char, "perAvailList") and len(avail_char.perAvailList) > 0
-                ):
-                    for avail_char_item in avail_char.perAvailList:
-                        if avail_char_item.rarityRank == 4:
-                            up_five_chars = avail_char_item.charIdList
-                        elif avail_char_item.rarityRank == 5:
-                            up_six_chars = avail_char_item.charIdList
-        for gacha_table in gacha_table_data.gacha_table:
-            if gacha_table.gachaPoolId == pool_id:
-                open_time = gacha_table.openTime
-                end_time = gacha_table.endTime
-                gacha_rule_type = gacha_table.gachaRuleType
-
-        gacha_groups: list[GachaGroup] = []
-
-        for gacha_ts, pulls in ts_dict.items():
-            gacha_pulls: list[GachaPull] = []
-            for p in pulls:
-                gacha_pulls.append(
+        up_five_chars, up_six_chars = _get_up_chars(pool_id)
+        open_time, end_time, gacha_rule_type = _get_pool_info(pool_id)
+        gacha_groups: list[GachaGroup] = [
+            GachaGroup(
+                gacha_ts=gacha_ts,
+                pulls=[
                     GachaPull(
                         pool_name=p.pool_name,
                         char_id=p.char_id,
@@ -300,9 +304,11 @@ def group_gacha_records(records: list[GachaRecord]) -> GroupedGachaRecord:
                         is_new=p.is_new,
                         pos=p.pos,
                     )
-                )
-            gacha_group = GachaGroup(gacha_ts=gacha_ts, pulls=gacha_pulls)
-            gacha_groups.append(gacha_group)
+                    for p in pulls
+                ],
+            )
+            for gacha_ts, pulls in ts_dict.items()
+        ]
         gacha_pool = GachaPool(
             gachaPoolId=pool_id,
             gachaPoolName=gacha_groups[0].pulls[0].pool_name,

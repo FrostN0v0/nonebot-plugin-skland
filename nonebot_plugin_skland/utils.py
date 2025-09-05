@@ -1,18 +1,28 @@
+from collections import defaultdict
+
 import httpx
 from nonebot import logger
 from pydantic import AnyUrl as Url
 from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_orm import async_scoped_session
 
-from .model import User, Character
-from .schemas import CRED, ArkSignResult
 from .db_handler import delete_characters
 from .api import SklandAPI, SklandLoginAPI
-from .config import RES_DIR, CustomSource, config
+from .model import SkUser, Character, GachaRecord
+from .config import RES_DIR, CustomSource, config, gacha_table_data
 from .exception import LoginException, RequestException, UnauthorizedException
+from .schemas import (
+    CRED,
+    GachaCate,
+    GachaPool,
+    GachaPull,
+    GachaGroup,
+    ArkSignResult,
+    GroupedGachaRecord,
+)
 
 
-async def get_characters_and_bind(user: User, session: async_scoped_session):
+async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
     await delete_characters(user, session)
 
     cred = CRED(cred=user.cred, token=user.cred_token)
@@ -36,7 +46,7 @@ async def get_characters_and_bind(user: User, session: async_scoped_session):
 def refresh_access_token_if_needed(func):
     """装饰器：如果 access_token 失效，刷新后重试"""
 
-    async def wrapper(user: User, *args, **kwargs):
+    async def wrapper(user: SkUser, *args, **kwargs):
         try:
             return await func(user, *args, **kwargs)
         except LoginException:
@@ -44,7 +54,7 @@ def refresh_access_token_if_needed(func):
                 await UniMessage("cred失效，用户没有绑定token，无法自动刷新cred").send(at_sender=True)
 
             try:
-                grant_code = await SklandLoginAPI.get_grant_code(user.access_token)
+                grant_code = await SklandLoginAPI.get_grant_code(user.access_token, 0)
                 new_cred = await SklandLoginAPI.get_cred(grant_code)
                 user.cred, user.cred_token = new_cred.cred, new_cred.token
                 logger.info("access_token 失效，已自动刷新")
@@ -60,7 +70,7 @@ def refresh_access_token_if_needed(func):
 def refresh_cred_token_if_needed(func):
     """装饰器：如果 cred_token 失效，刷新后重试"""
 
-    async def wrapper(user: User, *args, **kwargs):
+    async def wrapper(user: SkUser, *args, **kwargs):
         try:
             return await func(user, *args, **kwargs)
         except UnauthorizedException:
@@ -80,7 +90,7 @@ def refresh_cred_token_if_needed(func):
 def refresh_cred_token_with_error_return(func):
     """装饰器：如果 cred_token 失效，刷新后重试"""
 
-    async def wrapper(user: User, *args, **kwargs):
+    async def wrapper(user: SkUser, *args, **kwargs):
         try:
             return await func(user, *args, **kwargs)
         except UnauthorizedException:
@@ -98,7 +108,7 @@ def refresh_cred_token_with_error_return(func):
 
 
 def refresh_access_token_with_error_return(func):
-    async def wrapper(user: User, *args, **kwargs):
+    async def wrapper(user: SkUser, *args, **kwargs):
         try:
             return await func(user, *args, **kwargs)
         except LoginException:
@@ -106,7 +116,7 @@ def refresh_access_token_with_error_return(func):
                 await UniMessage("cred失效，用户没有绑定token，无法自动刷新cred").send(at_sender=True)
 
             try:
-                grant_code = await SklandLoginAPI.get_grant_code(user.access_token)
+                grant_code = await SklandLoginAPI.get_grant_code(user.access_token, 0)
                 new_cred = await SklandLoginAPI.get_cred(grant_code)
                 user.cred, user.cred_token = new_cred.cred, new_cred.token
                 logger.info("access_token 失效，已自动刷新")
@@ -206,3 +216,108 @@ def format_sign_result(sign_data: dict, sign_time: str, is_text: bool) -> ArkSig
             f"--------------------"
         ),
     )
+
+
+async def get_all_gacha_records(char: Character, cate: GachaCate, access_token: str, role_token: str, ak_cookie: str):
+    """一个异步生成器，用于获取并逐条产出指定分类下的所有抽卡记录。
+
+    此函数会自动处理分页，持续从森空岛(Skland)API请求数据，直到获取到
+    指定卡池的全部抽卡记录为止。
+
+    Args:
+        uid (str): 用户的游戏角色唯一标识 (UID)。
+        cate_id (str): 要查询的卡池类别ID，例如：'anniver_fest', 'summer_fest'。
+        access_token (str): 用于验证 Skland API 的访问令牌 (access_token)。
+        role_token (str): 用于验证的特定游戏角色令牌 (role_token)。
+        ak_cookie (str): 所需的会话 Cookie 字符串。
+
+    Yields:
+        GachaInfo: 产出一个代表单次抽卡记录的对象。
+                     其具体类型取决于 `SklandAPI.get_gacha_history` 返回结果中
+                     `gacha_list` 内元素的结构。
+    """
+    page = await SklandAPI.get_gacha_history(char.uid, role_token, access_token, ak_cookie, cate.id)
+    prev_ts, prev_pos = None, None
+
+    while page and page.gacha_list:
+        for record in page.gacha_list:
+            yield record
+        if not page.hasMore:
+            break
+        if (page.next_ts, page.next_pos) == (prev_ts, prev_pos):
+            break
+        prev_ts, prev_pos = page.next_ts, page.next_pos
+        page = await SklandAPI.get_gacha_history(
+            char.uid, role_token, access_token, ak_cookie, cate.id, gachaTs=page.next_ts, pos=page.next_pos
+        )
+
+
+def _get_up_chars(pool_id):
+    """获取up五星和六星角色列表"""
+    up_five_chars, up_six_chars = [], []
+    for gacha_detail in gacha_table_data.gacha_details:
+        if gacha_detail.gachaPoolId != pool_id:
+            continue
+        up_char = gacha_detail.gachaPoolDetail.detailInfo.upCharInfo
+        avail_char = gacha_detail.gachaPoolDetail.detailInfo.availCharInfo
+        if up_char and hasattr(up_char, "perCharList") and up_char.perCharList:
+            for up_char_item in up_char.perCharList:
+                if up_char_item.rarityRank == 4:
+                    up_five_chars = up_char_item.charIdList
+                elif up_char_item.rarityRank == 5:
+                    up_six_chars = up_char_item.charIdList
+        elif avail_char and hasattr(avail_char, "perAvailList") and avail_char.perAvailList:
+            for avail_char_item in avail_char.perAvailList:
+                if avail_char_item.rarityRank == 4:
+                    up_five_chars = avail_char_item.charIdList
+                elif avail_char_item.rarityRank == 5:
+                    up_six_chars = avail_char_item.charIdList
+    return up_five_chars, up_six_chars
+
+
+def _get_pool_info(pool_id):
+    """获取卡池开放时间、结束时间和规则类型"""
+    for gacha_table in gacha_table_data.gacha_table:
+        if gacha_table.gachaPoolId == pool_id:
+            return gacha_table.openTime, gacha_table.endTime, gacha_table.gachaRuleType
+    return 0, 0, 0
+
+
+def group_gacha_records(records: list[GachaRecord]) -> GroupedGachaRecord:
+    """将抽卡记录按卡池分组"""
+    temp_grouped_records = defaultdict(lambda: defaultdict(list))
+    for record in records:
+        temp_grouped_records[record.pool_id][record.gacha_ts].append(record)
+    final_pools_data: list[GachaPool] = []
+    for pool_id, ts_dict in temp_grouped_records.items():
+        up_five_chars, up_six_chars = _get_up_chars(pool_id)
+        open_time, end_time, gacha_rule_type = _get_pool_info(pool_id)
+        gacha_groups: list[GachaGroup] = [
+            GachaGroup(
+                gacha_ts=gacha_ts,
+                pulls=[
+                    GachaPull(
+                        pool_name=p.pool_name,
+                        char_id=p.char_id,
+                        char_name=p.char_name,
+                        rarity=p.rarity,
+                        is_new=p.is_new,
+                        pos=p.pos,
+                    )
+                    for p in pulls
+                ],
+            )
+            for gacha_ts, pulls in ts_dict.items()
+        ]
+        gacha_pool = GachaPool(
+            gachaPoolId=pool_id,
+            gachaPoolName=gacha_groups[0].pulls[0].pool_name,
+            openTime=open_time,
+            endTime=end_time,
+            up_five_chars=up_five_chars,
+            up_six_chars=up_six_chars,
+            gachaRuleType=gacha_rule_type,
+            records=gacha_groups,
+        )
+        final_pools_data.append(gacha_pool)
+    return GroupedGachaRecord(pools=final_pools_data)

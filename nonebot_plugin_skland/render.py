@@ -3,13 +3,15 @@ from datetime import datetime
 from pydantic import AnyUrl as Url
 from nonebot_plugin_htmlrender import template_to_pic
 
+from .model import Character
 from .config import TEMPLATES_DIR
-from .schemas import Clue, ArkCard, RogueData
+from .schemas import Clue, Status, ArkCard, RogueData, GroupedGachaRecord
 from .filters import (
     loads_json,
     format_timestamp,
     time_to_next_4am,
     charId_to_avatarUrl,
+    format_timestamp_md,
     format_timestamp_str,
     charId_to_portraitUrl,
     time_to_next_monday_4am,
@@ -116,6 +118,27 @@ async def render_clue_board(props: Clue):
         },
         pages={
             "viewport": {"width": 1100, "height": 1},
+            "base_url": f"file://{TEMPLATES_DIR}",
+        },
+        device_scale_factor=1.5,
+    )
+
+
+async def render_gacha_history(props: GroupedGachaRecord, char: Character, status: Status) -> bytes:
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="gacha.html.jinja2",
+        templates={
+            "record": props,
+            "character": char,
+            "status": status,
+        },
+        filters={
+            "charId_to_avatarUrl": charId_to_avatarUrl,
+            "format_timestamp_md": format_timestamp_md,
+        },
+        pages={
+            "viewport": {"width": 720, "height": 1},
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         device_scale_factor=1.5,

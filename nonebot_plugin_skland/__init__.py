@@ -176,6 +176,7 @@ skland.shortcut("角色更新", {"command": "skland char update", "fuzzy": False
 skland.shortcut("资源更新", {"command": "skland sync", "fuzzy": False, "prefix": True})
 skland.shortcut("战绩详情", {"command": "skland rginfo", "fuzzy": True, "prefix": True})
 skland.shortcut("收藏战绩详情", {"command": "skland rginfo -f", "fuzzy": True, "prefix": True})
+skland.shortcut("方舟抽卡记录", {"command": "skland gacha", "fuzzy": False, "prefix": True})
 
 
 @skland.assign("$main")

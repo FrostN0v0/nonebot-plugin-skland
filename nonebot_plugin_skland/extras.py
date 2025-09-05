@@ -143,6 +143,20 @@ extra_data = {
             ),
         },
         {
+            "func": "方舟抽卡记录",
+            "trigger_method": "**无限制**",
+            "trigger_condition": "**方舟抽卡记录** | `skland gacha`",
+            "brief_des": "查询绑定到bot的明日方舟账号的抽卡记录。",
+            "detail_des": (
+                "- **方舟抽卡记录**\n\n"
+                "```bash\n"
+                "skland gacha\n"
+                "```\n\n"
+                " **快捷指令** ：`方舟抽卡记录`\n\n"
+                "查询绑定到bot的明日方舟账号的抽卡记录。"
+            ),
+        },
+        {
             "func": "角色更新",
             "trigger_method": "**已绑定用户**",
             "trigger_condition": "**角色更新** | `skland char update`",

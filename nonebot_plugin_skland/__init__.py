@@ -64,7 +64,9 @@ from .utils import (
     group_gacha_records,
     get_background_image,
     get_all_gacha_records,
+    heybox_data_to_record,
     get_characters_and_bind,
+    import_heybox_gacha_data,
     get_rogue_background_image,
     refresh_cred_token_if_needed,
     refresh_access_token_if_needed,
@@ -144,6 +146,9 @@ skland = on_alconna(
             help_text="查询单局肉鸽战绩详情",
         ),
         Subcommand("gacha", help_text="查询明日方舟抽卡记录"),
+        Subcommand(
+            "import", Args["url", str, Field(completion=lambda: "请输入抽卡记录导出链接")], help_text="导入抽卡记录"
+        ),
         namespace=alc_config.namespaces["skland"],
         meta=CommandMeta(
             description=__plugin_meta__.description,
@@ -698,3 +703,30 @@ async def _(user_session: UserSession, session: async_scoped_session):
     await UniMessage.image(raw=await render_gacha_history(gacha_data_grouped, character, user_info.status)).send()
     session.add_all(record_to_save)
     await session.commit()
+
+
+@skland.assign("import")
+async def _(url: Match[str], user_session: UserSession, session: async_scoped_session):
+    """导入明日方舟抽卡记录（开发中）"""
+    user = await session.get(SkUser, user_session.user_id)
+    if not user:
+        await UniMessage("未绑定 skland 账号").finish(at_sender=True)
+    character = await get_default_arknights_character(user, session)
+    if not character:
+        await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
+    if url.available:
+        import_result = await import_heybox_gacha_data(url.result)
+        if str(import_result["info"]["uid"]) == character.uid:
+            records = heybox_data_to_record(import_result["data"], user.id, character.uid)
+            db_records = await select_all_gacha_records(user, character.uid, session)
+            existing_records_set = {(r.gacha_ts, r.pos) for r in db_records}
+            record_to_save: list[GachaRecord] = []
+            for record in records:
+                if (record.gacha_ts, record.pos) in existing_records_set:
+                    continue
+                record_to_save.append(record)
+            logger.debug(f"读取抽卡记录共 {len(records)} 条, 其中导入 {len(record_to_save)} 条新记录")
+            session.add_all(record_to_save)
+            await session.commit()
+        else:
+            await UniMessage("导入的抽卡记录与当前角色不匹配").finish(at_sender=True)

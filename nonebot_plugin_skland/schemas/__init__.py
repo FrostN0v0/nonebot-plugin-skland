@@ -10,9 +10,10 @@ from .gacha import GachaPull as GachaPull
 from .rogue import RogueData as RogueData
 from .gacha import GachaGroup as GachaGroup
 from .gacha import GachaTable as GachaTable
-from .gacha import GachaDetails as GachaDetails
+from .game_data import CharTable as CharTable
 from .ark_models import AssistChar as AssistChar
 from .gacha import GachaResponse as GachaResponse
+from .game_data import GachaDetails as GachaDetails
 from .ark_sign import ArkSignResult as ArkSignResult
 from .ark_sign import ArkSignResponse as ArkSignResponse
 from .gacha import GroupedGachaRecord as GroupedGachaRecord

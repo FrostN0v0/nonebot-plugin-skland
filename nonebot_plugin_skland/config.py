@@ -17,13 +17,13 @@ TEMPLATES_DIR: Path = RES_DIR / "templates"
 CACHE_DIR = store.get_plugin_cache_dir()
 DATA_DIR = store.get_plugin_data_dir()
 RESOURCE_ROUTES = ["portrait", "skill", "avatar"]
-DATA_ROUTES = ["gamedata/excel/gacha_table.json"]
+DATA_ROUTES = ["gamedata/excel/gacha_table.json", "gamedata/excel/character_table.json"]
 GACHA_DATA_PATH = DATA_DIR / "gamedata" / "excel"
 
 
 class GachaTableData:
     def __init__(self) -> None:
-        from .schemas import GachaTable, GachaDetails
+        from .schemas import CharTable, GachaTable, GachaDetails
 
         self.version: str = (
             DATA_DIR.joinpath("version").read_text(encoding="utf-8").strip()
@@ -33,6 +33,7 @@ class GachaTableData:
         self.origin_version: str = ""
         self.gacha_table: list[GachaTable] = []
         self.gacha_details: list[GachaDetails] = []
+        self.character_table: list[CharTable] = []
 
     async def get_gacha_details(self):
         from .schemas import GachaDetails
@@ -48,7 +49,7 @@ class GachaTableData:
 
         self.origin_version = await GameResourceDownloader.check_update(DATA_DIR)
 
-    async def get_gacha_table(self):
+    async def download_game_data(self):
         from .download import GameResourceDownloader
 
         self.version = await GameResourceDownloader.check_update(DATA_DIR)
@@ -64,19 +65,27 @@ class GachaTableData:
             )
 
     async def load(self) -> None:
-        from .schemas import GachaTable
+        from .schemas import CharTable, GachaTable
 
         await self.get_version()
         if not DATA_DIR.joinpath("version").exists():
             DATA_DIR.joinpath("version").write_text(self.origin_version, encoding="utf-8")
-        if GACHA_DATA_PATH.joinpath("gacha_table.json").exists():
+        if (
+            GACHA_DATA_PATH.joinpath("gacha_table.json").exists()
+            and GACHA_DATA_PATH.joinpath("character_table.json").exists()
+        ):
             if self.version != self.origin_version and self.origin_version:
                 logger.info("检测到卡池数据版本更新，正在重新下载卡池数据...")
-                await self.get_gacha_table()
+                await self.download_game_data()
                 self.version = self.origin_version
                 DATA_DIR.joinpath("version").write_text(self.origin_version, encoding="utf-8")
         else:
-            await self.get_gacha_table()
+            await self.download_game_data()
+        char_json = json.loads(GACHA_DATA_PATH.joinpath("character_table.json").read_text(encoding="utf-8"))
+        for char_id, data in char_json.items():
+            char_table = CharTable(**data)
+            char_table.char_id = char_id
+            self.character_table.append(char_table)
         gacha_json = json.loads(GACHA_DATA_PATH.joinpath("gacha_table.json").read_text(encoding="utf-8"))
         self.gacha_table = [GachaTable(**item) for item in gacha_json.get("gachaPoolClient", [])]
         await self.get_gacha_details()

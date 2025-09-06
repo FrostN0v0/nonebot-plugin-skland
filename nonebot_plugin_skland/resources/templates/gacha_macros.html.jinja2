@@ -4,12 +4,12 @@
 <div class="left-6 w-168 pb-4 bg-[#3F3F3F] rounded-xl gacha-info-shadow">
     <div class="flex flex-col justify-center gap-2 pt-4 px-4 divide-y divide-[#5A5A5A]">
 
-        <div class="flex flex-row pb-3 justify-between items-start">
-            <div>
+        <div class="flex flex-row pb-3 gap-4 items-start">
+            <div class="flex-1 min-w-0">
                 <span class="text-white font-[Akrobat] text-lg">{{pool.gachaPoolName}} <span
                         class="text-white/60 text-xs">{{pool.openTime | format_timestamp_md}}~{{pool.endTime |
                         format_timestamp_md}}</span></span>
-                <div class="flex h-6 w-[108px] flex-row gap-1">
+                <div class="flex flex-wrap gap-1 pt-1">
                     {% for char in pool.up_six_chars %}
                     <img src="{{ char | charId_to_avatarUrl }}"
                         class="w-6 h-6 bg-[#646464] rounded-sm" />
@@ -17,7 +17,7 @@
                 </div>
             </div>
             <div
-                class="flex h-14 w-[78px] items-center justify-center -mx-4 rounded-l-[5px] bg-[#146ACF] text-white text-2xl">
+                class="flex-shrink-0 flex h-12 w-16 items-center justify-center -mx-4 rounded-l-[5px] bg-[#146ACF] text-white text-xl">
                 {{ pool.total_pulls }}<span class="text-xs">抽</span>
             </div>
         </div>

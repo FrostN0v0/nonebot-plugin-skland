@@ -75,10 +75,10 @@ class GachaTableData:
                 await self.get_gacha_table()
                 self.version = self.origin_version
                 DATA_DIR.joinpath("version").write_text(self.origin_version, encoding="utf-8")
-            gacha_json = json.loads(GACHA_DATA_PATH.joinpath("gacha_table.json").read_text(encoding="utf-8"))
-            self.gacha_table = [GachaTable(**item) for item in gacha_json.get("gachaPoolClient", [])]
         else:
             await self.get_gacha_table()
+        gacha_json = json.loads(GACHA_DATA_PATH.joinpath("gacha_table.json").read_text(encoding="utf-8"))
+        self.gacha_table = [GachaTable(**item) for item in gacha_json.get("gachaPoolClient", [])]
         await self.get_gacha_details()
 
 

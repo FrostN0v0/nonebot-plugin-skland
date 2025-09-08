@@ -1,6 +1,6 @@
 from nonebot_plugin_orm import Model
 from sqlalchemy.orm import Mapped, relationship, mapped_column
-from sqlalchemy import VARCHAR, Text, BigInteger, ForeignKey, UniqueConstraint
+from sqlalchemy import VARCHAR, Text, Integer, BigInteger, ForeignKey, UniqueConstraint, ForeignKeyConstraint
 
 
 class SkUser(Model):
@@ -45,13 +45,16 @@ class GachaRecord(Model):
     """Gacha Record ID"""
     uid: Mapped[int] = mapped_column(ForeignKey("skland_user.id"), comment="关联的用户ID", index=True)
     """关联的用户ID"""
-    char_uid: Mapped[str] = mapped_column(
-        VARCHAR, ForeignKey("skland_characters.uid"), comment="关联的角色UID", index=True
-    )
+    char_pk_id: Mapped[int] = mapped_column(Integer, comment="关联角色的复合主键ID部分")
+    char_uid: Mapped[str] = mapped_column(VARCHAR, comment="关联的角色UID", index=True)
     """关联的角色UID"""
     user: Mapped["SkUser"] = relationship("SkUser", back_populates="gacha_records")
     """关联的用户"""
-    character: Mapped["Character"] = relationship("Character", back_populates="gacha_records")
+    character: Mapped["Character"] = relationship(
+        "Character",
+        back_populates="gacha_records",
+        primaryjoin="and_(GachaRecord.char_pk_id == Character.id, GachaRecord.char_uid == Character.uid)",
+    )
     """关联的角色"""
     pool_id: Mapped[str] = mapped_column(Text, index=True)
     """Gacha Pool ID"""
@@ -70,4 +73,11 @@ class GachaRecord(Model):
     pos: Mapped[int]
     """Gacha Position"""
 
-    __table_args__ = (UniqueConstraint("char_id", "gacha_ts", "pos", name="_character_ts_pos_uc"),)
+    __table_args__ = (
+        UniqueConstraint("char_id", "gacha_ts", "pos", name="_character_ts_pos_uc"),
+        ForeignKeyConstraint(
+            ["char_pk_id", "char_uid"],
+            ["skland_characters.id", "skland_characters.uid"],
+            name="fk_gacha_record_to_characters",
+        ),
+    )

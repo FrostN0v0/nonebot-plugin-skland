@@ -1,8 +1,8 @@
-"""gacha record
+"""gacha_record
 
 迁移 ID: 220f4e0d01fd
-父迁移:
-创建时间: 2025-09-05 18:26:46.589449
+父迁移: 02e0764f579e
+创建时间: 2025-09-08 18:34:44.475046
 
 """
 
@@ -14,8 +14,8 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "220f4e0d01fd"
-down_revision: str | Sequence[str] | None = None
-branch_labels: str | Sequence[str] | None = ("gacha",)
+down_revision: str | Sequence[str] | None = "02e0764f579e"
+branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
@@ -27,6 +27,7 @@ def upgrade(name: str = "") -> None:
         "skland_gacha_record",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("uid", sa.Integer(), nullable=False, comment="关联的用户ID"),
+        sa.Column("char_pk_id", sa.Integer(), nullable=False, comment="关联角色的复合主键ID部分"),
         sa.Column("char_uid", sa.VARCHAR(), nullable=False, comment="关联的角色UID"),
         sa.Column("pool_id", sa.Text(), nullable=False),
         sa.Column("pool_name", sa.Text(), nullable=False),
@@ -37,7 +38,9 @@ def upgrade(name: str = "") -> None:
         sa.Column("gacha_ts", sa.BigInteger(), nullable=False, comment="Gacha Timestamp"),
         sa.Column("pos", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(
-            ["char_uid"], ["skland_characters.uid"], name=op.f("fk_skland_gacha_record_char_uid_skland_characters")
+            ["char_pk_id", "char_uid"],
+            ["skland_characters.id", "skland_characters.uid"],
+            name="fk_gacha_record_to_characters",
         ),
         sa.ForeignKeyConstraint(["uid"], ["skland_user.id"], name=op.f("fk_skland_gacha_record_uid_skland_user")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_skland_gacha_record")),

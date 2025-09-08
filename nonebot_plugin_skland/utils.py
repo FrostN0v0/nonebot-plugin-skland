@@ -368,7 +368,7 @@ def get_pool_id(pool_name: str, gacha_ts: int) -> str:
     return "NORM_1_0_1"
 
 
-def heybox_data_to_record(data: dict, uid: int, char_uid: str) -> list[GachaRecord]:
+def heybox_data_to_record(data: dict, uid: int, char_id: int, char_uid: str) -> list[GachaRecord]:
     """将Heybox导出的抽卡记录转换为GachaRecord列表"""
     records: list[GachaRecord] = []
     for gacha_ts, gacha_data in data.items():
@@ -380,6 +380,7 @@ def heybox_data_to_record(data: dict, uid: int, char_uid: str) -> list[GachaReco
             records.append(
                 GachaRecord(
                     uid=uid,
+                    char_pk_id=char_id,
                     char_uid=char_uid,
                     pool_id=pool_id,
                     pool_name=pool_name,

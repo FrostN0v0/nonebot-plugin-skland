@@ -1,4 +1,4 @@
-<!-- markdownlint-disable MD033 MD036 MD041 MD046 -->
+<!-- markdownlint-disable MD028 MD033 MD036 MD041 MD046 -->
 <div align="center">
   <a href="https://v2.nonebot.dev/store"><img src="https://github.com/FrostN0v0/nonebot-plugin-template/blob/resources/NoneBotPlugin.svg" width="300"  alt="NoneBotPluginLogo"></a>
   <br>
@@ -196,6 +196,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 |        `skland rginfo`         |   所有   |     `战绩id`      |       根据 ID 查询最近战绩详情        |
 |       `skland rginfo -f`       |   所有   |     `战绩id`      |   根据 ID 查询森空岛收藏的战绩详情    |
 |         `skland gacha`         |   所有   |        无         |         查询明日方舟抽卡记录          |
+|        `skland import`         |   所有   |       `url`       |         导入明日方舟抽卡记录          |
 
 > [!NOTE]
 > Token 获取相关文档还没写~~才不是懒得写~~
@@ -203,6 +204,9 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 > 可以参考[`token获取`](https://docs.qq.com/doc/p/2f705965caafb3ef342d4a979811ff3960bb3c17)获取
 >
 > 本插件支持 cred 和 token 两种方式手动绑定，使用二维码绑定时会提供 token，请勿将 token 提供给不信任的 Bot 所有者
+
+> [!TIP]
+> 支持导入小黑盒记录的抽卡记录，请滑动至小黑盒抽卡分析页底部，点击`数据管理`导出数据并复制链接
 
 ### 🎯 快捷指令
 
@@ -224,6 +228,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 |   战绩详情   |        `skland rginfo`        |
 | 收藏战绩详情 |   `skland rginfo --favored`   |
 | 方舟抽卡记录 |        `skland gacha`         |
+| 导入抽卡记录 |        `skland import`        |
 
 #### 🪄 自定义快捷指令
 

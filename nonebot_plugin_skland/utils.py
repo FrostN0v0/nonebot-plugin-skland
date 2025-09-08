@@ -335,10 +335,10 @@ async def import_heybox_gacha_data(url: str) -> dict:
 
 def get_char_id_by_char_name(char_name: str) -> str:
     """通过角色名称获取角色ID"""
-    for char in gacha_table_data.character_table:
-        if char.name == char_name:
-            return char.char_id
-    return "char_601_cguard"
+    return next(
+        (char.char_id for char in gacha_table_data.character_table if char.name == char_name),
+        "char_601_cguard",
+    )
 
 
 def get_pool_id(pool_name: str, gacha_ts: int) -> str:
@@ -371,23 +371,18 @@ def heybox_data_to_record(data: dict, uid: int, char_uid: str) -> list[GachaReco
         if pool_id == "NORM_1_0_1":
             pool_name = "未知寻访"
         for index, char in enumerate(gacha_data["c"]):
-            char_name = char[0]
-            char_id = get_char_id_by_char_name(char[0])
-            rarity = char[1]
-            is_new = char[2]
-            pos = index
             records.append(
                 GachaRecord(
                     uid=uid,
                     char_uid=char_uid,
                     pool_id=pool_id,
                     pool_name=pool_name,
-                    char_id=char_id,
-                    char_name=char_name,
-                    rarity=rarity,
-                    is_new=is_new,
+                    char_id=get_char_id_by_char_name(char[0]),
+                    char_name=char[0],
+                    rarity=char[1],
+                    is_new=char[2],
                     gacha_ts=int(gacha_ts),
-                    pos=pos,
+                    pos=index,
                 )
             )
     return records

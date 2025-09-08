@@ -45,10 +45,10 @@ from nonebot_plugin_alconna import (
 
 from . import hook as hook
 from .extras import extra_data
-from .model import SkUser, GachaRecord
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
 from .download import GameResourceDownloader
+from .model import SkUser, Character, GachaRecord
 from .config import CACHE_DIR, RESOURCE_ROUTES, Config, config
 from .schemas import CRED, Clue, Topics, GachaInfo, RogueData, ArkSignResponse
 from .render import render_ark_card, render_clue_board, render_rogue_card, render_rogue_info, render_gacha_history
@@ -182,6 +182,7 @@ skland.shortcut("资源更新", {"command": "skland sync", "fuzzy": False, "pref
 skland.shortcut("战绩详情", {"command": "skland rginfo", "fuzzy": True, "prefix": True})
 skland.shortcut("收藏战绩详情", {"command": "skland rginfo -f", "fuzzy": True, "prefix": True})
 skland.shortcut("方舟抽卡记录", {"command": "skland gacha", "fuzzy": False, "prefix": True})
+skland.shortcut("导入抽卡记录", {"command": "skland import", "fuzzy": True, "prefix": True})
 
 
 @skland.assign("$main")
@@ -197,12 +198,7 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
     else:
         target_id = user_session.user_id
 
-    user = await session.get(SkUser, target_id)
-    if not user:
-        await UniMessage("未绑定 skland 账号").finish(at_sender=True)
-    ark_characters = await get_default_arknights_character(user, session)
-    if not ark_characters:
-        await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
+    user, ark_characters = await check_user_character(target_id, session)
     if user_session.platform == "QQClient":
         await message_reaction("66")
     else:
@@ -460,12 +456,7 @@ async def _(
     else:
         target_id = user_session.user_id
 
-    user = await session.get(SkUser, target_id)
-    if not user:
-        await UniMessage("未绑定 skland 账号").finish(at_sender=True)
-    character = await get_default_arknights_character(user, session)
-    if not character:
-        await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
+    user, character = await check_user_character(target_id, session)
     if user_session.platform == "QQClient":
         await message_reaction("66")
     else:
@@ -647,12 +638,7 @@ async def _(user_session: UserSession, session: async_scoped_session):
     async def get_user_info(user: SkUser, uid: str):
         return await SklandAPI.ark_card(CRED(cred=user.cred, token=user.cred_token), uid)
 
-    user = await session.get(SkUser, user_session.user_id)
-    if not user:
-        await UniMessage("未绑定 skland 账号").finish(at_sender=True)
-    character = await get_default_arknights_character(user, session)
-    if not character:
-        await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
+    user, character = await check_user_character(user_session.user_id, session)
     if user_session.platform == "QQClient":
         await message_reaction("66")
     else:
@@ -710,12 +696,7 @@ async def _(user_session: UserSession, session: async_scoped_session):
 @skland.assign("import")
 async def _(url: Match[str], user_session: UserSession, session: async_scoped_session):
     """导入明日方舟抽卡记录（开发中）"""
-    user = await session.get(SkUser, user_session.user_id)
-    if not user:
-        await UniMessage("未绑定 skland 账号").finish(at_sender=True)
-    character = await get_default_arknights_character(user, session)
-    if not character:
-        await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
+    user, character = await check_user_character(user_session.user_id, session)
     if url.available:
         import_result = await import_heybox_gacha_data(url.result)
         if str(import_result["info"]["uid"]) == character.uid:
@@ -735,3 +716,13 @@ async def _(url: Match[str], user_session: UserSession, session: async_scoped_se
             await session.commit()
         else:
             await UniMessage("导入的抽卡记录与当前角色不匹配").finish(at_sender=True)
+
+
+async def check_user_character(user_id: int, session: async_scoped_session) -> tuple[SkUser, Character]:
+    user = await session.get(SkUser, user_id)
+    if not user:
+        await UniMessage("未绑定 skland 账号").finish(at_sender=True)
+    char = await get_default_arknights_character(user, session)
+    if not char:
+        await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
+    return user, char

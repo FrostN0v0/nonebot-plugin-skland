@@ -1,4 +1,6 @@
 from collections import defaultdict
+from collections.abc import Callable, Coroutine
+from typing import TypeVar, ParamSpec, Concatenate
 
 import httpx
 from nonebot import logger
@@ -20,6 +22,10 @@ from .schemas import (
     ArkSignResult,
     GroupedGachaRecord,
 )
+
+P = ParamSpec("P")
+R = TypeVar("R")
+Refreshable = Callable[Concatenate[SkUser, P], Coroutine[None, None, R]]
 
 
 async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
@@ -43,10 +49,10 @@ async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
     await session.commit()
 
 
-def refresh_access_token_if_needed(func):
+def refresh_access_token_if_needed(func: Refreshable[P, R]) -> Refreshable[P, R | None]:
     """装饰器：如果 access_token 失效，刷新后重试"""
 
-    async def wrapper(user: SkUser, *args, **kwargs):
+    async def wrapper(user: SkUser, *args: P.args, **kwargs: P.kwargs) -> R | None:
         try:
             return await func(user, *args, **kwargs)
         except LoginException:
@@ -67,10 +73,10 @@ def refresh_access_token_if_needed(func):
     return wrapper
 
 
-def refresh_cred_token_if_needed(func):
+def refresh_cred_token_if_needed(func: Refreshable[P, R]) -> Refreshable[P, R | None]:
     """装饰器：如果 cred_token 失效，刷新后重试"""
 
-    async def wrapper(user: SkUser, *args, **kwargs):
+    async def wrapper(user: SkUser, *args: P.args, **kwargs: P.kwargs) -> R | None:
         try:
             return await func(user, *args, **kwargs)
         except UnauthorizedException:
@@ -87,10 +93,10 @@ def refresh_cred_token_if_needed(func):
     return wrapper
 
 
-def refresh_cred_token_with_error_return(func):
+def refresh_cred_token_with_error_return(func: Refreshable[P, R]) -> Refreshable[P, R | str]:
     """装饰器：如果 cred_token 失效，刷新后重试"""
 
-    async def wrapper(user: SkUser, *args, **kwargs):
+    async def wrapper(user: SkUser, *args: P.args, **kwargs: P.kwargs) -> R | str:
         try:
             return await func(user, *args, **kwargs)
         except UnauthorizedException:
@@ -107,8 +113,8 @@ def refresh_cred_token_with_error_return(func):
     return wrapper
 
 
-def refresh_access_token_with_error_return(func):
-    async def wrapper(user: SkUser, *args, **kwargs):
+def refresh_access_token_with_error_return(func: Refreshable[P, R]) -> Refreshable[P, R | str]:
+    async def wrapper(user: SkUser, *args, **kwargs) -> R | str:
         try:
             return await func(user, *args, **kwargs)
         except LoginException:

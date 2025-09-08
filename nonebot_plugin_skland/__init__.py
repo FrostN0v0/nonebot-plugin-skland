@@ -367,21 +367,19 @@ async def _(
     if not user:
         await UniMessage("未绑定 skland 账号").finish(at_sender=True)
 
-    sign_result: dict[str, ArkSignResponse] = {}
     if uid.available:
-        character = await get_arknights_character_by_uid(user, uid.result, session)
-        sign_result[character.nickname] = await sign_in(user, uid.result, character.channel_master_id)
+        chars = [await get_arknights_character_by_uid(user, uid.result, session)]
+    elif result.find("arksign.sign.all"):
+        chars = await get_arknights_characters(user, session)
+    elif character := await get_default_arknights_character(user, session):
+        chars = [character]
     else:
-        if result.find("arksign.sign.all"):
-            characters = await get_arknights_characters(user, session)
-            for character in characters:
-                sign_result[character.nickname] = await sign_in(user, str(character.uid), character.channel_master_id)
-        else:
-            character = await get_default_arknights_character(user, session)
-            if not character:
-                await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
+        await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
 
-            sign_result[character.nickname] = await sign_in(user, str(character.uid), character.channel_master_id)
+    sign_result: dict[str, ArkSignResponse] = {}
+    for character in chars:
+        if res := await sign_in(user, str(character.uid), character.channel_master_id):
+            sign_result[character.nickname] = res
 
     if sign_result:
         await UniMessage(
@@ -464,6 +462,8 @@ async def _(
 
     topic_id = Topics(str(result.query("rogue.topic.topic_name"))).topic_id if result.find("rogue.topic") else ""
     rogue = await get_rogue_info(user, str(character.uid), topic_id)
+    if not rogue:
+        return
     background = await get_rogue_background_image(topic_id)
     img = await render_rogue_card(rogue, background)
     if str(background).startswith("http"):
@@ -570,7 +570,7 @@ async def arksign_status(
 
 @refresh_cred_token_with_error_return
 @refresh_access_token_with_error_return
-async def sign_in(user: SkUser, uid: str, channel_master_id: str) -> ArkSignResponse | str:
+async def sign_in(user: SkUser, uid: str, channel_master_id: str) -> ArkSignResponse:
     """执行签到逻辑"""
     cred = CRED(cred=user.cred, token=user.cred_token)
     return await SklandAPI.ark_sign(cred, uid, channel_master_id=channel_master_id)
@@ -688,6 +688,8 @@ async def _(user_session: UserSession, session: async_scoped_session):
 
     gacha_data_grouped = group_gacha_records(all_gacha_records)
     user_info = await get_user_info(user, character.uid)
+    if not user_info:
+        return
     await UniMessage.image(raw=await render_gacha_history(gacha_data_grouped, character, user_info.status)).send()
     session.add_all(record_to_save)
     await session.commit()

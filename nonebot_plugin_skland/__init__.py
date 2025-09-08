@@ -698,7 +698,9 @@ async def _(user_session: UserSession, session: async_scoped_session):
             continue
         record_to_save.append(record)
 
-    gacha_data_grouped = group_gacha_records(gacha_record_list)
+    all_gacha_records = records + record_to_save
+
+    gacha_data_grouped = group_gacha_records(all_gacha_records)
     user_info = await get_user_info(user, character.uid)
     await UniMessage.image(raw=await render_gacha_history(gacha_data_grouped, character, user_info.status)).send()
     session.add_all(record_to_save)
@@ -727,6 +729,9 @@ async def _(url: Match[str], user_session: UserSession, session: async_scoped_se
                 record_to_save.append(record)
             logger.debug(f"读取抽卡记录共 {len(records)} 条, 其中导入 {len(record_to_save)} 条新记录")
             session.add_all(record_to_save)
+            await UniMessage(f"导入成功，读取抽卡记录共 {len(records)} 条, 共导入 {len(record_to_save)} 条新记录").send(
+                at_sender=True
+            )
             await session.commit()
         else:
             await UniMessage("导入的抽卡记录与当前角色不匹配").finish(at_sender=True)

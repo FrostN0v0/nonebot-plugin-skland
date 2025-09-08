@@ -341,11 +341,24 @@ def get_char_id_by_char_name(char_name: str) -> str:
     return "char_601_cguard"
 
 
-def get_pool_id_by_pool_name(pool_name: str) -> str:
+def get_pool_id(pool_name: str, gacha_ts: int) -> str:
     """通过卡池名称获取卡池ID"""
+    special_pools = {
+        "中坚寻访": [4, 10],
+        "标准寻访": [0, 9],
+        "中坚甄选": [6],
+        "联合行动": [0],
+        "常驻标准寻访": [0],
+    }
     for gacha_pool in gacha_table_data.gacha_table:
-        if gacha_pool.gachaPoolName == pool_name:
+        if gacha_pool.gachaPoolName == pool_name and gacha_pool.openTime <= gacha_ts <= gacha_pool.endTime:
             return gacha_pool.gachaPoolId
+        elif pool_name in special_pools:
+            if (
+                gacha_pool.gachaRuleType in special_pools[pool_name]
+                and gacha_pool.openTime <= gacha_ts <= gacha_pool.endTime
+            ):
+                return gacha_pool.gachaPoolId
     return "NORM_1_0_1"
 
 
@@ -354,7 +367,7 @@ def heybox_data_to_record(data: dict, uid: int, char_uid: str) -> list[GachaReco
     records: list[GachaRecord] = []
     for gacha_ts, gacha_data in data.items():
         pool_name = gacha_data["p"]
-        pool_id = get_pool_id_by_pool_name(pool_name)
+        pool_id = get_pool_id(pool_name, int(gacha_ts))
         if pool_id == "NORM_1_0_1":
             pool_name = "未知寻访"
         for index, char in enumerate(gacha_data["c"]):

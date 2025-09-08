@@ -157,6 +157,21 @@ extra_data = {
             ),
         },
         {
+            "func": "导入抽卡记录",
+            "trigger_method": "**已绑定用户**",
+            "trigger_condition": "**导入抽卡记录** | `skland import`",
+            "brief_des": "导入小黑盒明日方舟抽卡记录。",
+            "detail_des": (
+                "- **导入抽卡记录**\n\n"
+                "```bash\n"
+                "skland import <url>\n"
+                "```\n\n"
+                " **快捷指令** ：`导入抽卡记录`\n\n"
+                "支持导入小黑盒记录的抽卡记录\n"
+                "请滑动至小黑盒抽卡分析页底部，点击`数据管理`导出数据并复制链接"
+            ),
+        },
+        {
             "func": "角色更新",
             "trigger_method": "**已绑定用户**",
             "trigger_condition": "**角色更新** | `skland char update`",

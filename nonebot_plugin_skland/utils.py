@@ -241,6 +241,7 @@ async def get_all_gacha_records(char: Character, cate: GachaCate, access_token: 
 
     while page and page.gacha_list:
         for record in page.gacha_list:
+            record.gachaTs = str(int(record.gachaTs) // 1000)
             yield record
         if not page.hasMore:
             break
@@ -321,3 +322,67 @@ def group_gacha_records(records: list[GachaRecord]) -> GroupedGachaRecord:
         )
         final_pools_data.append(gacha_pool)
     return GroupedGachaRecord(pools=final_pools_data)
+
+
+async def import_heybox_gacha_data(url: str) -> dict:
+    """导入Heybox导出的抽卡记录"""
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        if response.status_code != 200:
+            raise RequestException(f"请求失败，状态码：{response.status_code}")
+        return response.json()
+
+
+def get_char_id_by_char_name(char_name: str) -> str:
+    """通过角色名称获取角色ID"""
+    return next(
+        (char.char_id for char in gacha_table_data.character_table if char.name == char_name),
+        "char_601_cguard",
+    )
+
+
+def get_pool_id(pool_name: str, gacha_ts: int) -> str:
+    """通过卡池名称获取卡池ID"""
+    special_pools = {
+        "中坚寻访": [4, 10],
+        "标准寻访": [0, 9],
+        "中坚甄选": [6],
+        "联合行动": [0],
+        "常驻标准寻访": [0],
+    }
+    for gacha_pool in gacha_table_data.gacha_table:
+        if gacha_pool.gachaPoolName == pool_name and gacha_pool.openTime <= gacha_ts <= gacha_pool.endTime:
+            return gacha_pool.gachaPoolId
+        elif pool_name in special_pools:
+            if (
+                gacha_pool.gachaRuleType in special_pools[pool_name]
+                and gacha_pool.openTime <= gacha_ts <= gacha_pool.endTime
+            ):
+                return gacha_pool.gachaPoolId
+    return "NORM_1_0_1"
+
+
+def heybox_data_to_record(data: dict, uid: int, char_uid: str) -> list[GachaRecord]:
+    """将Heybox导出的抽卡记录转换为GachaRecord列表"""
+    records: list[GachaRecord] = []
+    for gacha_ts, gacha_data in data.items():
+        pool_name = gacha_data["p"]
+        pool_id = get_pool_id(pool_name, int(gacha_ts))
+        if pool_id == "NORM_1_0_1":
+            pool_name = "未知寻访"
+        for index, char in enumerate(gacha_data["c"]):
+            records.append(
+                GachaRecord(
+                    uid=uid,
+                    char_uid=char_uid,
+                    pool_id=pool_id,
+                    pool_name=pool_name,
+                    char_id=get_char_id_by_char_name(char[0]),
+                    char_name=char[0],
+                    rarity=char[1],
+                    is_new=char[2],
+                    gacha_ts=int(gacha_ts),
+                    pos=index,
+                )
+            )
+    return records

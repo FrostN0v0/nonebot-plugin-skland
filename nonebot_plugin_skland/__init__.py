@@ -646,7 +646,6 @@ async def _(user_session: UserSession, session: async_scoped_session):
     token = user.access_token
     grant_code = await SklandLoginAPI.get_grant_code(token, 1)
     role_token = await SklandLoginAPI.get_role_token_by_uid(character.uid, grant_code)
-    logger.info(f"获取到的role_token: {role_token}")
     ak_cookie = await SklandLoginAPI.get_ak_cookie(role_token)
     categories = await SklandAPI.get_gacha_categories(character.uid, role_token, user.access_token, ak_cookie)
     all_gacha_records_flat: list[GachaInfo] = []
@@ -669,6 +668,7 @@ async def _(user_session: UserSession, session: async_scoped_session):
     for gacha_record in all_gacha_records_flat:
         record = GachaRecord(
             uid=user.id,
+            char_pk_id=character.id,
             char_uid=character.uid,
             pool_id=gacha_record.poolId,
             pool_name=gacha_record.poolName,
@@ -702,7 +702,7 @@ async def _(url: Match[str], user_session: UserSession, session: async_scoped_se
     if url.available:
         import_result = await import_heybox_gacha_data(url.result)
         if str(import_result["info"]["uid"]) == character.uid:
-            records = heybox_data_to_record(import_result["data"], user.id, character.uid)
+            records = heybox_data_to_record(import_result["data"], user.id, character.id, character.uid)
             db_records = await select_all_gacha_records(user, character.uid, session)
             existing_records_set = {(r.gacha_ts, r.pos) for r in db_records}
             record_to_save: list[GachaRecord] = []

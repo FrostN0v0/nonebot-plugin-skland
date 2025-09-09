@@ -145,7 +145,12 @@ skland = on_alconna(
             Option("-f|--favored|favored", help_text="是否查询收藏的战绩"),
             help_text="查询单局肉鸽战绩详情",
         ),
-        Subcommand("gacha", help_text="查询明日方舟抽卡记录"),
+        Subcommand(
+            "gacha",
+            Option("-b|--begin|begin", Args["begin", int], help_text="查询起始位置"),
+            Option("-l|--limit|limit", Args["limit", int], help_text="查询抽卡记录卡池渲染上限"),
+            Option("all|--all", help_text="渲染所有记录"),
+        ),
         Subcommand(
             "import", Args["url", str, Field(completion=lambda: "请输入抽卡记录导出链接")], help_text="导入抽卡记录"
         ),
@@ -630,8 +635,10 @@ async def run_daily_arksign():
 
 
 @skland.assign("gacha")
-async def _(user_session: UserSession, session: async_scoped_session):
-    """查询明日方舟抽卡记录（开发中）"""
+async def _(
+    user_session: UserSession, session: async_scoped_session, begin: Match[int], limit: Match[int], result: Arparma
+):
+    """查询明日方舟抽卡记录"""
 
     @refresh_cred_token_if_needed
     @refresh_access_token_if_needed
@@ -690,18 +697,46 @@ async def _(user_session: UserSession, session: async_scoped_session):
     user_info = await get_user_info(user, character.uid)
     if not user_info:
         return
-    await UniMessage.image(raw=await render_gacha_history(gacha_data_grouped, character, user_info.status)).send()
+    if result.find("gacha.all"):
+        gacha_limit = gacha_begin = None
+    else:
+        gacha_limit = limit.result if limit.available else None
+        gacha_begin = begin.result if begin.available else None
+    if gacha_limit is None and gacha_begin is None and len(gacha_data_grouped.pools) > config.gacha_render_max:
+        await UniMessage.text("抽卡记录过多，将以多张图片形式发送").send(reply_to=True)
+        nodes_to_send = []
+        for i in range(0, len(gacha_data_grouped.pools), config.gacha_render_max):
+            img_to_send = UniMessage.image(
+                raw=await render_gacha_history(
+                    gacha_data_grouped, character, user_info.status, i, i + config.gacha_render_max
+                )
+            )
+            if user_session.platform == "QQClient":
+                nodes_to_send.append(img_to_send)
+            else:
+                await img_to_send.send()
+        if user_session.platform == "QQClient":
+            await UniMessage.reference(
+                *[
+                    CustomNode(str(user_session.session.user.id), f"{character.nickname}|{str(index + 1)}", content)
+                    for index, content in enumerate(nodes_to_send)
+                ]
+            ).send()
+    else:
+        await UniMessage.image(
+            raw=await render_gacha_history(gacha_data_grouped, character, user_info.status, gacha_begin, gacha_limit)
+        ).send()
     session.add_all(record_to_save)
     await session.commit()
 
 
 @skland.assign("import")
 async def _(url: Match[str], user_session: UserSession, session: async_scoped_session):
-    """导入明日方舟抽卡记录（开发中）"""
+    """导入明日方舟抽卡记录"""
     user, character = await check_user_character(user_session.user_id, session)
     if url.available:
         import_result = await import_heybox_gacha_data(url.result)
-        if str(import_result["info"]["uid"]) == character.uid:
+        if str(import_result["info"]["uid"]) != character.uid:
             records = heybox_data_to_record(import_result["data"], user.id, character.id, character.uid)
             db_records = await select_all_gacha_records(user, character.uid, session)
             existing_records_set = {(r.gacha_ts, r.pos) for r in db_records}

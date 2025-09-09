@@ -636,7 +636,11 @@ async def run_daily_arksign():
 
 @skland.assign("gacha")
 async def _(
-    user_session: UserSession, session: async_scoped_session, begin: Match[int], limit: Match[int], result: Arparma
+    user_session: UserSession,
+    session: async_scoped_session,
+    begin: Match[int],
+    limit: Match[int],
+    result: Arparma,
 ):
     """查询明日方舟抽卡记录"""
 
@@ -704,28 +708,40 @@ async def _(
         gacha_begin = begin.result if begin.available else None
     if gacha_limit is None and gacha_begin is None and len(gacha_data_grouped.pools) > config.gacha_render_max:
         await UniMessage.text("抽卡记录过多，将以多张图片形式发送").send(reply_to=True)
-        nodes_to_send = []
-        for i in range(0, len(gacha_data_grouped.pools), config.gacha_render_max):
-            img_to_send = UniMessage.image(
-                raw=await render_gacha_history(
+        if user_session.platform == "QQClient":
+            coros = [
+                render_gacha_history(gacha_data_grouped, character, user_info.status, i, i + config.gacha_render_max)
+                for i in range(0, len(gacha_data_grouped.pools), config.gacha_render_max)
+            ]
+            imgs = await asyncio.gather(*coros)
+            nodes = [
+                CustomNode(
+                    str(user_session.session.user.id),
+                    f"{character.nickname} | {index}",
+                    UniMessage.image(raw=content),
+                )
+                for index, content in enumerate(imgs, 1)
+            ]
+            await UniMessage.reference(*nodes).send()
+        else:
+
+            async def _send(img: bytes) -> None:
+                async with send_lock:  # ensure msg sequence
+                    await UniMessage.image(raw=img).send()
+
+            send_lock = asyncio.Lock()
+            tasks: list[asyncio.Task] = []
+            for i in range(0, len(gacha_data_grouped.pools), config.gacha_render_max):
+                img = await render_gacha_history(
                     gacha_data_grouped, character, user_info.status, i, i + config.gacha_render_max
                 )
-            )
-            if user_session.platform == "QQClient":
-                nodes_to_send.append(img_to_send)
-            else:
-                await img_to_send.send()
-        if user_session.platform == "QQClient":
-            await UniMessage.reference(
-                *[
-                    CustomNode(str(user_session.session.user.id), f"{character.nickname}|{str(index + 1)}", content)
-                    for index, content in enumerate(nodes_to_send)
-                ]
-            ).send()
+                tasks.append(asyncio.create_task(_send(img)))
+            await asyncio.gather(*tasks)
     else:
         await UniMessage.image(
             raw=await render_gacha_history(gacha_data_grouped, character, user_info.status, gacha_begin, gacha_limit)
         ).send()
+
     session.add_all(record_to_save)
     await session.commit()
 

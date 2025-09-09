@@ -341,6 +341,8 @@ async def import_heybox_gacha_data(url: str) -> dict:
 
 def get_char_id_by_char_name(char_name: str) -> str:
     """通过角色名称获取角色ID"""
+    if char_name == "麒麟X夜刀":
+        char_name = "麒麟R夜刀"
     return next(
         (char.char_id for char in gacha_table_data.character_table if char.name == char_name),
         "char_601_cguard",
@@ -350,11 +352,14 @@ def get_char_id_by_char_name(char_name: str) -> str:
 def get_pool_id(pool_name: str, gacha_ts: int) -> str:
     """通过卡池名称获取卡池ID"""
     special_pools = {
-        "中坚寻访": [4, 10],
+        "中坚寻访": [4, 6, 10],
         "标准寻访": [0, 9],
         "中坚甄选": [6],
         "联合行动": [0],
         "常驻标准寻访": [0],
+        "【联合行动】特选干员定向寻访": [0],
+        "进攻-防守-战术交汇": [2],
+        "前路回响": [0],
     }
     for gacha_pool in gacha_table_data.gacha_table:
         if gacha_pool.gachaPoolName == pool_name and gacha_pool.openTime <= gacha_ts <= gacha_pool.endTime:
@@ -377,6 +382,9 @@ def heybox_data_to_record(data: dict, uid: int, char_id: int, char_uid: str) -> 
         if pool_id == "NORM_1_0_1":
             pool_name = "未知寻访"
         for index, char in enumerate(gacha_data["c"]):
+            char_name = char[0]
+            if char_name == "麒麟X夜刀":
+                char_name = "麒麟R夜刀"
             records.append(
                 GachaRecord(
                     uid=uid,

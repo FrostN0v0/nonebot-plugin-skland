@@ -1,12 +1,14 @@
+import contextlib
 from collections import defaultdict
 from collections.abc import Callable, Coroutine
 from typing import TypeVar, ParamSpec, Concatenate
 
 import httpx
-from nonebot import logger
 from pydantic import AnyUrl as Url
-from nonebot_plugin_alconna import UniMessage
+from nonebot import logger, get_driver
+from nonebot_plugin_user import UserSession
 from nonebot_plugin_orm import async_scoped_session
+from nonebot_plugin_alconna import UniMessage, message_reaction
 
 from .db_handler import delete_characters
 from .api import SklandAPI, SklandLoginAPI
@@ -401,3 +403,11 @@ def heybox_data_to_record(data: dict, uid: int, char_id: int, char_uid: str) -> 
                 )
             )
     return records
+
+
+def send_reaction(user_session: UserSession, emoji_id: int, emoji: str) -> None:
+    async def send() -> None:
+        with contextlib.suppress(Exception):
+            await message_reaction(str(emoji_id) if user_session.platform == "QQClient" else emoji)
+
+    get_driver().task_group.start_soon(send)

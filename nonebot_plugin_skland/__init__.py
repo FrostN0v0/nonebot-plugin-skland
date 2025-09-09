@@ -40,7 +40,6 @@ from nonebot_plugin_alconna import (
     UniMessage,
     CommandMeta,
     on_alconna,
-    message_reaction,
 )
 
 from . import hook as hook
@@ -60,6 +59,7 @@ from .db_handler import (
     get_default_arknights_character,
 )
 from .utils import (
+    send_reaction,
     format_sign_result,
     group_gacha_records,
     get_background_image,
@@ -199,10 +199,7 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
         target_id = user_session.user_id
 
     user, ark_characters = await check_user_character(target_id, session)
-    if user_session.platform == "QQClient":
-        await message_reaction("66")
-    else:
-        await message_reaction("❤")
+    send_reaction(user_session, 66, "❤")
 
     info = await get_character_info(user, str(ark_characters.uid))
     if not info:
@@ -321,10 +318,7 @@ async def _(
     if qr_msg.recallable:
         await qr_msg.recall(index=0)
     if scan_code:
-        if user_session.platform == "QQClient":
-            await message_reaction("124")
-        else:
-            await message_reaction("👌")
+        send_reaction(user_session, 124, "👌")
         token = await SklandLoginAPI.get_token_by_scan_code(scan_code)
         grant_code = await SklandLoginAPI.get_grant_code(token, 0)
         cred = await SklandLoginAPI.get_cred(grant_code)
@@ -455,10 +449,7 @@ async def _(
         target_id = user_session.user_id
 
     user, character = await check_user_character(target_id, session)
-    if user_session.platform == "QQClient":
-        await message_reaction("66")
-    else:
-        await message_reaction("❤")
+    send_reaction(user_session, 66, "❤")
 
     topic_id = Topics(str(result.query("rogue.topic.topic_name"))).topic_id if result.find("rogue.topic") else ""
     rogue = await get_rogue_info(user, str(character.uid), topic_id)
@@ -484,16 +475,10 @@ async def _(id: Match[int], msg_id: MsgId, ext: ReplyRecordExtension, result: Ar
     if reply := ext.get_reply(msg_id):
         argot = await get_argot("data", reply.id)
         if not argot:
-            if user_session.platform == "QQClient":
-                await message_reaction("326")
-            else:
-                await message_reaction("🤖")
+            send_reaction(user_session, 326, "🤖")
             await UniMessage.text("未找到该暗语或暗语已过期").finish(at_sender=True)
         if data := argot.dump_segment():
-            if user_session.platform == "QQClient":
-                await message_reaction("66")
-            else:
-                await message_reaction("❤")
+            send_reaction(user_session, 66, "❤")
             rogue_data = RogueData.model_validate_json(UniMessage.load(data).extract_plain_text())
             background = await get_rogue_background_image(rogue_data.topic)
             if result.find("rginfo.favored"):
@@ -542,9 +527,9 @@ async def arksign_status(
         chars = await get_arknights_characters(user, session)
         char_nicknames = {char.nickname for char in chars}
         sign_data = {nickname: value for nickname, value in sign_data.items() if nickname in char_nicknames}
+    send_reaction(user_session, 66, "❤")
     if user_session.platform == "QQClient":
-        await message_reaction("66")
-        sliced_nodes = []
+        sliced_nodes: list[dict[str, str]] = []
         prased_sign_result = format_sign_result(sign_data, sign_time, False)
         NODE_SLICE_LIMIT = 98
         formatted_nodes = {k: f"{v}\n" for k, v in prased_sign_result.results.items()}
@@ -562,7 +547,6 @@ async def arksign_status(
                     *[CustomNode(bot.self_id, nickname, content) for nickname, content in node.items()],
                 ).send()
     else:
-        await message_reaction("❤")
         prased_sign_result = format_sign_result(sign_data, sign_time, True)
         formatted_messages = [prased_sign_result.results[nickname] for nickname in prased_sign_result.results]
         await UniMessage.text(prased_sign_result.summary + "\n".join(formatted_messages)).finish()
@@ -586,10 +570,7 @@ async def _(
     """签到所有绑定角色"""
     if not is_superuser:
         await UniMessage.text("该指令仅超管可用").finish()
-    if user_session.platform == "QQClient":
-        await message_reaction("66")
-    else:
-        await message_reaction("❤")
+    send_reaction(user_session, 66, "❤")
     sign_result: dict[str, ArkSignResponse | str] = {}
     serializable_sign_result: dict[str, dict | str] = {}
     for user in await select_all_users(session):
@@ -639,10 +620,7 @@ async def _(user_session: UserSession, session: async_scoped_session):
         return await SklandAPI.ark_card(CRED(cred=user.cred, token=user.cred_token), uid)
 
     user, character = await check_user_character(user_session.user_id, session)
-    if user_session.platform == "QQClient":
-        await message_reaction("66")
-    else:
-        await message_reaction("❤")
+    send_reaction(user_session, 66, "❤")
     token = user.access_token
     grant_code = await SklandLoginAPI.get_grant_code(token, 1)
     role_token = await SklandLoginAPI.get_role_token_by_uid(character.uid, grant_code)

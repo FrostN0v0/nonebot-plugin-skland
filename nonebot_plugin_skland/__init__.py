@@ -641,6 +641,7 @@ async def _(
     begin: Match[int],
     limit: Match[int],
     result: Arparma,
+    bot: Bot,
 ):
     """查询明日方舟抽卡记录"""
 
@@ -706,7 +707,7 @@ async def _(
     else:
         gacha_limit = limit.result if limit.available else None
         gacha_begin = begin.result if begin.available else None
-    if gacha_limit is None and gacha_begin is None and len(gacha_data_grouped.pools) > config.gacha_render_max:
+    if len(gacha_data_grouped.pools[gacha_begin:gacha_limit]) > config.gacha_render_max:
         await UniMessage.text("抽卡记录过多，将以多张图片形式发送").send(reply_to=True)
         if user_session.platform == "QQClient":
             render_semaphore = asyncio.Semaphore(4)
@@ -718,16 +719,28 @@ async def _(
                     )
 
             imgs = await asyncio.gather(
-                *(render(i) for i in range(0, len(gacha_data_grouped.pools), config.gacha_render_max))
-            )
-            nodes = [
-                CustomNode(
-                    str(user_session.session.user.id),
-                    f"{character.nickname} | {index}",
-                    UniMessage.image(raw=content),
+                *(
+                    render(i)
+                    for i in range(0, len(gacha_data_grouped.pools[gacha_begin:gacha_limit]), config.gacha_render_max)
                 )
-                for index, content in enumerate(imgs, 1)
-            ]
+            )
+            gacha_begin_val = gacha_begin if gacha_begin is not None else 0
+            total = len(gacha_data_grouped.pools[gacha_begin:gacha_limit])
+            nodes = []
+            for index, content in enumerate(imgs, 1):
+                start_id = gacha_begin_val + (index - 1) * config.gacha_render_max
+
+                if index * config.gacha_render_max >= total:
+                    end_id = gacha_begin_val + total
+                else:
+                    end_id = gacha_begin_val + index * config.gacha_render_max
+                nodes.append(
+                    CustomNode(
+                        bot.self_id,
+                        f"{character.nickname} | {start_id}-{end_id}",
+                        UniMessage.image(raw=content),
+                    )
+                )
             await UniMessage.reference(*nodes).send()
         else:
             send_lock = asyncio.Lock()

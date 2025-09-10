@@ -150,7 +150,7 @@ extra_data = {
             "detail_des": (
                 "- **方舟抽卡记录**\n\n"
                 "```bash\n"
-                "skland gacha\n"
+                "skland gacha -b <起始id> -l <结束id>\n"
                 "```\n\n"
                 " **快捷指令** ：`方舟抽卡记录`\n\n"
                 "查询绑定到bot的明日方舟账号的抽卡记录。"

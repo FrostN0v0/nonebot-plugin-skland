@@ -123,14 +123,15 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 在 nonebot2 项目的`.env`文件中修改配置项
 
-|              配置项               | 必填 |   默认值    |           说明           |
-| :-------------------------------: | :--: | :---------: | :----------------------: |
-|    `skland__github_proxy_url`     |  否  |    `""`     |     GitHub 代理 URL      |
-|      `skland__github_token`       |  否  |    `""`     |       GitHub Token       |
-|    `skland__check_res_update`     |  否  |   `False`   | 是否在启动时检查资源更新 |
-|    `skland__background_source`    |  否  | `"default"` |       背景图片来源       |
-| `skland__rogue_background_source` |  否  |  `"rogue"`  |   肉鸽战绩背景图片来源   |
-|      `skland__argot_expire`       |  否  |    `300`    |  暗语消息过期时间（秒）  |
+|              配置项               | 必填 |   默认值    |               说明                |
+| :-------------------------------: | :--: | :---------: | :-------------------------------: |
+|    `skland__github_proxy_url`     |  否  |    `""`     |          GitHub 代理 URL          |
+|      `skland__github_token`       |  否  |    `""`     |           GitHub Token            |
+|    `skland__check_res_update`     |  否  |   `False`   |     是否在启动时检查资源更新      |
+|    `skland__background_source`    |  否  | `"default"` |           背景图片来源            |
+| `skland__rogue_background_source` |  否  |  `"rogue"`  |       肉鸽战绩背景图片来源        |
+|      `skland__argot_expire`       |  否  |    `300`    |      暗语消息过期时间（秒）       |
+|    `skland__gacha_render_max`     |  否  |    `30`     | 抽卡记录单图渲染上限（单位:卡池） |
 
 > [!TIP]
 > 以上配置项均~~没什么用~~按需填写，GitHub Token 用于解决 fetch_file_list 接口到达免费调用上限，但不会有那么频繁的更新频率，99.98%的概率是用不上的。~~只是因为我开发测试的时候上限了，所以有了这项~~,
@@ -178,25 +179,25 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 
 ### 🪧 指令表
 
-|              指令              |   权限   |       参数        |                 说明                  |
-| :----------------------------: | :------: | :---------------: | :-----------------------------------: |
-|            `skland`            |   所有   |     无 or `@`     |             角色信息卡片              |
-|         `skland bind`          |   所有   | `token` or `cred` |            绑定森空岛账号             |
-|        `skland bind -u`        |   所有   | `token` or `cred` |       更新绑定的 token 或 cred        |
-|        `skland qrcode`         |   所有   |        无         |          扫码绑定森空岛账号           |
-|     `skland arksign sign`      |   所有   |        无         |         个人角色明日方舟签到          |
-| `skland arksign sign -u <uid>` |   所有   |       `uid`       |    指定绑定的个人角色 UID 进行签到    |
-|      `skland arksign all`      | 超级用户 |        无         |      签到所有绑定到该 bot 的角色      |
-|    `skland arksign status`     |   所有   |        无         |       查询个人角色自动签到状态        |
-| `skland arksign status --all`  | 超级用户 |        无         | 查询所有绑定到该 bot 的角色的签到状态 |
-|  `skland arksign sign --all`   |   所有   |        无         |           签到所有绑定角色            |
-|      `skland char update`      |   所有   |        无         |        更新森空岛绑定角色信息         |
-|         `skland sync`          | 超级用户 |        无         |             本地资源更新              |
-|         `skland rogue`         |   所有   |  `@` \| `topic`   |             肉鸽战绩查询              |
-|        `skland rginfo`         |   所有   |     `战绩id`      |       根据 ID 查询最近战绩详情        |
-|       `skland rginfo -f`       |   所有   |     `战绩id`      |   根据 ID 查询森空岛收藏的战绩详情    |
-|         `skland gacha`         |   所有   |        无         |         查询明日方舟抽卡记录          |
-|        `skland import`         |   所有   |       `url`       |         导入明日方舟抽卡记录          |
+|              指令              |   权限   |            参数            |                 说明                  |
+| :----------------------------: | :------: | :------------------------: | :-----------------------------------: |
+|            `skland`            |   所有   |         无 or `@`          |             角色信息卡片              |
+|         `skland bind`          |   所有   |     `token` or `cred`      |            绑定森空岛账号             |
+|        `skland bind -u`        |   所有   |     `token` or `cred`      |       更新绑定的 token 或 cred        |
+|        `skland qrcode`         |   所有   |             无             |          扫码绑定森空岛账号           |
+|     `skland arksign sign`      |   所有   |             无             |         个人角色明日方舟签到          |
+| `skland arksign sign -u <uid>` |   所有   |           `uid`            |    指定绑定的个人角色 UID 进行签到    |
+|      `skland arksign all`      | 超级用户 |             无             |      签到所有绑定到该 bot 的角色      |
+|    `skland arksign status`     |   所有   |             无             |       查询个人角色自动签到状态        |
+| `skland arksign status --all`  | 超级用户 |             无             | 查询所有绑定到该 bot 的角色的签到状态 |
+|  `skland arksign sign --all`   |   所有   |             无             |           签到所有绑定角色            |
+|      `skland char update`      |   所有   |             无             |        更新森空岛绑定角色信息         |
+|         `skland sync`          | 超级用户 |             无             |             本地资源更新              |
+|         `skland rogue`         |   所有   |       `@` \| `topic`       |             肉鸽战绩查询              |
+|        `skland rginfo`         |   所有   |          `战绩id`          |       根据 ID 查询最近战绩详情        |
+|       `skland rginfo -f`       |   所有   |          `战绩id`          |   根据 ID 查询森空岛收藏的战绩详情    |
+|         `skland gacha`         |   所有   | `-b 起始id` \| `-l 结束id` |         查询明日方舟抽卡记录          |
+|        `skland import`         |   所有   |           `url`            |         导入明日方舟抽卡记录          |
 
 > [!NOTE]
 > Token 获取相关文档还没写~~才不是懒得写~~
@@ -207,6 +208,10 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 
 > [!TIP]
 > 支持导入小黑盒记录的抽卡记录，请滑动至小黑盒抽卡分析页底部，点击`数据管理`导出数据并复制链接
+>
+> 查询抽卡记录支持指定范围，例如 `sk gacha -b -3` 是只渲染倒数 3 个卡池，或者 `sk gacha -b 3 -l 25` 是只渲染第 3 到 25 个卡池
+>
+> 若单页渲染卡池数量超过配置项 `skland__gacha_render_max` 会输出多张图片（QQ 会以合并消息方式发送）
 
 ### 🎯 快捷指令
 
@@ -262,32 +267,47 @@ bot: skland::skland 的快捷指令: "/兔兔签到" 添加成功
 >
 > 对暗语对象`回复对应的暗语指令`即可获取暗语消息
 
-|   暗语指令   |           对象           |    说明    |
-| :----------: | :----------------------: | :--------: |
-| `background` |  [`信息卡片`](#-效果图)  | 查看背景图 |
-|    `clue`    | [`游戏信息`](#-游戏信息) | 查看线索板 |
+|   暗语指令   |         对象          |    说明    |
+| :----------: | :-------------------: | :--------: |
+| `background` |  [信息卡片](#效果图)  | 查看背景图 |
+|    `clue`    | [游戏信息](#游戏信息) | 查看线索板 |
 
 ### 📸 效果图
 
-#### 🔮 游戏信息
+<details id="效果图">
+  <summary>🔮 游戏信息</summary>
 
 ![示例图1](docs/example_1.png)
 
-#### 🫖 肉鸽战绩
+</details>
+
+<details>
+  <summary>🫖 肉鸽战绩</summary>
 
 ![示例图2](docs/example_2.png)
 
-#### 🏆 战绩详情
+</details>
+
+<details>
+  <summary>🏆 战绩详情</summary>
 
 ![示例图3](docs/example_3.png)
 
-#### 🕵️‍♀ 线索板
+</details>
+
+<details id="游戏信息">
+  <summary>🕵️‍♀ 线索板</summary>
 
 ![线索板](docs/clue_board.png)
 
-#### 🦭 抽卡记录
+</details>
+
+<details>
+  <summary>🦭 抽卡记录</summary>
 
 ![抽卡记录](docs/gacha_record.png)
+
+</details>
 
 ## 💖 鸣谢
 
@@ -321,8 +341,8 @@ bot: skland::skland 的快捷指令: "/兔兔签到" 添加成功
 - [x] 绘制渲染肉鸽战绩卡片
 - [x] 粥游签到自动化
 - [x] 实现抽卡记录获取及渲染
-- [ ] 支持抽卡记录导入\导出(从小黑盒)
-- [ ] 抽卡记录分页
+- [x] 支持抽卡记录导入(从小黑盒)
+- [x] 抽卡记录分页
 - [ ] 实现满理智/干员训练完成订阅提醒
 - [ ] ~~扬了不必要的 💩~~
 - [ ] 待补充，欢迎 pr

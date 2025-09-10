@@ -8,6 +8,7 @@ from nonebot.adapters import Bot
 from nonebot.params import Depends
 from nonebot import logger, require
 from nonebot.permission import SuperUser
+from nonebot.compat import model_dump, type_validate_json
 from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 
 require("nonebot_plugin_orm")
@@ -222,7 +223,7 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
             "clue",
             command="clue",
             expired_at=config.argot_expire,
-            extra={"data": info.building.meeting.clue.model_dump_json()},
+            extra={"data": json.dumps(model_dump(info.building.meeting.clue))},
         )
     )
     send_reaction(user_session, "done")
@@ -486,7 +487,7 @@ async def _(
         argot_seg = Image(path=str(background))
     await UniMessage(
         Image(raw=img)
-        + Argot("data", rogue.model_dump_json(), command=False)
+        + Argot("data", json.dumps(model_dump(rogue)), command=False)
         + Argot("background", argot_seg, command="background", expired_at=config.argot_expire)
     ).send()
     send_reaction(user_session, "done")
@@ -503,7 +504,7 @@ async def _(id: Match[int], msg_id: MsgId, ext: ReplyRecordExtension, result: Ar
             await UniMessage.text("未找到该暗语或暗语已过期").finish(at_sender=True)
         if data := argot.dump_segment():
             send_reaction(user_session, "processing")
-            rogue_data = RogueData.model_validate_json(UniMessage.load(data).extract_plain_text())
+            rogue_data = type_validate_json(RogueData, UniMessage.load(data).extract_plain_text())
             background = await get_rogue_background_image(rogue_data.topic)
             if result.find("rginfo.favored"):
                 img = await render_rogue_info(rogue_data, background, id.result, True)
@@ -604,7 +605,7 @@ async def _(
         for character in characters:
             sign_result[character.nickname] = await sign_in(user, str(character.uid), character.channel_master_id)
     serializable_sign_result["data"] = {
-        nickname: res.model_dump() if isinstance(res, ArkSignResponse) else res for nickname, res in sign_result.items()
+        nickname: model_dump(res) if isinstance(res, ArkSignResponse) else res for nickname, res in sign_result.items()
     }
     serializable_sign_result["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M")
     sign_result_file = CACHE_DIR / "sign_result.json"
@@ -625,7 +626,7 @@ async def run_daily_arksign():
         for character in characters:
             sign_result[character.nickname] = await sign_in(user, str(character.uid), character.channel_master_id)
     serializable_sign_result["data"] = {
-        nickname: res.model_dump() if isinstance(res, ArkSignResponse) else res for nickname, res in sign_result.items()
+        nickname: model_dump(res) if isinstance(res, ArkSignResponse) else res for nickname, res in sign_result.items()
     }
     serializable_sign_result["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M")
     sign_result_file = CACHE_DIR / "sign_result.json"

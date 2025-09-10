@@ -709,11 +709,17 @@ async def _(
     if gacha_limit is None and gacha_begin is None and len(gacha_data_grouped.pools) > config.gacha_render_max:
         await UniMessage.text("抽卡记录过多，将以多张图片形式发送").send(reply_to=True)
         if user_session.platform == "QQClient":
-            coros = [
-                render_gacha_history(gacha_data_grouped, character, user_info.status, i, i + config.gacha_render_max)
-                for i in range(0, len(gacha_data_grouped.pools), config.gacha_render_max)
-            ]
-            imgs = await asyncio.gather(*coros)
+            render_semaphore = asyncio.Semaphore(4)
+
+            async def render(index: int) -> bytes:
+                async with render_semaphore:
+                    return await render_gacha_history(
+                        gacha_data_grouped, character, user_info.status, index, index + config.gacha_render_max
+                    )
+
+            imgs = await asyncio.gather(
+                *(render(i) for i in range(0, len(gacha_data_grouped.pools), config.gacha_render_max))
+            )
             nodes = [
                 CustomNode(
                     str(user_session.session.user.id),
@@ -724,18 +730,18 @@ async def _(
             ]
             await UniMessage.reference(*nodes).send()
         else:
+            send_lock = asyncio.Lock()
 
-            async def _send(img: bytes) -> None:
+            async def send(img: bytes) -> None:
                 async with send_lock:  # ensure msg sequence
                     await UniMessage.image(raw=img).send()
 
-            send_lock = asyncio.Lock()
             tasks: list[asyncio.Task] = []
             for i in range(0, len(gacha_data_grouped.pools), config.gacha_render_max):
                 img = await render_gacha_history(
                     gacha_data_grouped, character, user_info.status, i, i + config.gacha_render_max
                 )
-                tasks.append(asyncio.create_task(_send(img)))
+                tasks.append(asyncio.create_task(send(img)))
             await asyncio.gather(*tasks)
     else:
         await UniMessage.image(

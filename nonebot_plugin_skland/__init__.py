@@ -85,7 +85,7 @@ __plugin_meta__ = PluginMetadata(
     supported_adapters=inherit_supported_adapters("nonebot_plugin_alconna"),
     extra={
         "author": "FrostN0v0 <1614591760@qq.com>",
-        "version": "0.5.2",
+        "version": "0.5.3",
     },
 )
 __plugin_meta__.extra.update(extra_data)
@@ -767,7 +767,7 @@ async def _(url: Match[str], user_session: UserSession, session: async_scoped_se
     user, character = await check_user_character(user_session.user_id, session)
     if url.available:
         import_result = await import_heybox_gacha_data(url.result)
-        if str(import_result["info"]["uid"]) != character.uid:
+        if str(import_result["info"]["uid"]) == character.uid:
             records = heybox_data_to_record(import_result["data"], user.id, character.id, character.uid)
             db_records = await select_all_gacha_records(user, character.uid, session)
             existing_records_set = {(r.gacha_ts, r.pos) for r in db_records}

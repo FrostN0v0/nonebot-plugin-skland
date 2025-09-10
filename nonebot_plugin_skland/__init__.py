@@ -150,7 +150,6 @@ skland = on_alconna(
             "gacha",
             Option("-b|--begin|begin", Args["begin", int], help_text="查询起始位置"),
             Option("-l|--limit|limit", Args["limit", int], help_text="查询抽卡记录卡池渲染上限"),
-            Option("all|--all", help_text="渲染所有记录"),
         ),
         Subcommand(
             "import", Args["url", str, Field(completion=lambda: "请输入抽卡记录导出链接")], help_text="导入抽卡记录"
@@ -702,11 +701,8 @@ async def _(
     user_info = await get_user_info(user, character.uid)
     if not user_info:
         return
-    if result.find("gacha.all"):
-        gacha_limit = gacha_begin = None
-    else:
-        gacha_limit = limit.result if limit.available else None
-        gacha_begin = begin.result if begin.available else None
+    gacha_limit = limit.result if limit.available else None
+    gacha_begin = begin.result if begin.available else None
     if len(gacha_data_grouped.pools[gacha_begin:gacha_limit]) > config.gacha_render_max:
         await UniMessage.text("抽卡记录过多，将以多张图片形式发送").send(reply_to=True)
         if user_session.platform == "QQClient":

@@ -132,8 +132,6 @@ class ScopedConfig(BaseModel):
     """Rogue 战绩查询背景图片来源"""
     argot_expire: int = 300
     """Argot 缓存过期时间"""
-    gacha_pool_limit: int = 12
-    """抽卡记录渲染上限"""
     gacha_render_max: int = 30
     """抽卡记录单图渲染上限"""
 

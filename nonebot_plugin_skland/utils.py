@@ -1,7 +1,7 @@
 import contextlib
 from collections import defaultdict
 from collections.abc import Callable, Coroutine
-from typing import TypeVar, ParamSpec, Concatenate
+from typing import Literal, TypeVar, ParamSpec, Concatenate
 
 import httpx
 from pydantic import AnyUrl as Url
@@ -405,9 +405,19 @@ def heybox_data_to_record(data: dict, uid: int, char_id: int, char_uid: str) -> 
     return records
 
 
-def send_reaction(user_session: UserSession, emoji_id: int, emoji: str) -> None:
+def send_reaction(
+    user_session: UserSession, emoji: Literal["fail", "done", "processing", "received", "unmatch"]
+) -> None:
+    emoji_map = {
+        "fail": ["10060", "❌"],
+        "done": ["144", "🎉"],
+        "processing": ["66", "❤"],
+        "received": ["124", "👌"],
+        "unmatch": ["326", "🤖"],
+    }
+
     async def send() -> None:
         with contextlib.suppress(Exception):
-            await message_reaction(str(emoji_id) if user_session.platform == "QQClient" else emoji)
+            await message_reaction(emoji_map[emoji][0] if user_session.platform == "QQClient" else emoji_map[emoji][1])
 
     get_driver().task_group.start_soon(send)

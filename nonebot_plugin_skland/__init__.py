@@ -186,7 +186,7 @@ skland.shortcut("角色更新", {"command": "skland char update", "fuzzy": False
 skland.shortcut("资源更新", {"command": "skland sync", "fuzzy": False, "prefix": True})
 skland.shortcut("战绩详情", {"command": "skland rginfo", "fuzzy": True, "prefix": True})
 skland.shortcut("收藏战绩详情", {"command": "skland rginfo -f", "fuzzy": True, "prefix": True})
-skland.shortcut("方舟抽卡记录", {"command": "skland gacha", "fuzzy": False, "prefix": True})
+skland.shortcut("方舟抽卡记录", {"command": "skland gacha", "fuzzy": True, "prefix": True})
 skland.shortcut("导入抽卡记录", {"command": "skland import", "fuzzy": True, "prefix": True})
 
 
@@ -204,7 +204,7 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
         target_id = user_session.user_id
 
     user, ark_characters = await check_user_character(target_id, session)
-    send_reaction(user_session, 66, "❤")
+    send_reaction(user_session, "processing")
 
     info = await get_character_info(user, str(ark_characters.uid))
     if not info:
@@ -225,6 +225,7 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
             extra={"data": info.building.meeting.clue.model_dump_json()},
         )
     )
+    send_reaction(user_session, "done")
     await msg.send(reply_to=True)
     await session.commit()
 
@@ -247,6 +248,7 @@ async def _(
     """绑定森空岛账号"""
 
     if not msg_target.private:
+        send_reaction(user_session, "unmatch")
         await UniMessage("绑定指令只允许在私聊中使用").finish(at_sender=True)
 
     if user := await session.get(SkUser, user_session.user_id):
@@ -262,9 +264,12 @@ async def _(
                 user.cred = token.result
                 user.cred_token = cred_token
             else:
+                send_reaction(user_session, "unmatch")
                 await UniMessage("token 或 cred 错误,请检查格式").finish(at_sender=True)
             await get_characters_and_bind(user, session)
+            send_reaction(user_session, "done")
             await UniMessage("更新成功").finish(at_sender=True)
+        send_reaction(user_session, "unmatch")
         await UniMessage("已绑定过 skland 账号").finish(at_sender=True)
 
     if token.available:
@@ -289,11 +294,14 @@ async def _(
                     user_id=user_id,
                 )
             else:
+                send_reaction(user_session, "unmatch")
                 await UniMessage("token 或 cred 错误,请检查格式").finish(at_sender=True)
             session.add(user)
             await get_characters_and_bind(user, session)
+            send_reaction(user_session, "done")
             await UniMessage("绑定成功").finish(at_sender=True)
         except RequestException as e:
+            send_reaction(user_session, "fail")
             await UniMessage(f"绑定失败,错误信息:{e}").finish(at_sender=True)
 
 
@@ -303,6 +311,7 @@ async def _(
     session: async_scoped_session,
 ):
     """二维码绑定森空岛账号"""
+    send_reaction(user_session, "processing")
     scan_id = await SklandLoginAPI.get_scan()
     scan_url = f"hypergryph://scan_login?scanId={scan_id}"
     qr_code = qrcode.make(scan_url)
@@ -323,7 +332,7 @@ async def _(
     if qr_msg.recallable:
         await qr_msg.recall(index=0)
     if scan_code:
-        send_reaction(user_session, 124, "👌")
+        send_reaction(user_session, "received")
         token = await SklandLoginAPI.get_token_by_scan_code(scan_code)
         grant_code = await SklandLoginAPI.get_grant_code(token, 0)
         cred = await SklandLoginAPI.get_cred(grant_code)
@@ -341,8 +350,10 @@ async def _(
             )
             session.add(user)
         await get_characters_and_bind(user, session)
+        send_reaction(user_session, "done")
         await UniMessage("绑定成功").finish(at_sender=True)
     else:
+        send_reaction(user_session, "fail")
         await UniMessage("二维码超时,请重新获取并扫码").finish(at_sender=True)
 
 
@@ -364,6 +375,7 @@ async def _(
 
     user = await session.get(SkUser, user_session.user_id)
     if not user:
+        send_reaction(user_session, "unmatch")
         await UniMessage("未绑定 skland 账号").finish(at_sender=True)
 
     if uid.available:
@@ -373,6 +385,7 @@ async def _(
     elif character := await get_default_arknights_character(user, session):
         chars = [character]
     else:
+        send_reaction(user_session, "unmatch")
         await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
 
     sign_result: dict[str, ArkSignResponse] = {}
@@ -381,6 +394,7 @@ async def _(
             sign_result[character.nickname] = res
 
     if sign_result:
+        send_reaction(user_session, "done")
         await UniMessage(
             "\n".join(
                 f"角色: {nickname} 签到成功，获得了:\n"
@@ -407,11 +421,13 @@ async def _(user_session: UserSession, session: async_scoped_session):
 
 
 @skland.assign("sync")
-async def _(is_superuser: bool = Depends(SuperUser())):
+async def _(user_session: UserSession, is_superuser: bool = Depends(SuperUser())):
     if not is_superuser:
+        send_reaction(user_session, "unmatch")
         await UniMessage.text("该指令仅超管可用").finish()
     try:
         logger.info("开始下载游戏资源")
+        send_reaction(user_session, "processing")
         for route in RESOURCE_ROUTES:
             logger.info(f"正在下载: {route}")
             await GameResourceDownloader.download_all(
@@ -423,9 +439,11 @@ async def _(is_superuser: bool = Depends(SuperUser())):
             )
         version = await GameResourceDownloader.get_version()
         GameResourceDownloader.update_version_file(version)
+        send_reaction(user_session, "done")
         await UniMessage.text(f"资源更新成功，版本:{version}").send()
     except RequestException as e:
         logger.error(f"下载游戏资源失败: {e}")
+        send_reaction(user_session, "fail")
         await UniMessage.text(f"资源更新失败：{e.args[0]}").send()
 
 
@@ -454,7 +472,7 @@ async def _(
         target_id = user_session.user_id
 
     user, character = await check_user_character(target_id, session)
-    send_reaction(user_session, 66, "❤")
+    send_reaction(user_session, "processing")
 
     topic_id = Topics(str(result.query("rogue.topic.topic_name"))).topic_id if result.find("rogue.topic") else ""
     rogue = await get_rogue_info(user, str(character.uid), topic_id)
@@ -471,6 +489,7 @@ async def _(
         + Argot("data", rogue.model_dump_json(), command=False)
         + Argot("background", argot_seg, command="background", expired_at=config.argot_expire)
     ).send()
+    send_reaction(user_session, "done")
     await session.commit()
 
 
@@ -480,10 +499,10 @@ async def _(id: Match[int], msg_id: MsgId, ext: ReplyRecordExtension, result: Ar
     if reply := ext.get_reply(msg_id):
         argot = await get_argot("data", reply.id)
         if not argot:
-            send_reaction(user_session, 326, "🤖")
+            send_reaction(user_session, "unmatch")
             await UniMessage.text("未找到该暗语或暗语已过期").finish(at_sender=True)
         if data := argot.dump_segment():
-            send_reaction(user_session, 66, "❤")
+            send_reaction(user_session, "processing")
             rogue_data = RogueData.model_validate_json(UniMessage.load(data).extract_plain_text())
             background = await get_rogue_background_image(rogue_data.topic)
             if result.find("rginfo.favored"):
@@ -532,7 +551,7 @@ async def arksign_status(
         chars = await get_arknights_characters(user, session)
         char_nicknames = {char.nickname for char in chars}
         sign_data = {nickname: value for nickname, value in sign_data.items() if nickname in char_nicknames}
-    send_reaction(user_session, 66, "❤")
+    send_reaction(user_session, "processing")
     if user_session.platform == "QQClient":
         sliced_nodes: list[dict[str, str]] = []
         prased_sign_result = format_sign_result(sign_data, sign_time, False)
@@ -551,9 +570,11 @@ async def arksign_status(
                 await UniMessage.reference(
                     *[CustomNode(bot.self_id, nickname, content) for nickname, content in node.items()],
                 ).send()
+        send_reaction(user_session, "done")
     else:
         prased_sign_result = format_sign_result(sign_data, sign_time, True)
         formatted_messages = [prased_sign_result.results[nickname] for nickname in prased_sign_result.results]
+        send_reaction(user_session, "done")
         await UniMessage.text(prased_sign_result.summary + "\n".join(formatted_messages)).finish()
 
 
@@ -575,7 +596,7 @@ async def _(
     """签到所有绑定角色"""
     if not is_superuser:
         await UniMessage.text("该指令仅超管可用").finish()
-    send_reaction(user_session, 66, "❤")
+    send_reaction(user_session, "processing")
     sign_result: dict[str, ArkSignResponse | str] = {}
     serializable_sign_result: dict[str, dict | str] = {}
     for user in await select_all_users(session):
@@ -632,7 +653,7 @@ async def _(
         return await SklandAPI.ark_card(CRED(cred=user.cred, token=user.cred_token), uid)
 
     user, character = await check_user_character(user_session.user_id, session)
-    send_reaction(user_session, 66, "❤")
+    send_reaction(user_session, "processing")
     token = user.access_token
     grant_code = await SklandLoginAPI.get_grant_code(token, 1)
     role_token = await SklandLoginAPI.get_role_token_by_uid(character.uid, grant_code)
@@ -738,7 +759,7 @@ async def _(
         await UniMessage.image(
             raw=await render_gacha_history(gacha_data_grouped, character, user_info.status, gacha_begin, gacha_limit)
         ).send()
-
+    send_reaction(user_session, "done")
     session.add_all(record_to_save)
     await session.commit()
 
@@ -763,8 +784,10 @@ async def _(url: Match[str], user_session: UserSession, session: async_scoped_se
             await UniMessage(f"导入成功，读取抽卡记录共 {len(records)} 条, 共导入 {len(record_to_save)} 条新记录").send(
                 at_sender=True
             )
+            send_reaction(user_session, "done")
             await session.commit()
         else:
+            send_reaction(user_session, "fail")
             await UniMessage("导入的抽卡记录与当前角色不匹配").finish(at_sender=True)
 
 

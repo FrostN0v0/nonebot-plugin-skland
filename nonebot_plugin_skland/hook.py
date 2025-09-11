@@ -11,7 +11,10 @@ shortcut_cache = CACHE_DIR / "shortcut.db"
 
 @driver.on_startup
 async def startup():
-    await gacha_table_data.load()
+    try:
+        await gacha_table_data.load()
+    except RequestException as e:
+        logger.error(f"检查卡池数据更新加载失败: {e}")
     logger.debug("Skland gacha table data loaded")
     command_manager.load_cache(shortcut_cache)
     logger.debug("Skland shortcuts cache loaded")

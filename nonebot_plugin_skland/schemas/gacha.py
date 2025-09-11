@@ -33,6 +33,11 @@ class GachaInfo(BaseModel):
     pos: int
     """抽卡位置"""
 
+    @property
+    def gacha_ts_sec(self) -> int:
+        """将毫秒级时间戳 (gachaTs) 转换为秒级时间戳。"""
+        return int(self.gachaTs) // 1000
+
 
 class GachaResponse(BaseModel):
     """Gacha Response Schema"""

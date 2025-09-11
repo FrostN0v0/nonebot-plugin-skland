@@ -249,7 +249,6 @@ async def get_all_gacha_records(char: Character, cate: GachaCate, access_token: 
 
     while page and page.gacha_list:
         for record in page.gacha_list:
-            record.gachaTs = str(int(record.gachaTs) // 1000)
             yield record
         if not page.hasMore:
             break

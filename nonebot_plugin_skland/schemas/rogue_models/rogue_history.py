@@ -1,4 +1,4 @@
-from pydantic import HttpUrl, BaseModel
+from pydantic import BaseModel
 
 
 class Char(BaseModel):
@@ -15,7 +15,7 @@ class Char(BaseModel):
 
 class Tag(BaseModel):
     name: str
-    icon: HttpUrl
+    icon: str
     description: str
     id: int
 

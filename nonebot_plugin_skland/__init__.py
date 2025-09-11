@@ -642,7 +642,6 @@ async def _(
     session: async_scoped_session,
     begin: Match[int],
     limit: Match[int],
-    result: Arparma,
     bot: Bot,
 ):
     """查询明日方舟抽卡记录"""
@@ -687,11 +686,11 @@ async def _(
             char_name=gacha_record.charName,
             rarity=gacha_record.rarity,
             is_new=gacha_record.isNew,
-            gacha_ts=int(gacha_record.gachaTs),
+            gacha_ts=gacha_record.gacha_ts_sec,
             pos=gacha_record.pos,
         )
         gacha_record_list.append(record)
-        if (int(gacha_record.gachaTs), gacha_record.pos) in existing_records_set:
+        if (int(gacha_record.gacha_ts_sec), gacha_record.pos) in existing_records_set:
             continue
         record_to_save.append(record)
 

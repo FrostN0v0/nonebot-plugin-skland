@@ -36,6 +36,7 @@ class AssistChar(BaseModel):
 
     @property
     def portrait(self) -> str:
+        portrait_id = self.skinId
         for symbol in ["@", "#"]:
             if symbol in self.skinId:
                 portrait_id = self.skinId.replace(symbol, "_", 1)

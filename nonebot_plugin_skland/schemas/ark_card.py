@@ -64,8 +64,6 @@ class ArkCard(BaseModel):
 
     @model_validator(mode="after")
     def inject_uniequip_uris(cls, values) -> Any:
-        from ..config import RES_DIR
-
         if isinstance(values, dict):
             assist_chars = values.get("assistChars", [])
             equipment_map = values.get("equipmentInfoMap", {})
@@ -79,7 +77,7 @@ class ArkCard(BaseModel):
             else:
                 equip_id = "original"
 
-            char.uniequip = (RES_DIR / "images" / "ark_card" / "uniequip" / f"{equip_id}.png").as_uri()
+            char.uniequip = f"https://torappu.prts.wiki/assets/uniequip_direction/{equip_id}.png"
         if isinstance(values, dict):
             values["assistChars"] = assist_chars
             return values

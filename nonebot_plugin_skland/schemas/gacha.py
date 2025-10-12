@@ -86,6 +86,7 @@ class GachaGroup(BaseModel):
     pulls: list[GachaPull]
 
     @model_validator(mode="before")
+    @classmethod
     def sort_pulls(cls, values) -> Any:
         if "pulls" in values:
             values["pulls"] = sorted(values["pulls"], key=lambda x: x.pos, reverse=True)
@@ -101,6 +102,7 @@ class GachaPool(GachaTable):
     """该卡池的抽卡记录"""
 
     @model_validator(mode="before")
+    @classmethod
     def sort_records(cls, values) -> Any:
         if "records" in values:
             values["records"] = sorted(values["records"], key=lambda x: x.gacha_ts, reverse=True)
@@ -147,6 +149,7 @@ class GroupedGachaRecord(BaseModel):
     pools: list[GachaPool]
 
     @model_validator(mode="before")
+    @classmethod
     def sort_pools(cls, values) -> Any:
         if "pools" in values:
             values["pools"] = sorted(values["pools"], key=lambda x: x.openTime, reverse=True)

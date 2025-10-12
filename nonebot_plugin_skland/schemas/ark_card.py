@@ -63,6 +63,7 @@ class ArkCard(BaseModel):
         return ""
 
     @model_validator(mode="after")
+    @classmethod
     def inject_uniequip_uris(cls, values) -> Any:
         if isinstance(values, dict):
             assist_chars = values.get("assistChars", [])
@@ -85,6 +86,7 @@ class ArkCard(BaseModel):
             return values
 
     @model_validator(mode="after")
+    @classmethod
     def inject_manufacture_stoke(cls, values) -> Any:
         if isinstance(values, dict):
             building = values.get("building")

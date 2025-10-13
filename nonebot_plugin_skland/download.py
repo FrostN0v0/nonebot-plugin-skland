@@ -31,6 +31,7 @@ class File(BaseModel):
     download_url: str
 
     @model_validator(mode="before")
+    @classmethod
     def modify_download_url(cls, values):
         from .config import config
 

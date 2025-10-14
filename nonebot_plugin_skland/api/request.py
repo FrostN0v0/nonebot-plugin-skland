@@ -7,9 +7,10 @@ from urllib.parse import urlparse
 
 import httpx
 from nonebot import logger
+from nonebot.compat import type_validate_python
 
 from ..exception import LoginException, RequestException, UnauthorizedException
-from ..schemas import CRED, ArkCard, GachaCate, RogueData, GachaResponse, ArkSignResponse
+from ..schemas import CRED, ArkCard, GachaCate, RogueData, BindingApp, GachaResponse, ArkSignResponse
 
 base_url = "https://zonai.skland.com/api/v1"
 
@@ -24,7 +25,7 @@ class SklandAPI:
     _header_for_sign = {"platform": "", "timestamp": "", "dId": "", "vName": ""}
 
     @classmethod
-    async def get_binding(cls, cred: CRED) -> list:
+    async def get_binding(cls, cred: CRED) -> list[BindingApp]:
         """获取绑定的角色"""
         binding_url = f"{base_url}/game/player/binding"
         async with httpx.AsyncClient() as client:
@@ -40,7 +41,7 @@ class SklandAPI:
                         raise LoginException(f"获取绑定角色失败：{response.json().get('message')}")
                     if status != 0:
                         raise RequestException(f"获取绑定角色失败：{response.json().get('message')}")
-                return response.json()["data"]["list"]
+                return type_validate_python(list[BindingApp], response.json()["data"]["list"])
             except httpx.HTTPError as e:
                 raise RequestException(f"获取绑定角色失败: {e}")
 

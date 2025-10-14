@@ -10,6 +10,7 @@ from .gacha import GachaPull as GachaPull
 from .rogue import RogueData as RogueData
 from .gacha import GachaGroup as GachaGroup
 from .gacha import GachaTable as GachaTable
+from .binding import BindingApp as BindingApp
 from .game_data import CharTable as CharTable
 from .ark_models import AssistChar as AssistChar
 from .gacha import GachaResponse as GachaResponse

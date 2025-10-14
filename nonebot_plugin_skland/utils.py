@@ -36,7 +36,7 @@ async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
     existing = {char.uid: char for char in await select_user_characters(user, session)}
     for app in binding_app_list:
         for character in app.bindingList:
-            if model := existing.get(character.uid):
+            if model := existing.pop(character.uid):
                 model.nickname = character.nickName
                 model.app_code = app.appCode
                 model.channel_master_id = character.channelMasterId
@@ -51,6 +51,8 @@ async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
                     isdefault=len(app.bindingList) == 1 or character.isDefault,
                 )
                 session.add(model)
+    for old_char in existing.values():
+        await session.delete(old_char)
     await session.commit()
 
 

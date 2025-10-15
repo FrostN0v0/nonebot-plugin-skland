@@ -10,10 +10,10 @@ from nonebot_plugin_user import UserSession
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_alconna import UniMessage, message_reaction
 
-from .db_handler import delete_characters
 from .api import SklandAPI, SklandLoginAPI
 from .model import SkUser, Character, GachaRecord
 from .config import RES_DIR, CustomSource, config, gacha_table_data
+from .db_handler import select_user_characters, delete_character_gacha_records
 from .exception import LoginException, RequestException, UnauthorizedException
 from .schemas import (
     CRED,
@@ -31,23 +31,30 @@ Refreshable = Callable[Concatenate[SkUser, P], Coroutine[None, None, R]]
 
 
 async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
-    await delete_characters(user, session)
-
     cred = CRED(cred=user.cred, token=user.cred_token)
     binding_app_list = await SklandAPI.get_binding(cred)
+    existing_chars = {char.uid: char for char in await select_user_characters(user, session)}
     for app in binding_app_list:
-        for character in app["bindingList"]:
-            character_model = Character(
-                id=user.id,
-                uid=character["uid"],
-                nickname=character["nickName"],
-                app_code=app["appCode"],
-                channel_master_id=character["channelMasterId"],
-                isdefault=character["isDefault"],
-            )
-            if len(app["bindingList"]) == 1:
-                character_model.isdefault = True
-            session.add(character_model)
+        for character in app.bindingList:
+            if model := existing_chars.pop(character.uid):
+                model.nickname = character.nickName
+                model.app_code = app.appCode
+                model.channel_master_id = character.channelMasterId
+                model.isdefault = len(app.bindingList) == 1 or character.isDefault
+            else:
+                model = Character(
+                    id=user.id,
+                    uid=character.uid,
+                    nickname=character.nickName,
+                    app_code=app.appCode,
+                    channel_master_id=character.channelMasterId,
+                    isdefault=len(app.bindingList) == 1 or character.isDefault,
+                )
+                session.add(model)
+    for old_char in existing_chars.values():
+        # 抽卡记录的外键引用了 skland_characters 表, 但未设置级联删除
+        await delete_character_gacha_records(old_char, session)
+        await session.delete(old_char)
     await session.commit()
 
 

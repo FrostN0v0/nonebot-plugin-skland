@@ -52,6 +52,10 @@ async def select_all_users(session: async_scoped_session) -> list[SkUser]:
     return list(users)
 
 
+async def select_user_characters(user: SkUser, session: async_scoped_session) -> list[Character]:
+    return list((await session.scalars(select(Character).where(Character.id == user.id))).all())
+
+
 async def select_all_gacha_records(user: SkUser, char_uid: str, session: async_scoped_session) -> list[GachaRecord]:
     records = (
         (await session.execute(select(GachaRecord).where(GachaRecord.uid == user.id, GachaRecord.char_uid == char_uid)))
@@ -59,3 +63,9 @@ async def select_all_gacha_records(user: SkUser, char_uid: str, session: async_s
         .all()
     )
     return list(records)
+
+
+async def delete_character_gacha_records(character: Character, session: async_scoped_session):
+    await session.execute(
+        delete(GachaRecord).where(GachaRecord.char_pk_id == character.id, GachaRecord.char_uid == character.uid)
+    )

@@ -33,16 +33,16 @@ Refreshable = Callable[Concatenate[SkUser, P], Coroutine[None, None, R]]
 async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
     cred = CRED(cred=user.cred, token=user.cred_token)
     binding_app_list = await SklandAPI.get_binding(cred)
-    existing_chars = {char.uid: char for char in await select_user_characters(user, session)}
+    new_uids = {char.uid for app in binding_app_list for char in app.bindingList}
+    for character in await select_user_characters(user, session):
+        if character.uid not in new_uids:
+            # 抽卡记录的外键引用了 skland_characters 表, 但未设置级联删除
+            await delete_character_gacha_records(character, session)
+            await session.delete(character)
     for app in binding_app_list:
         for character in app.bindingList:
-            if model := existing_chars.pop(character.uid):
-                model.nickname = character.nickName
-                model.app_code = app.appCode
-                model.channel_master_id = character.channelMasterId
-                model.isdefault = len(app.bindingList) == 1 or character.isDefault
-            else:
-                model = Character(
+            await session.merge(
+                Character(
                     id=user.id,
                     uid=character.uid,
                     nickname=character.nickName,
@@ -50,11 +50,7 @@ async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
                     channel_master_id=character.channelMasterId,
                     isdefault=len(app.bindingList) == 1 or character.isDefault,
                 )
-                session.add(model)
-    for old_char in existing_chars.values():
-        # 抽卡记录的外键引用了 skland_characters 表, 但未设置级联删除
-        await delete_character_gacha_records(old_char, session)
-        await session.delete(old_char)
+            )
     await session.commit()
 
 

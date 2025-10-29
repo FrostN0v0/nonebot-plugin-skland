@@ -10,10 +10,10 @@ from nonebot_plugin_user import UserSession
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_alconna import UniMessage, message_reaction
 
-from .db_handler import delete_characters
 from .api import SklandAPI, SklandLoginAPI
 from .model import SkUser, Character, GachaRecord
 from .config import RES_DIR, CustomSource, config, gacha_table_data
+from .db_handler import select_user_characters, delete_character_gacha_records
 from .exception import LoginException, RequestException, UnauthorizedException
 from .schemas import (
     CRED,
@@ -31,23 +31,26 @@ Refreshable = Callable[Concatenate[SkUser, P], Coroutine[None, None, R]]
 
 
 async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
-    await delete_characters(user, session)
-
     cred = CRED(cred=user.cred, token=user.cred_token)
     binding_app_list = await SklandAPI.get_binding(cred)
+    new_uids = {char.uid for app in binding_app_list for char in app.bindingList}
+    for character in await select_user_characters(user, session):
+        if character.uid not in new_uids:
+            # 抽卡记录的外键引用了 skland_characters 表, 但未设置级联删除
+            await delete_character_gacha_records(character, session)
+            await session.delete(character)
     for app in binding_app_list:
-        for character in app["bindingList"]:
-            character_model = Character(
-                id=user.id,
-                uid=character["uid"],
-                nickname=character["nickName"],
-                app_code=app["appCode"],
-                channel_master_id=character["channelMasterId"],
-                isdefault=character["isDefault"],
+        for character in app.bindingList:
+            await session.merge(
+                Character(
+                    id=user.id,
+                    uid=character.uid,
+                    nickname=character.nickName,
+                    app_code=app.appCode,
+                    channel_master_id=character.channelMasterId,
+                    isdefault=len(app.bindingList) == 1 or character.isDefault,
+                )
             )
-            if len(app["bindingList"]) == 1:
-                character_model.isdefault = True
-            session.add(character_model)
     await session.commit()
 
 

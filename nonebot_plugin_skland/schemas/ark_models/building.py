@@ -41,9 +41,9 @@ class Building(BaseModel):
     manufactures: list[Manufacture]
     tradings: list[Trading]
     dormitories: list[Dormitory]
-    meeting: Meeting
-    hire: Hire
-    training: Training
+    meeting: Meeting | None = None
+    hire: Hire | None = None
+    training: Training | None = None
     labor: Labor
     furniture: Furniture
     control: Control

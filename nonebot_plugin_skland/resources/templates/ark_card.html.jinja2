@@ -141,10 +141,14 @@
               class="w-full h-10 flex flex-col items-start justify-center bg-gradient-to-r from-[#DE9A67]/40 to-transparent border-l-3 border-[#DE9A67]">
               <span class="text-white/80 font-bold font-[Bender] text-sm ml-2 mt-0.5">线索交流</span>
               <span class="text-[#DE9A67] font-bold font-[Bender] text-sm ml-2 -mt-1">
-                {% if building.meeting.clue.sharing %}
-                交流中
+                {% if building.meeting %}
+                    {% if building.meeting.clue.sharing %}
+                    交流中
+                    {% else %}
+                    {{ building.meeting.clue.board | length }}<span class="text-white/60 text-[10px]">/7</span>
+                    {% endif %}
                 {% else %}
-                {{ building.meeting.clue.board | length }}<span class="text-white/60 text-[10px]">/7</span>
+                未建造
                 {% endif %}
               </span>
               <img src="../images/ark_card/building/meeting.png"
@@ -197,7 +201,11 @@
               <div class="absolute left-21 top-6 flex flex-col items-start space-y-1">
                 <span class="text-white/80 font-bold font-[Bender] text-xl">公招刷新</span>
                 <span class="text-white font-bold font-[Bender] text-xl">
+                  {% if building.hire %}
                   {{ building.hire.refreshCount }}<span class="text-white/60 text-base">/3</span>
+                  {% else %}
+                  -<span class="text-white/60 text-base">/3</span>
+                  {% endif %}
                 </span>
               </div>
               <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
@@ -311,11 +319,11 @@
                 <span class="text-white/80 font-bold font-[Bender] text-lg">训练室</span>
                 <span class="text-white font-bold font-[Bender] text-sm">{{ training_char }}
                 </span>
-                <span class="text-white font-bold font-[Bender] text-xs">{{ building.training.training_state }}
+                <span class="text-white font-bold font-[Bender] text-xs">{{ building.training.training_state if building.training else '未建造' }}
                 </span>
               </div>
               <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-sm">
-                {% if building.training.training_state == "空闲中" %}
+                {% if building.training and building.training.training_state == "空闲中" %}
                 <div class="w-0 h-full rounded-[10px] green-bar"></div>
                 {% else %}
                 <div class="w-full h-full rounded-[10px] green-bar"></div>
@@ -323,7 +331,9 @@
               </div>
             </div>
             <span class="text-white/60 text-xs absolute bottom-0.5">
-              {% if building.training.training_state == "空闲中" %}
+              {% if not building.training %}
+              未建造
+              {% elif building.training.training_state == "空闲中" %}
               空闲中
               {% else %}
               {% if building.training.remainSecs != 0%}

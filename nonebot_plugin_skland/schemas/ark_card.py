@@ -57,8 +57,9 @@ class ArkCard(BaseModel):
 
     @property
     def trainee_char(self) -> str:
-        trainee = self.building.training.trainee
-        if trainee:
+        training = getattr(self.building, "training", None) if self.building else None
+        trainee = getattr(training, "trainee", None) if training else None
+        if trainee and trainee.charId in self.charInfoMap:
             return self.charInfoMap[trainee.charId].name
         return ""
 

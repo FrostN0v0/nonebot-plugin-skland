@@ -34,7 +34,6 @@ class SklandAPI:
                     binding_url,
                     headers=cls.get_sign_header(cred, binding_url, method="get"),
                 )
-                response.raise_for_status()
                 if status := response.json().get("code"):
                     if status == 10000:
                         raise UnauthorizedException(f"获取绑定角色失败：{response.json().get('message')}")
@@ -87,7 +86,6 @@ class SklandAPI:
                     headers={**headers, "Content-Type": "application/json"},
                     content=json_body,
                 )
-                response.raise_for_status()
                 logger.debug(f"签到回复：{response.json()}")
                 if status := response.json().get("code"):
                     if status == 10000:
@@ -109,7 +107,6 @@ class SklandAPI:
                     uid_url,
                     headers=cls.get_sign_header(cred, uid_url, method="get"),
                 )
-                response.raise_for_status()
                 if status := response.json().get("code"):
                     if status == 10000:
                         raise UnauthorizedException(f"获取账号 userId 失败：{response.json().get('message')}")
@@ -131,7 +128,6 @@ class SklandAPI:
                     game_info_url,
                     headers=cls.get_sign_header(cred, game_info_url, method="get"),
                 )
-                response.raise_for_status()
                 if status := response.json().get("code"):
                     if status == 10000:
                         raise UnauthorizedException(f"获取账号 game_info 失败：{response.json().get('message')}")
@@ -153,7 +149,6 @@ class SklandAPI:
                     rogue_url,
                     headers=cls.get_sign_header(cred, rogue_url, method="get"),
                 )
-                response.raise_for_status()
                 if status := response.json().get("code"):
                     if status == 10000:
                         raise UnauthorizedException(f"获取肉鸽数据失败：{response.json().get('message')}")
@@ -176,7 +171,6 @@ class SklandAPI:
                     headers={"X-Account-Token": token, "X-Role-Token": role_token},
                     cookies={"ak-user-center": ak_cookie},
                 )
-                response.raise_for_status()
                 if status := response.json().get("code"):
                     if status == 10000:
                         raise UnauthorizedException(f"获取抽卡类别失败：{response.json().get('message')}")
@@ -218,7 +212,6 @@ class SklandAPI:
                     cookies={"ak-user-center": ak_cookie},
                     params=query_params,
                 )
-                response.raise_for_status()
                 if status := response.json().get("code"):
                     if status == 10000:
                         raise UnauthorizedException(f"获取抽卡记录失败：{response.json().get('message')}")

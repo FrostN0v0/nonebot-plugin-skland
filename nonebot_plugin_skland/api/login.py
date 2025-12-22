@@ -60,6 +60,7 @@ class SklandLoginAPI:
                     refresh_url,
                     headers={**cls._headers, "cred": cred},
                 )
+                response.raise_for_status()
                 if status := response.json().get("status"):
                     if status != 0:
                         raise RequestException(f"刷新token失败：{response.json().get('message')}")

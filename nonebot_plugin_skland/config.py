@@ -43,6 +43,7 @@ class GachaTableData:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get("https://weedy.prts.wiki/gacha_table.json")
+                response.raise_for_status()
                 data = response.json()["gachaPoolClient"]
                 self.gacha_details = [GachaDetails(**item) for item in data]
         except httpx.HTTPError as e:

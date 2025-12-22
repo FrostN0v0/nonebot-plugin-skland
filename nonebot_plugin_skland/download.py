@@ -111,7 +111,6 @@ class GameResourceDownloader:
         try:
             async with AsyncClient() as client:
                 response = await client.get(url)
-                response.raise_for_status()
                 origin_version = response.content.decode()
                 return origin_version
         except HTTPError as e:
@@ -148,7 +147,6 @@ class GameResourceDownloader:
         try:
             async with AsyncClient() as client:
                 response = await client.get(url, headers=headers)
-                response.raise_for_status()
                 data = response.json()
                 is_file_path = "." in route.split("/")[-1]
 

@@ -239,6 +239,7 @@ class GameResourceDownloader:
         file_path = save_path / file.name
         try:
             async with client.stream("GET", file.download_url, **kwargs) as response:
+                response.raise_for_status()
                 file_size = int(response.headers.get("Content-Length", 0))
                 progress.update(task_id, total=file_size)
 

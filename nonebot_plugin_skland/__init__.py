@@ -215,16 +215,18 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
         argot_seg = [Text(str(background)), Image(url=str(background))]
     else:
         argot_seg = Image(path=str(background))
-    msg = (
-        UniMessage.image(raw=image)
-        + Argot("background", argot_seg, command="background", expired_at=config.argot_expire)
-        + Argot(
+    msg = UniMessage.image(raw=image) + Argot(
+        "background", argot_seg, command="background", expired_at=config.argot_expire
+    )
+    meeting = getattr(getattr(info, "building", None), "meeting", None)
+    meeting_clue = getattr(meeting, "clue", None) if meeting else None
+    if meeting_clue is not None:
+        msg += Argot(
             "clue",
             command="clue",
             expired_at=config.argot_expire,
-            extra={"data": json.dumps(model_dump(info.building.meeting.clue))},
+            extra={"data": json.dumps(model_dump(meeting_clue))},
         )
-    )
     send_reaction(user_session, "done")
     await msg.send(reply_to=True)
     await session.commit()

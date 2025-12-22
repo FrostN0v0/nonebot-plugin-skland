@@ -12,6 +12,8 @@ from nonebot.compat import PYDANTIC_V2
 import nonebot_plugin_localstore as store
 from nonebot.plugin import get_plugin_config
 
+from .exception import RequestException
+
 RES_DIR: Path = Path(__file__).parent / "resources"
 TEMPLATES_DIR: Path = RES_DIR / "templates"
 CACHE_DIR = store.get_plugin_cache_dir()
@@ -38,11 +40,14 @@ class GachaTableData:
     async def get_gacha_details(self):
         from .schemas import GachaDetails
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get("https://weedy.prts.wiki/gacha_table.json")
-            response.raise_for_status()
-            data = response.json()["gachaPoolClient"]
-            self.gacha_details = [GachaDetails(**item) for item in data]
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get("https://weedy.prts.wiki/gacha_table.json")
+                response.raise_for_status()
+                data = response.json()["gachaPoolClient"]
+                self.gacha_details = [GachaDetails(**item) for item in data]
+        except httpx.HTTPError as e:
+            raise RequestException(f"获取卡池详情失败: {type(e).__name__}: {e}")
 
     async def get_version(self):
         from .download import GameResourceDownloader

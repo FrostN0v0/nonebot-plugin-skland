@@ -12,9 +12,10 @@ from nonebot_plugin_alconna import UniMessage, message_reaction
 
 from .api import SklandAPI, SklandLoginAPI
 from .model import SkUser, Character, GachaRecord
-from .config import RES_DIR, CustomSource, config, gacha_table_data
+from .download import DownloadResult, GameResourceDownloader
 from .db_handler import select_user_characters, delete_character_gacha_records
 from .exception import LoginException, RequestException, UnauthorizedException
+from .config import RES_DIR, CACHE_DIR, RESOURCE_ROUTES, CustomSource, config, gacha_table_data
 from .schemas import (
     CRED,
     GachaCate,
@@ -423,3 +424,54 @@ def send_reaction(
             await message_reaction(emoji_map[emoji][0] if user_session.platform == "QQClient" else emoji_map[emoji][1])
 
     get_driver().task_group.start_soon(send)
+
+
+async def download_img_resource(
+    force: bool,
+    update: bool,
+    user_session: UserSession | None = None,
+) -> DownloadResult:
+    """下载图片资源
+
+    Args:
+        force: 是否强制更新，忽略版本检查
+        update: 是否更新替换已有图片文件
+        user_session: 用户会话，用于发送反应
+
+    Returns:
+        DownloadResult: 下载结果，包含版本号、成功数量和失败数量
+    """
+
+    origin_version = await GameResourceDownloader.get_version()
+    version_file = CACHE_DIR.joinpath("version")
+    local_version = version_file.read_text(encoding="utf-8") if version_file.exists() else None
+    if local_version == origin_version and not force:
+        logger.info("游戏图片资源已是最新版本")
+        return DownloadResult(version=None, success_count=0, failed_count=0)
+
+    if user_session:
+        send_reaction(user_session, "processing")
+    logger.info(f"检测到新版本 {origin_version}，开始下载游戏资源")
+    total_success = 0
+    total_failed = 0
+    for route in RESOURCE_ROUTES:
+        logger.info(f"正在下载: {route}")
+        result = await GameResourceDownloader.download_all(
+            owner="yuanyan3060",
+            repo="ArknightsGameResource",
+            route=route,
+            save_dir=CACHE_DIR,
+            branch="main",
+            update=update,
+        )
+        total_success += result.success_count
+        total_failed += result.failed_count
+    GameResourceDownloader.update_version_file(origin_version)
+    if user_session:
+        send_reaction(user_session, "done")
+    logger.success(f"游戏资源已更新到版本：{origin_version}")
+    return DownloadResult(
+        version=origin_version,
+        success_count=total_success,
+        failed_count=total_failed,
+    )

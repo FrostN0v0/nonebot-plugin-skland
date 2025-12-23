@@ -47,9 +47,8 @@ from . import hook as hook
 from .extras import extra_data
 from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
-from .download import GameResourceDownloader
 from .model import SkUser, Character, GachaRecord
-from .config import CACHE_DIR, RESOURCE_ROUTES, Config, config
+from .config import CACHE_DIR, Config, config, gacha_table_data
 from .schemas import CRED, Clue, Topics, GachaInfo, RogueData, ArkSignResponse
 from .render import render_ark_card, render_clue_board, render_rogue_card, render_rogue_info, render_gacha_history
 from .db_handler import (
@@ -64,6 +63,7 @@ from .utils import (
     format_sign_result,
     group_gacha_records,
     get_background_image,
+    download_img_resource,
     get_all_gacha_records,
     heybox_data_to_record,
     get_characters_and_bind,
@@ -125,7 +125,14 @@ skland = on_alconna(
             help_text="明日方舟森空岛签到相关功能",
         ),
         Subcommand("char", Option("-u|--update|update"), help_text="更新绑定角色信息"),
-        Subcommand("sync", help_text="更新图片资源(仅超管可用)"),
+        Subcommand(
+            "sync",
+            Option("-f|--force|force", help_text="强制更新"),
+            Option("--img", help_text="更新图片资源(仅超管可用)"),
+            Option("--data", help_text="更新数据资源(仅超管可用)"),
+            Option("-u|--update|update", help_text="更新时下载并替换已有图片文件"),
+            help_text="同步游戏资源",
+        ),
         Subcommand(
             "rogue",
             Args["target?#目标", At | int],
@@ -423,30 +430,78 @@ async def _(user_session: UserSession, session: async_scoped_session):
 
 
 @skland.assign("sync")
-async def _(user_session: UserSession, is_superuser: bool = Depends(SuperUser())):
+async def _(
+    user_session: UserSession,
+    result: Arparma,
+    is_superuser: bool = Depends(SuperUser()),
+):
+    """同步游戏资源"""
     if not is_superuser:
         send_reaction(user_session, "unmatch")
         await UniMessage.text("该指令仅超管可用").finish()
+
+    force_update = result.find("sync.force")
+    update_img = result.find("sync.img")
+    update_data = result.find("sync.data")
+    update_existing = result.find("sync.update")
+
+    update_all = not update_img and not update_data
+
+    send_reaction(user_session, "processing")
+    messages = []
+    has_error = False
+
     try:
-        logger.info("开始下载游戏资源")
-        send_reaction(user_session, "processing")
-        for route in RESOURCE_ROUTES:
-            logger.info(f"正在下载: {route}")
-            await GameResourceDownloader.download_all(
-                owner="yuanyan3060",
-                repo="ArknightsGameResource",
-                route=route,
-                save_dir=CACHE_DIR,
-                branch="main",
-            )
-        version = await GameResourceDownloader.get_version()
-        GameResourceDownloader.update_version_file(version)
-        send_reaction(user_session, "done")
-        await UniMessage.text(f"资源更新成功，版本:{version}").send()
-    except RequestException as e:
-        logger.error(f"下载游戏资源失败: {e}")
+        if update_img or update_all:
+            logger.info("开始更新图片资源...")
+            try:
+                download_result = await download_img_resource(
+                    force=force_update,
+                    update=update_existing,
+                    user_session=None,
+                )
+                if download_result.version is None:
+                    messages.append("📦 图片资源已是最新版本")
+                else:
+                    update_mode = "（覆盖更新）" if update_existing else ""
+                    stats = f"成功: {download_result.success_count}个"
+                    if download_result.failed_count > 0:
+                        stats += f"，失败: {download_result.failed_count}个"
+                    messages.append(f"✅ 图片资源更新成功{update_mode}，版本: {download_result.version}（{stats}）")
+            except RequestException as e:
+                logger.error(f"下载图片资源失败: {e}")
+                messages.append(f"❌ 图片资源更新失败: {e.args[0]}")
+                has_error = True
+
+        if update_data or update_all:
+            logger.info("开始更新数据资源...")
+            try:
+                downloaded = await gacha_table_data.load(force=bool(force_update))
+                if not downloaded and not force_update:
+                    messages.append("📦 数据资源已是最新版本")
+                else:
+                    version = gacha_table_data.version or gacha_table_data.origin_version or "未知"
+                    messages.append(f"✅ 数据资源更新成功，版本: {version}")
+            except RequestException as e:
+                logger.error(f"下载数据资源失败: {e}")
+                messages.append(f"❌ 数据资源更新失败: {e.args[0]}")
+                has_error = True
+
+        if has_error:
+            send_reaction(user_session, "fail")
+        else:
+            send_reaction(user_session, "done")
+
+        result_msg = "\n".join(messages)
+        if force_update:
+            result_msg = "🔄 强制更新模式\n\n" + result_msg
+
+        await UniMessage.text(result_msg).send()
+
+    except Exception as e:
+        logger.exception(f"同步资源时发生未知错误: {e}")
         send_reaction(user_session, "fail")
-        await UniMessage.text(f"资源更新失败：{e.args[0]}").send()
+        await UniMessage.text(f"❌ 同步资源失败: {type(e).__name__}: {str(e)}").send()
 
 
 @skland.assign("rogue")

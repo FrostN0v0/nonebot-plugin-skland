@@ -82,7 +82,7 @@ class GachaTableData:
         from .schemas import CharTable, GachaTable
 
         await self.get_version()
-        if not DATA_DIR.joinpath("version").exists() and self.origin_version:
+        if not self.version_file.exists() and self.origin_version:
             self._update_version_file()
 
         downloaded = False
@@ -105,6 +105,10 @@ class GachaTableData:
             await self.download_game_data()
             self._update_version_file()
             downloaded = True
+
+        self.character_table = []
+        self.gacha_table = []
+        self.gacha_details = []
 
         try:
             char_json = json.loads(GACHA_DATA_PATH.joinpath("character_table.json").read_text(encoding="utf-8"))

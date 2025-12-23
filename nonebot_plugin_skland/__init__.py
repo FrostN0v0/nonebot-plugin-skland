@@ -456,8 +456,8 @@ async def _(
             logger.info("开始更新图片资源...")
             try:
                 download_result = await download_img_resource(
-                    force=bool(force_update),
-                    update=bool(update_existing),
+                    force=force_update,
+                    update=update_existing,
                     user_session=None,
                 )
                 if download_result.version is None:

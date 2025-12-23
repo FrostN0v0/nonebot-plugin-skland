@@ -10,8 +10,8 @@ from rich.text import Text
 from rich.panel import Panel
 from rich.table import Table
 from pydantic import BaseModel
-from httpx import HTTPError, AsyncClient
 from nonebot.compat import model_validator
+from httpx import Timeout, HTTPError, AsyncClient, TimeoutException
 from rich.progress import (
     Task,
     TaskID,
@@ -118,7 +118,7 @@ class GameResourceDownloader:
             raise RequestException(f"检查更新失败: {type(e).__name__}: {e}")
 
     @classmethod
-    async def check_update(cls, dir: Path) -> str:
+    async def check_update(cls, dir: Path) -> str | None:
         """检查更新"""
         origin_version = await cls.get_version()
         version_file = dir.joinpath("version")
@@ -127,7 +127,7 @@ class GameResourceDownloader:
         local_version = version_file.read_text(encoding="utf-8").strip()
         if origin_version != local_version:
             return origin_version
-        return ""
+        return None
 
     @classmethod
     def update_version_file(cls, version: str):
@@ -190,7 +190,9 @@ class GameResourceDownloader:
             save_path = save_path.parent
         save_path.mkdir(parents=True, exist_ok=True)
 
-        async with AsyncClient() as client:
+        failed_files = []
+        timeout = Timeout(timeout=300.0, connect=30.0, read=60.0, write=30.0, pool=10.0)
+        async with AsyncClient(timeout=timeout) as client:
             with DownloadProgress(
                 "[cyan]{task.fields[filename]}",
                 BarColumn(),
@@ -205,23 +207,46 @@ class GameResourceDownloader:
                         return
                     async with cls.SEMAPHORE:
                         task_id = progress.add_task("Downloading", filename=file.name, total=0)
-                        await cls.download_file(
-                            client,
-                            file,
-                            save_path,
-                            progress,
-                            task_id=task_id,
-                            timeout=300,
-                        )
-                        progress.remove_task(task_id)
-                        cls.download_count += 1
+                        try:
+                            await cls.download_file(
+                                client,
+                                file,
+                                save_path,
+                                progress,
+                                task_id=task_id,
+                            )
+                            cls.download_count += 1
+                        except TimeoutException as e:
+                            error_msg = f"下载文件 {file.name} 超时: {e}"
+                            failed_files.append(error_msg)
+                        except RequestException as e:
+                            error_msg = f"下载文件 {file.name} 失败: {e}"
+                            failed_files.append(error_msg)
+                        except Exception as e:
+                            error_msg = f"下载文件 {file.name} 时发生未知错误: {type(e).__name__}: {e}"
+                            failed_files.append(error_msg)
+                        finally:
+                            progress.remove_task(task_id)
 
                 await asyncio.gather(*(worker(file) for file in files))
+        if failed_files:
+            logger.error(f"❌ 资源 {route} 有 {len(failed_files)} 个文件下载失败:")
+            for error_msg in failed_files:
+                logger.error(f"  - {error_msg}")
+
         time_consumed = datetime.now() - cls.download_time
-        if cls.download_count == 0:
+        failed_count = len(failed_files)
+
+        if cls.download_count == 0 and failed_count == 0:
             logger.info(f"✅ 资源 {route} 无新增文件")
+        elif cls.download_count == 0 and failed_count > 0:
+            logger.warning(f"⚠️ 资源 {route} 无新增文件，但有 {failed_count} 个文件下载失败")
         else:
-            logger.success(f"🎉 资源 {route} 下载完成，共下载 {cls.download_count} 个文件,耗时 {time_consumed}")
+            success_msg = f"🎉 资源 {route} 下载完成，成功 {cls.download_count} 个"
+            if failed_count > 0:
+                success_msg += f"，失败 {failed_count} 个"
+            success_msg += f"，耗时 {time_consumed}"
+            logger.success(success_msg)
 
     @classmethod
     async def download_file(

@@ -11,10 +11,11 @@ from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_alconna import UniMessage, message_reaction
 
 from .api import SklandAPI, SklandLoginAPI
+from .download import GameResourceDownloader
 from .model import SkUser, Character, GachaRecord
-from .config import RES_DIR, CustomSource, config, gacha_table_data
 from .db_handler import select_user_characters, delete_character_gacha_records
 from .exception import LoginException, RequestException, UnauthorizedException
+from .config import RES_DIR, CACHE_DIR, RESOURCE_ROUTES, CustomSource, config, gacha_table_data
 from .schemas import (
     CRED,
     GachaCate,
@@ -423,3 +424,28 @@ def send_reaction(
             await message_reaction(emoji_map[emoji][0] if user_session.platform == "QQClient" else emoji_map[emoji][1])
 
     get_driver().task_group.start_soon(send)
+
+
+async def download_img_resource(force: bool, user_session: UserSession | None = None) -> str | None:
+    """下载图片资源"""
+    version = await GameResourceDownloader.check_update(CACHE_DIR)
+    if not version:
+        logger.info("游戏资源已是最新")
+        return None
+    if user_session:
+        send_reaction(user_session, "processing")
+    logger.info(f"检测到新版本 {version}，开始下载游戏资源")
+    for route in RESOURCE_ROUTES:
+        logger.info(f"正在下载: {route}")
+        await GameResourceDownloader.download_all(
+            owner="yuanyan3060",
+            repo="ArknightsGameResource",
+            route=route,
+            save_dir=CACHE_DIR,
+            branch="main",
+        )
+    GameResourceDownloader.update_version_file(version)
+    if user_session:
+        send_reaction(user_session, "done")
+    logger.success(f"游戏资源已更新到版本：{version}")
+    return version

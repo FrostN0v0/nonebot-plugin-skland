@@ -130,6 +130,7 @@ skland = on_alconna(
             Option("-f|--force|force", help_text="强制更新"),
             Option("--img", help_text="更新图片资源(仅超管可用)"),
             Option("--data", help_text="更新数据资源(仅超管可用)"),
+            Option("-u|--update|update", help_text="更新时下载并替换已有图片文件"),
             help_text="同步游戏资源",
         ),
         Subcommand(
@@ -439,12 +440,11 @@ async def _(
         send_reaction(user_session, "unmatch")
         await UniMessage.text("该指令仅超管可用").finish()
 
-    # 解析选项
     force_update = result.find("sync.force")
     update_img = result.find("sync.img")
     update_data = result.find("sync.data")
+    update_existing = result.find("sync.update")
 
-    # 如果没有指定任何资源类型，则更新所有资源
     update_all = not update_img and not update_data
 
     send_reaction(user_session, "processing")
@@ -452,21 +452,27 @@ async def _(
     has_error = False
 
     try:
-        # 更新图片资源
         if update_img or update_all:
             logger.info("开始更新图片资源...")
             try:
-                img_version = await download_img_resource(force=bool(force_update), user_session=None)
-                if img_version is None:
+                download_result = await download_img_resource(
+                    force=bool(force_update),
+                    update=bool(update_existing),
+                    user_session=None,
+                )
+                if download_result.version is None:
                     messages.append("📦 图片资源已是最新版本")
                 else:
-                    messages.append(f"✅ 图片资源更新成功，版本: {img_version}")
+                    update_mode = "（覆盖更新）" if update_existing else ""
+                    stats = f"成功: {download_result.success_count}个"
+                    if download_result.failed_count > 0:
+                        stats += f"，失败: {download_result.failed_count}个"
+                    messages.append(f"✅ 图片资源更新成功{update_mode}，版本: {download_result.version}（{stats}）")
             except RequestException as e:
                 logger.error(f"下载图片资源失败: {e}")
                 messages.append(f"❌ 图片资源更新失败: {e.args[0]}")
                 has_error = True
 
-        # 更新数据资源
         if update_data or update_all:
             logger.info("开始更新数据资源...")
             try:
@@ -481,7 +487,6 @@ async def _(
                 messages.append(f"❌ 数据资源更新失败: {e.args[0]}")
                 has_error = True
 
-        # 发送结果消息
         if has_error:
             send_reaction(user_session, "fail")
         else:

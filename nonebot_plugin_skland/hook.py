@@ -20,7 +20,7 @@ async def startup():
     logger.debug("Skland shortcuts cache loaded")
     if config.check_res_update:
         try:
-            await download_img_resource()
+            await download_img_resource(force=False, update=False)
         except RequestException as e:
             logger.error(f"资源下载失败: {e}")
 

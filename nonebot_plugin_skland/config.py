@@ -1,7 +1,7 @@
 import json
 import random
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import httpx
 from nonebot import logger
@@ -14,6 +14,9 @@ from nonebot.plugin import get_plugin_config
 
 from .exception import RequestException
 
+if TYPE_CHECKING:
+    from .schemas import CharTable, GachaTable, GachaDetails
+
 RES_DIR: Path = Path(__file__).parent / "resources"
 TEMPLATES_DIR: Path = RES_DIR / "templates"
 CACHE_DIR = store.get_plugin_cache_dir()
@@ -25,8 +28,6 @@ GACHA_DATA_PATH = DATA_DIR / "gamedata" / "excel"
 
 class GachaTableData:
     def __init__(self) -> None:
-        from .schemas import CharTable, GachaTable, GachaDetails
-
         self.version_file = DATA_DIR / "version"
         self.version: str | None = None
         if self.version_file.exists():

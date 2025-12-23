@@ -42,6 +42,12 @@ class File(BaseModel):
         return values
 
 
+class DownloadResult(BaseModel):
+    version: str | None
+    success_count: int
+    failed_count: int
+
+
 class DownloadProgress(Progress):
     """下载进度条"""
 
@@ -177,8 +183,12 @@ class GameResourceDownloader:
     @classmethod
     async def download_all(
         cls, owner: str, repo: str, route: str, save_dir: Path, branch: str = "main", update: bool = False
-    ):
-        """并行下载 GitHub 目录下的所有文件"""
+    ) -> DownloadResult:
+        """并行下载 GitHub 目录下的所有文件
+
+        Returns:
+            DownloadResult: 下载结果，包含版本号、成功数量和失败数量
+        """
         cls.download_count = 0
         cls.download_time = datetime.now()
         url = cls.BASE_URL.format(owner=owner, repo=repo, branch=branch)
@@ -229,6 +239,7 @@ class GameResourceDownloader:
                             progress.remove_task(task_id)
 
                 await asyncio.gather(*(worker(file) for file in files))
+
         if failed_files:
             logger.error(f"❌ 资源 {route} 有 {len(failed_files)} 个文件下载失败:")
             for error_msg in failed_files:
@@ -247,6 +258,12 @@ class GameResourceDownloader:
                 success_msg += f"，失败 {failed_count} 个"
             success_msg += f"，耗时 {time_consumed}"
             logger.success(success_msg)
+
+        return DownloadResult(
+            version=None,
+            success_count=cls.download_count,
+            failed_count=failed_count,
+        )
 
     @classmethod
     async def download_file(

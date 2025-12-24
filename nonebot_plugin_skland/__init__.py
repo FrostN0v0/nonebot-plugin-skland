@@ -155,6 +155,7 @@ skland = on_alconna(
         ),
         Subcommand(
             "gacha",
+            Args["target?#目标", At | int],
             Option("-b|--begin|begin", Args["begin", int], help_text="查询起始位置"),
             Option("-l|--limit|limit", Args["limit", int], help_text="查询抽卡记录卡池渲染上限"),
         ),
@@ -699,6 +700,7 @@ async def _(
     session: async_scoped_session,
     begin: Match[int],
     limit: Match[int],
+    target: Match[At | int],
     bot: Bot,
 ):
     """查询明日方舟抽卡记录"""
@@ -708,7 +710,13 @@ async def _(
     async def get_user_info(user: SkUser, uid: str):
         return await SklandAPI.ark_card(CRED(cred=user.cred, token=user.cred_token), uid)
 
-    user, character = await check_user_character(user_session.user_id, session)
+    if target.available:
+        target_platform_id = target.result.target if isinstance(target.result, At) else target.result
+        target_id = (await get_user(user_session.platform, str(target_platform_id))).id
+    else:
+        target_id = user_session.user_id
+
+    user, character = await check_user_character(target_id, session)
     send_reaction(user_session, "processing")
     token = user.access_token
     grant_code = await SklandLoginAPI.get_grant_code(token, 1)

@@ -190,7 +190,7 @@ skland.shortcut("萨米肉鸽", {"command": "skland rogue --topic 萨米", "fuzz
 skland.shortcut("水月肉鸽", {"command": "skland rogue --topic 水月", "fuzzy": True, "prefix": True})
 skland.shortcut("傀影肉鸽", {"command": "skland rogue --topic 傀影", "fuzzy": True, "prefix": True})
 skland.shortcut("角色更新", {"command": "skland char update", "fuzzy": False, "prefix": True})
-skland.shortcut("资源更新", {"command": "skland sync", "fuzzy": False, "prefix": True})
+skland.shortcut("资源更新", {"command": "skland sync", "fuzzy": True, "prefix": True})
 skland.shortcut("战绩详情", {"command": "skland rginfo", "fuzzy": True, "prefix": True})
 skland.shortcut("收藏战绩详情", {"command": "skland rginfo -f", "fuzzy": True, "prefix": True})
 skland.shortcut("方舟抽卡记录", {"command": "skland gacha", "fuzzy": True, "prefix": True})

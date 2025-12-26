@@ -46,7 +46,7 @@
             <div
                 class="flex flex-col items-start pr-8 pl-4 ml-[-16px] {% if is_multi_six %} multi-six-bg {% endif %} {% if is_multi_six and six_index.value == 1 %}mb-2 pb-2{% endif %} {% if six_index.value == six_count %} pt-2 {% endif %}">
                 {% if is_multi_six and six_index.value == six_count %}
-                <div class="flex items-start pb-2" style="margin-left: -1rem;">
+                <div class="flex items-start pb-2 ml-[-16px]">
                     <div
                         class="flex items-center justify-center bg-[#2C6B60] text-white font-[Bender] tracking-widest text-sm px-3 py-1 shadow-lg">
                         <span>十连{{ six_count }}金</span>
@@ -67,9 +67,9 @@
                             {% endif %}
                         </div>
                         {% set bar_class = 'green-stripe-bar' %}
-                        {% if stats.pity_count >= 60 %}
+                        {% if stats.pity_count >= 55 %}
                         {% set bar_class = 'red-stripe-bar' %}
-                        {% elif stats.pity_count >= 40 %}
+                        {% elif stats.pity_count >= 35 %}
                         {% set bar_class = 'yellow-stripe-bar' %}
                         {% endif %}
                         <div class="w-12 text-center">
@@ -91,7 +91,7 @@
                                     <div class="h-4 ml-2 rounded-xs flex items-center justify-center px-1"
                                         style="background-color:{{ luck_color }};">
                                         <span class="text-xs font-[Bender] whitespace-nowrap">
-                                            {% if stats.pity_count <= 10 %} 超欧 {% elif stats.pity_count>=60 %}超非 {%
+                                            {% if stats.pity_count <= 10 %} 超欧 {% elif stats.pity_count>=65 %}超非 {%
                                                 endif %}
                                         </span>
                                     </div>

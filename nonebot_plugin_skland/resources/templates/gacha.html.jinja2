@@ -34,11 +34,35 @@
             </div>
         </div>
 
-        <div class="left-6 w-168 h-74.25 bg-[#151515] rounded-2xl gacha-info-shadow">
+        <div class="left-6 w-168 bg-[#151515] rounded-2xl gacha-info-shadow">
             <div class="flex flex-col justify-between items-start gap-4 py-4">
-                <div
-                    class="flex py-1 px-4 items-center justify-center rounded-r-[5px] bg-[#01CC9D] font-[Akrobat] font-bold text-2xl">
-                    传说级欧皇(头衔未完工)
+                <div class="flex flex-col w-full">
+                    <div class="flex flex-row items-center bg-[#272D29] rounded-lg py-3 mr-4">
+                        <div
+                            class="flex py-2 pl-3 pr-6 items-center justify-center bg-[#01CC9D] text-white font-[Akrobat] rounded-lg font-bold z-10 shadow-lg relative"
+                            style="clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%, 0 0);">
+                            <img src="../images/gacha/laurel_left.svg" class="w-8 h-16 flex-shrink-0" />
+                            <div class="flex flex-col items-center justify-center leading-[1.1]">
+                                <span class="text-[22px]">{{ record.gacha_title.title[:4] if record.gacha_title.title|length > 4 else record.gacha_title.title }}</span>
+                                <span class="text-[22px]">{{ record.gacha_title.title[4:] if record.gacha_title.title|length > 4 else '' }}</span>
+                            </div>
+                            <img src="../images/gacha/laurel_right.svg" class="w-8 h-16 flex-shrink-0" />
+                        </div>
+                        <div class="flex flex-row flex-1 px-6 items-center justify-around">
+                            <div class="flex flex-col items-center justify-center">
+                                <span class="text-white font-[Akrobat] font-bold text-3xl">{{ record.total_pulls }}</span>
+                                <span class="text-white/80 font-[Akrobat] text-xs">总抽数</span>
+                            </div>
+                            <div class="flex flex-col items-center justify-center">
+                                <span class="text-white font-[Akrobat] font-bold text-3xl">{{ "%.1f"|format(record.six_star_rate) }}%</span>
+                                <span class="text-white/80 font-[Akrobat] text-xs">六星率</span>
+                            </div>
+                            <div class="flex flex-col items-center justify-center">
+                                <span class="text-white font-[Akrobat] font-bold text-3xl">{{ "%.1f"|format(record.up_rate) }}%</span>
+                                <span class="text-white/80 font-[Akrobat] text-xs">UP率</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="flex flex-row w-full gap-4 px-4">
                     <div class="flex flex-col w-full bg-[#333333] rounded-lg py-3.5">

@@ -1,14 +1,6 @@
 {% macro gacha_pool(pool) %}
 {% set stats = namespace(pity_count=0, five_stars=[]) %}
 
-{% set multi_six_stars = {} %}
-{% for record in pool.records %}
-{% set six_star_count = record.pulls | selectattr('rarity', 'equalto', 5) | list | length %}
-{% if six_star_count >= 2 %}
-{% set _ = multi_six_stars.update({record.gacha_ts: six_star_count}) %}
-{% endif %}
-{% endfor %}
-
 <div class="left-6 w-168 pb-4 bg-[#3F3F3F] rounded-xl gacha-info-shadow">
     <div class="flex flex-col justify-center gap-2 pt-4 px-4 divide-y divide-[#5A5A5A]">
 
@@ -30,8 +22,8 @@
         </div>
         <div class="flex flex-col-reverse">
             {% for record in pool.records | reverse %}
-            {% set is_multi_six = record.gacha_ts in multi_six_stars %}
-            {% set six_count = multi_six_stars.get(record.gacha_ts, 0) %}
+            {% set six_count = record.pulls | selectattr('rarity', 'equalto', 5) | list | length %}
+            {% set is_multi_six = six_count >= 2 %}
             {% set six_index = namespace(value=0) %}
 
             {% for pull in record.pulls | reverse %}

@@ -1,6 +1,14 @@
 {% macro gacha_pool(pool) %}
 {% set stats = namespace(pity_count=0, five_stars=[]) %}
 
+{% set multi_six_stars = {} %}
+{% for record in pool.records %}
+{% set six_star_count = record.pulls | selectattr('rarity', 'equalto', 5) | list | length %}
+{% if six_star_count >= 2 %}
+{% set _ = multi_six_stars.update({record.gacha_ts: six_star_count}) %}
+{% endif %}
+{% endfor %}
+
 <div class="left-6 w-168 pb-4 bg-[#3F3F3F] rounded-xl gacha-info-shadow">
     <div class="flex flex-col justify-center gap-2 pt-4 px-4 divide-y divide-[#5A5A5A]">
 
@@ -11,8 +19,7 @@
                         format_timestamp_md}}</span></span>
                 <div class="flex flex-wrap gap-1 pt-1">
                     {% for char in pool.up_six_chars %}
-                    <img src="{{ char | charId_to_avatarUrl }}"
-                        class="w-6 h-6 bg-[#646464] rounded-sm" />
+                    <img src="{{ char | charId_to_avatarUrl }}" class="w-6 h-6 bg-[#646464] rounded-sm" />
                     {% endfor %}
                 </div>
             </div>
@@ -23,6 +30,10 @@
         </div>
         <div class="flex flex-col-reverse">
             {% for record in pool.records | reverse %}
+            {% set is_multi_six = record.gacha_ts in multi_six_stars %}
+            {% set six_count = multi_six_stars.get(record.gacha_ts, 0) %}
+            {% set six_index = namespace(value=0) %}
+
             {% for pull in record.pulls | reverse %}
             {% set stats.pity_count = stats.pity_count + 1 %}
 
@@ -30,11 +41,31 @@
             {% set stats.five_stars = stats.five_stars + [pull.char_id] %}
             {% endif %}
             {% if pull.rarity == 5 %}
-            <div class="flex flex-col items-start pr-8">
+            {% set six_index.value = six_index.value + 1 %}
+
+            <div
+                class="flex flex-col items-start pr-8 pl-4 ml-[-16px] {% if is_multi_six %} multi-six-bg {% endif %} {% if is_multi_six and six_index.value == 1 %}mb-2 pb-2{% endif %} {% if six_index.value == six_count %} pt-2 {% endif %}">
+                {% if is_multi_six and six_index.value == six_count %}
+                <div class="flex items-start pb-2" style="margin-left: -1rem;">
+                    <div
+                        class="flex items-center justify-center bg-[#2C6B60] text-white font-[Bender] tracking-widest text-sm px-3 py-1 shadow-lg">
+                        <span>十连{{ six_count }}金</span>
+                    </div>
+                </div>
+                {% endif %}
+
                 <div class="flex flex-row items-center w-full">
                     <div class="flex flex-col">
-                        <img src="{{ pull.char_id | charId_to_avatarUrl }}"
-                            class="w-12 h-12 bg-[#646464] rounded-sm" />
+                        <div class="relative inline-block">
+                            <img src="{{ pull.char_id | charId_to_avatarUrl }}"
+                                class="w-12 h-12 bg-[#646464] rounded-sm" />
+                            {% if pull.char_id not in pool.up_six_chars %}
+                            <div
+                                class="absolute top-0 right-0 w-4 h-4 bg-[#C04855] rounded-sm flex items-center justify-center">
+                                <span class="text-white text-[10px] font-bold font-[Akrobat]">歪</span>
+                            </div>
+                            {% endif %}
+                        </div>
                         {% set bar_class = 'green-stripe-bar' %}
                         {% if stats.pity_count >= 60 %}
                         {% set bar_class = 'red-stripe-bar' %}
@@ -54,11 +85,9 @@
                                     抽</span>
                             </div>
                             {% if stats.pity_count <= 10 or stats.pity_count>= 60 %}
-                                {% if stats.pity_count <= 10 %}
-                                    {% set luck_color='#30B63E' %}
-                                {% elif stats.pity_count>= 60 %}
+                                {% if stats.pity_count <= 10 %} {% set luck_color='#30B63E' %} {% elif stats.pity_count>= 60 %}
                                     {% set luck_color = '#ef6853' %}
-                                {% endif %}
+                                    {% endif %}
                                     <div class="h-4 ml-2 rounded-xs flex items-center justify-center px-1"
                                         style="background-color:{{ luck_color }};">
                                         <span class="text-xs font-[Bender] whitespace-nowrap">
@@ -71,14 +100,11 @@
 
                         <div class="flex ml-4 h-6 w-full flex-row gap-1">
                             {% for char_id in stats.five_stars %}
-                            <img src="{{ char_id | charId_to_avatarUrl }}"
-                                class="w-6 h-6 bg-[#646464] rounded-sm" />
+                            <img src="{{ char_id | charId_to_avatarUrl }}" class="w-6 h-6 bg-[#646464] rounded-sm" />
                             {% endfor %}
                         </div>
                     </div>
                 </div>
-
-
             </div>
             {% set stats.pity_count = 0 %}
             {% set stats.five_stars = [] %}

@@ -76,6 +76,9 @@
       rgba(35, 186, 252, 0) 100%
     );
   }
+  .multi-six-bg {
+    background: linear-gradient(to right, rgba(48, 182, 62, 0.2) 0%, rgba(48, 182, 62, 0) 100%);
+  }
   .theme-color-rogue-1 {
     color: #e56d5c;
   }

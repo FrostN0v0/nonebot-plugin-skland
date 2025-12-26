@@ -1152,7 +1152,7 @@ default = [
 
 [[package]]
 name = "nonebot-plugin-skland"
-version = "0.5.5"
+version = "0.5.6"
 source = { editable = "." }
 dependencies = [
     { name = "arclet-alconna" },
@@ -1181,7 +1181,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "arclet-alconna", specifier = ">=1.8.38" },
-    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "httpx", specifier = ">=0.27.0" },
     { name = "nonebot-adapter-discord", marker = "extra == 'dev'", specifier = ">=0.1.8" },
     { name = "nonebot-adapter-onebot", marker = "extra == 'dev'", specifier = ">=2.4.6" },
     { name = "nonebot-adapter-telegram", marker = "extra == 'dev'", specifier = ">=0.1.0b20" },

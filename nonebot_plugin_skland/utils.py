@@ -51,7 +51,7 @@ async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
                             nickname=role.nickname,
                             app_code=app.appCode,
                             channel_master_id=role.serverId,
-                            isdefault=len(app.bindingList) == 1 or character.isDefault,
+                            isdefault=role.isDefault,
                         )
                     )
             else:

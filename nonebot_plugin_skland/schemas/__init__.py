@@ -18,3 +18,4 @@ from .game_data import GachaDetails as GachaDetails
 from .ark_sign import ArkSignResult as ArkSignResult
 from .ark_sign import ArkSignResponse as ArkSignResponse
 from .gacha import GroupedGachaRecord as GroupedGachaRecord
+from .endfield import EndfieldSignResponse as EndfieldSignResponse

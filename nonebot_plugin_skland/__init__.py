@@ -49,13 +49,16 @@ from .exception import RequestException
 from .api import SklandAPI, SklandLoginAPI
 from .model import SkUser, Character, GachaRecord
 from .config import CACHE_DIR, Config, config, gacha_table_data
-from .schemas import CRED, Clue, Topics, GachaInfo, RogueData, ArkSignResponse
+from .schemas import CRED, Clue, Topics, GachaInfo, RogueData, ArkSignResponse, EndfieldSignResponse
 from .render import render_ark_card, render_clue_board, render_rogue_card, render_rogue_info, render_gacha_history
 from .db_handler import (
     select_all_users,
+    get_endfield_characters,
     get_arknights_characters,
     select_all_gacha_records,
+    get_endfield_character_by_uid,
     get_arknights_character_by_uid,
+    get_default_endfield_character,
     get_default_arknights_character,
 )
 from .utils import (
@@ -123,6 +126,19 @@ skland = on_alconna(
             ),
             Subcommand("all", help_text="签到所有绑定角色(仅超管可用)"),
             help_text="明日方舟森空岛签到相关功能",
+        ),
+        Subcommand(
+            "zmdsign",
+            Subcommand(
+                "sign",
+                Option(
+                    "-u|--uid|uid",
+                    Args["uid", str, Field(completion=lambda: "请输入指定绑定角色uid")],
+                    help_text="指定个人绑定的角色uid进行签到",
+                ),
+                Option("--all", help_text="签到所有个人绑定的角色"),
+                help_text="个人绑定角色签到",
+            ),
         ),
         Subcommand("char", Option("-u|--update|update"), help_text="更新绑定角色信息"),
         Subcommand(
@@ -860,3 +876,50 @@ async def check_user_character(user_id: int, session: async_scoped_session) -> t
     if not char:
         await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
     return user, char
+
+
+@skland.assign("zmdsign.sign")
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+    uid: Match[str],
+    result: Arparma,
+):
+    """明日方舟森空岛签到"""
+
+    @refresh_cred_token_if_needed
+    @refresh_access_token_if_needed
+    async def sign_in(user: SkUser, uid: str, server_id: str):
+        """执行签到逻辑"""
+        cred = CRED(cred=user.cred, token=user.cred_token)
+        return await SklandAPI.endfield_sign(cred, uid, server_id=server_id)
+
+    user = await session.get(SkUser, user_session.user_id)
+    if not user:
+        send_reaction(user_session, "unmatch")
+        await UniMessage("未绑定 skland 账号").finish(at_sender=True)
+
+    if uid.available:
+        chars = [await get_endfield_character_by_uid(user, uid.result, session)]
+    elif result.find("zmdsign.sign.all"):
+        chars = await get_endfield_characters(user, session)
+    elif character := await get_default_endfield_character(user, session):
+        chars = [character]
+    else:
+        send_reaction(user_session, "unmatch")
+        await UniMessage("未绑定 endfield 账号").finish(at_sender=True)
+
+    sign_result: dict[str, EndfieldSignResponse] = {}
+    for character in chars:
+        if res := await sign_in(user, str(character.uid), character.channel_master_id):
+            sign_result[character.nickname] = res
+
+    if sign_result:
+        send_reaction(user_session, "done")
+        await UniMessage(
+            "\n".join(
+                f"角色: {nickname} 签到成功，获得了:\n" + sign.award_summary for nickname, sign in sign_result.items()
+            )
+        ).send(at_sender=True)
+
+    await session.commit()

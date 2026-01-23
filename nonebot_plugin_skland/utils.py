@@ -42,16 +42,29 @@ async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
             await session.delete(character)
     for app in binding_app_list:
         for character in app.bindingList:
-            await session.merge(
-                Character(
-                    id=user.id,
-                    uid=character.uid,
-                    nickname=character.nickName,
-                    app_code=app.appCode,
-                    channel_master_id=character.channelMasterId,
-                    isdefault=len(app.bindingList) == 1 or character.isDefault,
+            if character.roles:
+                for role in character.roles:
+                    await session.merge(
+                        Character(
+                            id=user.id,
+                            uid=role.roleId,
+                            nickname=role.nickname,
+                            app_code=app.appCode,
+                            channel_master_id=role.serverId,
+                            isdefault=len(app.bindingList) == 1 or character.isDefault,
+                        )
+                    )
+            else:
+                await session.merge(
+                    Character(
+                        id=user.id,
+                        uid=character.uid,
+                        nickname=character.nickName,
+                        app_code=app.appCode,
+                        channel_master_id=character.channelMasterId,
+                        isdefault=len(app.bindingList) == 1 or character.isDefault,
+                    )
                 )
-            )
     await session.commit()
 
 

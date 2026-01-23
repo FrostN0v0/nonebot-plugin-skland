@@ -3,6 +3,17 @@ from typing import Any
 from pydantic import BaseModel
 
 
+class Role(BaseModel):
+    serverId: str
+    roleId: str
+    nickname: str
+    level: int
+    isDefault: bool
+    isBanned: bool
+    serverType: str
+    serverName: str
+
+
 class BindingCharacter(BaseModel):
     uid: str
     isOfficial: bool
@@ -13,7 +24,7 @@ class BindingCharacter(BaseModel):
     isDelete: bool
     gameName: str
     gameId: int
-    roles: list
+    roles: list[Role]
     defaultRole: Any | None
 
 

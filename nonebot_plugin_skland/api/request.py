@@ -10,7 +10,16 @@ from nonebot import logger
 from nonebot.compat import type_validate_python
 
 from ..exception import LoginException, RequestException, UnauthorizedException
-from ..schemas import CRED, ArkCard, GachaCate, RogueData, BindingApp, GachaResponse, ArkSignResponse
+from ..schemas import (
+    CRED,
+    ArkCard,
+    GachaCate,
+    RogueData,
+    BindingApp,
+    GachaResponse,
+    ArkSignResponse,
+    EndfieldSignResponse,
+)
 
 base_url = "https://zonai.skland.com/api/v1"
 
@@ -57,7 +66,10 @@ class SklandAPI:
         timestamp = int(datetime.now().timestamp()) - 1
         header_ca = {**cls._header_for_sign, "timestamp": str(timestamp)}
         parsed_url = urlparse(url)
-        query_params = json.dumps(query_body) if method == "post" else parsed_url.query
+        if method == "post":
+            query_params = json.dumps(query_body) if query_body is not None else ""
+        else:
+            query_params = parsed_url.query
         header_ca_str = json.dumps(
             {**cls._header_for_sign, "timestamp": str(timestamp)},
             separators=(",", ":"),
@@ -222,3 +234,36 @@ class SklandAPI:
                 return GachaResponse(**response.json()["data"])
             except httpx.HTTPError as e:
                 raise RequestException(f"获取抽卡记录失败: {e}") from e
+
+    @classmethod
+    async def endfield_sign(cls, cred: CRED, uid: str, server_id: str) -> EndfieldSignResponse:
+        """进行明日方舟：终末地签到"""
+        sign_url = "https://zonai.skland.com/web/v1/game/endfield/attendance"
+        headers = cls.get_sign_header(
+            cred,
+            sign_url,
+            method="post",
+            query_body=None,
+        )
+        game_role = f"3_{uid}_{server_id}"
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    sign_url,
+                    headers={
+                        **headers,
+                        "Content-Type": "application/json",
+                        "sk-game-role": game_role,
+                    },
+                )
+                logger.debug(f"终末地签到回复：{response.json()}")
+                if status := response.json().get("code"):
+                    if status == 10000:
+                        raise UnauthorizedException(f"角色 {uid} 终末地签到失败：{response.json().get('message')}")
+                    elif status == 10002:
+                        raise LoginException(f"角色 {uid} 终末地签到失败：{response.json().get('message')}")
+                    elif status != 0:
+                        raise RequestException(f"角色 {uid} 终末地签到失败：{response.json().get('message')}")
+            except httpx.HTTPError as e:
+                raise RequestException(f"角色 {uid} 终末地签到失败: {e}") from e
+            return EndfieldSignResponse(**response.json()["data"])

@@ -1388,7 +1388,7 @@ default = [
 
 [[package]]
 name = "nonebot-plugin-skland"
-version = "0.5.6"
+version = "0.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "arclet-alconna" },

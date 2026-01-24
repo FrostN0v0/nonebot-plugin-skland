@@ -243,6 +243,56 @@ def format_sign_result(sign_data: dict, sign_time: str, is_text: bool) -> ArkSig
     )
 
 
+def format_endfield_sign_result(sign_data: dict, sign_time: str, is_text: bool) -> ArkSignResult:
+    """格式化终末地签到结果"""
+    formatted_results = {}
+    success_count = 0
+    failed_count = 0
+    for nickname, result_data in sign_data.items():
+        if isinstance(result_data, dict):
+            # 终末地签到成功返回的数据结构
+            resource_info_map = result_data.get("resourceInfoMap", {})
+            award_ids = result_data.get("awardIds", [])
+            award_lines = []
+            for award in award_ids:
+                info = resource_info_map.get(award["id"], {})
+                name = info.get("name", "未知物品")
+                count = info.get("count", 0)
+                award_lines.append(f"  {name} x{count}")
+            awards_text = "\n".join(award_lines)
+            if is_text:
+                formatted_results[nickname] = f"✅ 角色：{nickname} 签到成功，获得了:\n📦{awards_text}"
+            else:
+                formatted_results[nickname] = f"✅ 签到成功，获得了:\n📦{awards_text}"
+            success_count += 1
+        elif isinstance(result_data, str):
+            if "请勿重复签到" in result_data:
+                if is_text:
+                    formatted_results[nickname] = f"ℹ️ 角色：{nickname} 已签到 (无需重复签到)"
+                else:
+                    formatted_results[nickname] = "ℹ️ 已签到 (无需重复签到)"
+                success_count += 1
+            else:
+                if is_text:
+                    formatted_results[nickname] = f"❌ 角色：{nickname} 签到失败: {result_data}"
+                else:
+                    formatted_results[nickname] = f"❌ 签到失败: {result_data}"
+                failed_count += 1
+    return ArkSignResult(
+        failed_count=failed_count,
+        success_count=success_count,
+        results=formatted_results,
+        summary=(
+            f"--- 终末地签到结果概览 ---\n"
+            f"总计签到角色: {len(formatted_results)}个\n"
+            f"✅ 成功签到: {success_count}个\n"
+            f"❌ 签到失败: {failed_count}个\n"
+            f"⏰️ 签到时间: {sign_time}\n"
+            f"--------------------"
+        ),
+    )
+
+
 async def get_all_gacha_records(char: Character, cate: GachaCate, access_token: str, role_token: str, ak_cookie: str):
     """一个异步生成器，用于获取并逐条产出指定分类下的所有抽卡记录。
 

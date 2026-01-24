@@ -4,7 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from nonebot.compat import model_validator
 
-from .ark_models import (
+from .models import (
     Skin,
     Medal,
     Tower,
@@ -13,7 +13,6 @@ from .ark_models import (
     Routine,
     Building,
     Campaign,
-    BaseCount,
     Character,
     Equipment,
     AssistChar,
@@ -47,7 +46,7 @@ class ArkCard(BaseModel):
 
     @property
     def recruit_complete_time(self) -> str:
-        from ..render import format_timestamp
+        from ...render import format_timestamp
 
         finish_ts = max([recruit.finishTs for recruit in self.recruit])
         if finish_ts == -1:
@@ -99,28 +98,9 @@ class ArkCard(BaseModel):
         if not building or not formula_map:
             return values
 
-        stoke_max = 0
-        stoke_count = 0
-        for manu in building.manufactures:
-            if manu.formulaId in formula_map:
-                formula_weight = formula_map[manu.formulaId].weight
-                stoke_max += int(manu.capacity / formula_weight)
-                elapsed_time = datetime.now().timestamp() - manu.lastUpdateTime
-                cost_time = formula_map[manu.formulaId].costPoint / manu.speed
-                additional_complete = round(elapsed_time / cost_time)
-                if datetime.now().timestamp() >= manu.completeWorkTime:
-                    stoke_count += manu.capacity // formula_weight
-                else:
-                    to_be_processed = (manu.completeWorkTime - manu.lastUpdateTime) / (cost_time / manu.speed)
-                    has_processed = to_be_processed - int(to_be_processed)
-                    additional_complete = (elapsed_time - has_processed * cost_time) / cost_time
-                    stoke_count += manu.complete + int(additional_complete) + 1
-
-        manufacture_stoke = BaseCount(current=stoke_count, total=stoke_max)
-
-        if isinstance(values, dict):
-            values["building"].manufacture_stoke = manufacture_stoke
-            return values
-        else:
-            values.building.manufacture_stoke = manufacture_stoke
-            return values
+        for slot in getattr(building, "manufactures", []) or []:
+            if slot.formulaId and (info := formula_map.get(slot.formulaId)):
+                slot.stoke_name = info.itemName
+                if slot.weight != 0:
+                    slot.stoke_speed = round(1 / slot.weight, 1)
+        return values

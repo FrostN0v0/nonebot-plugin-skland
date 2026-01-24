@@ -1,3 +1,5 @@
+"""肉鸽历史记录模型"""
+
 from pydantic import BaseModel
 
 

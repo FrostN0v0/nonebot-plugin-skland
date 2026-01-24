@@ -1,3 +1,5 @@
+"""肉鸽生涯数据模型"""
+
 from pydantic import BaseModel
 
 

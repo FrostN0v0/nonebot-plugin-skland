@@ -4,7 +4,7 @@ from nonebot import logger
 from pydantic import BaseModel
 
 from .base import Equip
-from ...config import RES_DIR, CACHE_DIR
+from ....config import RES_DIR, CACHE_DIR
 
 
 class AssistChar(BaseModel):

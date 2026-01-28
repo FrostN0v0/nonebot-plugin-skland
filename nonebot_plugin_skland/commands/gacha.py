@@ -151,7 +151,7 @@ async def gacha_handler(
                     await UniMessage.image(raw=img).send()
 
             tasks: list[asyncio.Task] = []
-            for i in range(0, len(gacha_data_grouped.pools), config.gacha_render_max):
+            for i in range(0, len(gacha_data_grouped.pools[gacha_begin:gacha_limit]), config.gacha_render_max):
                 img = await render_gacha_history(
                     gacha_data_grouped, character, user_info.status, i, i + config.gacha_render_max
                 )

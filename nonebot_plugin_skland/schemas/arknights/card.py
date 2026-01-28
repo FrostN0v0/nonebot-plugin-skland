@@ -4,7 +4,8 @@ from datetime import datetime
 from pydantic import BaseModel
 from nonebot.compat import model_validator
 
-from .ark_models import (
+from .models.base import BaseCount
+from .models import (
     Skin,
     Medal,
     Tower,
@@ -13,7 +14,6 @@ from .ark_models import (
     Routine,
     Building,
     Campaign,
-    BaseCount,
     Character,
     Equipment,
     AssistChar,
@@ -47,7 +47,7 @@ class ArkCard(BaseModel):
 
     @property
     def recruit_complete_time(self) -> str:
-        from ..render import format_timestamp
+        from ...render import format_timestamp
 
         finish_ts = max([recruit.finishTs for recruit in self.recruit])
         if finish_ts == -1:
@@ -101,13 +101,12 @@ class ArkCard(BaseModel):
 
         stoke_max = 0
         stoke_count = 0
-        for manu in building.manufactures:
+        for manu in getattr(building, "manufactures", []) or []:
             if manu.formulaId in formula_map:
                 formula_weight = formula_map[manu.formulaId].weight
                 stoke_max += int(manu.capacity / formula_weight)
                 elapsed_time = datetime.now().timestamp() - manu.lastUpdateTime
                 cost_time = formula_map[manu.formulaId].costPoint / manu.speed
-                additional_complete = round(elapsed_time / cost_time)
                 if datetime.now().timestamp() >= manu.completeWorkTime:
                     stoke_count += manu.capacity // formula_weight
                 else:

@@ -18,7 +18,7 @@ class Hire(BaseModel):
 
     @property
     def refresh_complete_time(self) -> str:
-        from ....render import format_timestamp
+        from .....filters import format_timestamp
 
         if self.refreshCount == 3:
             return "可进行公开招募标签刷新"

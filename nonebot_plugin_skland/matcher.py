@@ -18,11 +18,9 @@ from nonebot_plugin_alconna import (
     on_alconna,
 )
 
-# 命令命名空间
 ns = Namespace("skland", disable_builtin_options=set())
 alc_config.namespaces["skland"] = ns
 
-# 主命令定义
 skland_command = Alconna(
     "skland",
     Args["target?#目标", At | int],
@@ -119,7 +117,6 @@ skland_command = Alconna(
     ),
 )
 
-# 创建匹配器
 skland = on_alconna(
     skland_command,
     aliases={"sk"},
@@ -129,7 +126,6 @@ skland = on_alconna(
     extensions=[ArgotExtension, ReplyRecordExtension],
 )
 
-# 注册快捷指令
 skland.shortcut("森空岛绑定", {"command": "skland bind", "fuzzy": True, "prefix": True})
 skland.shortcut("扫码绑定", {"command": "skland qrcode", "fuzzy": False, "prefix": True})
 skland.shortcut("明日方舟签到", {"command": "skland arksign sign --all", "fuzzy": False, "prefix": True})

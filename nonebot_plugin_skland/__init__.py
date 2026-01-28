@@ -23,7 +23,6 @@ from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_alconna import At, Match, MsgId, Arparma, MsgTarget
 from nonebot_plugin_alconna.builtins.extensions import ReplyRecordExtension
 
-# 导入定时任务模块以注册任务
 from . import hook as hook
 from .config import Config
 from .matcher import skland
@@ -45,9 +44,6 @@ __plugin_meta__ = PluginMetadata(
     },
 )
 __plugin_meta__.extra.update(extra_data)
-
-
-# === 命令处理器 ===
 
 
 @skland.assign("$main")

@@ -79,3 +79,95 @@ def charId_to_portraitUrl(charId: str) -> str:
 
 def loads_json(json_str: str) -> dict:
     return json.loads(json_str)
+
+
+def format_stamina_time(remaining_seconds: float) -> str:
+    """将剩余秒数格式化为 XXh XXmin 格式"""
+    if remaining_seconds <= 0:
+        return "已满"
+    hours = int(remaining_seconds // 3600)
+    minutes = int((remaining_seconds % 3600) // 60)
+    if hours > 0:
+        return f"{hours}h {minutes}min"
+    return f"{minutes}min"
+
+
+def format_date_ymd(timestamp: str | float) -> str:
+    """将时间戳格式化为 YYYY-MM-DD 格式（苏醒日）"""
+    ts = float(timestamp) if isinstance(timestamp, str) else timestamp
+    return datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+
+
+# 据点映射表：domainId -> {name, gradient}
+DOMAIN_MAP: dict[str, dict[str, str]] = {
+    "domain_1": {"name": "四号谷地", "gradient": "green-linear"},
+    "domain_2": {"name": "武陵", "gradient": "blue-linear"},
+}
+
+
+def get_domain_info(domain_id: str) -> dict[str, str]:
+    """根据 domainId 获取据点信息（名称和渐变样式类）"""
+    return DOMAIN_MAP.get(domain_id, {"name": "未知据点", "gradient": "gray-linear"})
+
+
+# 稀有度到边框颜色映射
+RARITY_COLOR_MAP: dict[str, str] = {
+    "rarity_6": "#FF7101",  # 6星橙色
+    "rarity_5": "#FFCC00",  # 5星金色
+    "rarity_4": "#A85FD6",  # 4星紫色
+    "rarity_3": "#00B0FF",  # 3星蓝色
+}
+
+
+def get_rarity_color(rarity_key: str) -> str:
+    """根据稀有度 key 获取边框颜色"""
+    return RARITY_COLOR_MAP.get(rarity_key, "#FFFFFF")
+
+
+# 装备稀有度到边框颜色映射
+EQUIP_RARITY_COLOR_MAP: dict[str, str] = {
+    "equip_rarity_6": "#FF7101",
+    "equip_rarity_5": "#FFCC00",
+    "equip_rarity_4": "#A85FD6",
+    "equip_rarity_3": "#00B0FF",
+}
+
+
+def get_equip_rarity_color(rarity_key: str) -> str:
+    """根据装备稀有度 key 获取边框颜色"""
+    return EQUIP_RARITY_COLOR_MAP.get(rarity_key, "#FFFFFF")
+
+
+# 职业 key 到图片文件名映射
+PROFESSION_MAP: dict[str, str] = {
+    "profession_assault": "assault",
+    "profession_supporter": "supporter",
+    "profession_caster": "caster",
+    "profession_vanguard": "vanguard",
+    "profession_guard": "guard",
+    "profession_defender": "defender",
+    "profession_sniper": "sniper",
+    "profession_medic": "medic",
+}
+
+
+def get_profession_icon(profession_key: str) -> str:
+    """根据职业 key 获取图片文件名"""
+    name = PROFESSION_MAP.get(profession_key, "unknown")
+    return f"profession/{name}.png"
+
+
+# 属性 key 到图片文件名映射
+PROPERTY_MAP: dict[str, str] = {
+    "char_property_fire": "fire",
+    "char_property_cryst": "cryst",
+    "char_property_natural": "natural",
+    "char_property_pulse": "pulse",
+    "char_property_physical": "physical",
+}
+
+
+def get_property_icon(property_key: str) -> str:
+    """根据属性 key 获取图片文件名"""
+    name = PROPERTY_MAP.get(property_key, "unknown")
+    return f"property/{name}.png"

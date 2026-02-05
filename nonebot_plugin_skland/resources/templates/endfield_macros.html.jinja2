@@ -1,0 +1,113 @@
+{# 终末地干员卡片宏 #}
+{% macro endfield_char_card(char) %}
+{# 获取稀有度边框颜色 #}
+{% set rarity_color = char.charData.rarity.key | get_rarity_color %}
+{% set profession_icon = char.charData.profession.key | get_profession_icon %}
+{% set property_icon = char.charData.property.key | get_property_icon %}
+
+<div class="w-fit">
+  <div class="relative">
+    {# 角色半身像 #}
+    <img
+      src="{{ char.charData.avatarRtUrl }}"
+      class="w-auto h-48 block"
+      alt="{{ char.charData.name }}" />
+    <div class="absolute inset-0 bg-linear-to-b from-transparent gradient-operator"></div>
+
+    {# 左上角职业和属性图标 #}
+    <div class="absolute left-1 top-1 flex flex-col gap-0.5">
+      <img src="../images/endfield/{{ profession_icon }}" class="w-4 h-4" alt="profession" />
+      <img src="../images/endfield/{{ property_icon }}" class="w-4 h-4" alt="property" />
+    </div>
+
+    {# 左下角武器区域 #}
+    <div class="absolute left-0 bottom-0 w-7.5 h-7.5 bg-[#F0F0F0]/80 border-b-2" style="border-color: {{ char.weapon.weaponData.rarity.key | get_rarity_color }}">
+      {% if char.weapon and char.weapon.weaponData.iconUrl %}
+      <img
+        src="{{ char.weapon.weaponData.iconUrl }}"
+        class="w-7.5 h-7.5"
+        alt="weapon" />
+      {% endif %}
+      {# 武器精炼等级 #}
+      {% if char.weapon and char.weapon.refineLevel > 0 %}
+      <div class="absolute right-0 bottom-0 w-2.5 h-2.5 bg-[#080808]/60 text-white text-[8px] flex items-center justify-center">
+        {{ char.weapon.refineLevel }}
+      </div>
+      {% endif %}
+    </div>
+
+    {# 命座图标 - 0级不显示图标 #}
+    {% if char.potentialLevel > 0 %}
+    <img
+      src="../images/endfield/potential/potential_{{ char.potentialLevel }}.png"
+      class="absolute left-11.25 bottom-0.75 w-6 h-6"
+      alt="potential" />
+    {% endif %}
+
+    {# 等级和突破阶段 #}
+    <div class="absolute left-18 bottom-0.5 flex items-end">
+      <span class="text-base font-bold text-white font-[Akrobat] leading-none mb-0.5">Lv.</span>
+      <span class="text-2xl font-bold text-white font-[Akrobat] leading-none">{{ char.level }}</span>
+      <img
+        src="../images/endfield/evolve_phases/phase-{{ char.evolvePhase }}.png"
+        class="w-4.5 h-4.5 mb-1 ml-1"
+        alt="evolve" />
+    </div>
+
+    {# 右上角四块装备区域 #}
+    <div class="absolute right-0 top-0 flex flex-col">
+      {# 装备1: bodyEquip #}
+      {{ equip_slot(char.bodyEquip) }}
+      {# 装备2: armEquip #}
+      {{ equip_slot(char.armEquip) }}
+      {# 装备3: firstAccessory #}
+      {{ equip_slot(char.firstAccessory) }}
+      {# 装备4: secondAccessory #}
+      {{ equip_slot(char.secondAccessory) }}
+    </div>
+  </div>
+
+  {# 底部名称栏 #}
+  <div
+    class="w-full h-7 bg-white border-b-4 rounded-b-xs flex items-center justify-between pl-1.25"
+    style="border-color: {{ rarity_color }}">
+    <span class="text-sm font-bold">{{ char.charData.name }}</span>
+    <img src="../images/endfield/decoration.png" class="h-4.5 mr-1.25" />
+  </div>
+</div>
+{% endmacro %}
+
+
+{# 装备槽宏 - 仅在有装备时渲染 #}
+{% macro equip_slot(equip) %}
+{% if equip and equip.equipData and equip.equipData.iconUrl %}
+{% set equip_color = equip.equipData.rarity.key | get_equip_rarity_color %}
+<div class="w-8 h-8 bg-[#F0F0F0]/80 border-r-2" style="border-color: {{ equip_color }}">
+  <img src="{{ equip.equipData.iconUrl }}" class="w-8 h-8" alt="equip" />
+</div>
+{% endif %}
+{% endmacro %}
+
+
+{# 据点卡片宏 #}
+{% macro domain_card(domain) %}
+{% set domain_info = domain.domainId | get_domain_info %}
+<div class="relative w-46.5 min-h-32.5 bg-[#E6E6E6]/60 rounded-sm card-shadow flex flex-col pb-4">
+  <div class="absolute inset-0 rounded-sm {{ domain_info.gradient }}"></div>
+  <span class="relative text-[#080808]/80 font-[Bender] font-bold px-2 pt-2">{{ domain_info.name }}</span>
+  {# 进度条容器 - 聚落列表 #}
+  <div class="relative flex flex-col gap-2.5 mt-4 px-4">
+    {% for settlement in domain.settlements %}
+    <div class="relative h-3.5 bg-[#454545]/20 bar-shadow rounded-2xl backdrop-blur-xs overflow-hidden">
+      {# 进度条宽度根据等级计算，假设最大等级为10 #}
+      <div class="h-full rounded-l-2xl bg-[#D1D1D7]/60" style="width: {{ (settlement.level / 10 * 100) | int }}%"></div>
+      <span
+        class="absolute inset-0 flex items-center justify-between px-3 text-[#3D3D3D] font-bold font-[Bender] text-[10px]">
+        <span>{{ settlement.name }}</span>
+        <span class="font-bold">{{ settlement.level }}</span>
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endmacro %}

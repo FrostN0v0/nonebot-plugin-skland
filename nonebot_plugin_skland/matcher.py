@@ -109,6 +109,13 @@ skland_command = Alconna(
     Subcommand(
         "import", Args["url", str, Field(completion=lambda: "请输入抽卡记录导出链接")], help_text="导入抽卡记录"
     ),
+    Subcommand(
+        "zmdcard",
+        Args["target?#目标", At | int],
+        Option("-a|--all|all", help_text="展示所有角色"),
+        Option("-s|--simple|simple", help_text="使用简化背景"),
+        help_text="终末地角色面板查询",
+    ),
     namespace=alc_config.namespaces["skland"],
     meta=CommandMeta(
         description="通过森空岛查询游戏数据",
@@ -147,3 +154,4 @@ skland.shortcut("终末地签到", {"command": "skland zmdsign sign --all", "fuz
 skland.shortcut("终末地全体签到", {"command": "skland zmdsign all", "fuzzy": False, "prefix": True})
 skland.shortcut("终末地签到详情", {"command": "skland zmdsign status", "fuzzy": False, "prefix": True})
 skland.shortcut("终末地全体签到详情", {"command": "skland zmdsign status --all", "fuzzy": False, "prefix": True})
+skland.shortcut("zmd", {"command": "skland zmdcard", "fuzzy": True, "prefix": True})

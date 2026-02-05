@@ -1,1 +1,2 @@
-from .endfield_sign import EndfieldSignResponse as EndfieldSignResponse
+from .card import EndfieldCard as EndfieldCard
+from .sign import EndfieldSignResponse as EndfieldSignResponse

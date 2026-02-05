@@ -10,7 +10,6 @@
     --color-yellow-400: oklch(85.2% 0.199 91.936);
     --color-slate-600: oklch(44.6% 0.043 257.281);
     --color-slate-800: oklch(27.9% 0.041 260.031);
-    --color-gray-800: oklch(27.8% 0.033 256.848);
     --color-black: #000;
     --color-white: #fff;
     --spacing: 0.25rem;
@@ -1684,7 +1683,7 @@
     background: linear-gradient(270deg, rgba(1, 204, 157, 0.6) 0%, rgba(95, 251, 122, 0.6) 100%);
     box-shadow: 0px 0px 10px 0px rgba(1, 204, 157, 0.6);
   }
-  .grey-linear {
+  .gray-linear {
     background: linear-gradient( 90deg, rgba(112, 112, 112, 0.1) 5%, rgba(112, 112, 112, 0.8) 56%, rgba(112, 112, 112, 0.1) 91%, rgba(35, 186, 252, 0) 100% );
   }
   .blue-linear {

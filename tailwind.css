@@ -73,7 +73,7 @@
     background: linear-gradient(270deg, rgba(1, 204, 157, 0.6) 0%, rgba(95, 251, 122, 0.6) 100%);
     box-shadow: 0px 0px 10px 0px rgba(1, 204, 157, 0.6);
   }
-  .grey-linear {
+  .gray-linear {
     background: linear-gradient(
       90deg,
       rgba(112, 112, 112, 0.1) 5%,

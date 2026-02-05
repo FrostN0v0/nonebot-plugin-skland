@@ -9,6 +9,8 @@ import httpx
 from nonebot import logger
 from nonebot.compat import type_validate_python
 
+from nonebot_plugin_skland.model import Character
+
 from ..exception import LoginException, RequestException, UnauthorizedException
 from ..schemas import (
     CRED,
@@ -16,6 +18,7 @@ from ..schemas import (
     GachaCate,
     RogueData,
     BindingApp,
+    EndfieldCard,
     GachaResponse,
     ArkSignResponse,
     EndfieldSignResponse,
@@ -267,3 +270,29 @@ class SklandAPI:
             except httpx.HTTPError as e:
                 raise RequestException(f"角色 {uid} 终末地签到失败: {e}") from e
             return EndfieldSignResponse(**response.json()["data"])
+
+    @classmethod
+    async def endfield_card(cls, cred: CRED, uid: str, char: Character) -> EndfieldCard:
+        """获取终末地角色信息"""
+        game_info_url = f"https://zonai.skland.com/web/v1/game/endfield/card/detail?roleId={char.uid}&serverId={char.channel_master_id}&userId={uid}"
+        headers = cls.get_sign_header(
+            cred,
+            game_info_url,
+            method="get",
+        )
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    game_info_url,
+                    headers=headers,
+                )
+                if status := response.json().get("code"):
+                    if status == 10000:
+                        raise UnauthorizedException(f"获取终末地角色卡片失败：{response.json().get('message')}")
+                    elif status == 10002:
+                        raise LoginException(f"获取终末地角色卡片失败：{response.json().get('message')}")
+                    if status != 0:
+                        raise RequestException(f"获取终末地角色卡片失败：{response.json().get('message')}")
+                return EndfieldCard(**response.json()["data"]["detail"])
+            except httpx.HTTPError as e:
+                raise RequestException(f"获取终末地角色卡片失败: {e}") from e

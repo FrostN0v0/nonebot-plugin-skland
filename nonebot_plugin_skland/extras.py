@@ -168,6 +168,23 @@ extra_data = {
             ),
         },
         {
+            "func": "终末地角色卡片",
+            "trigger_method": "**已绑定用户**",
+            "trigger_condition": "**zmd** | `skland zmdcard`",
+            "brief_des": "查询终末地角色信息卡片。",
+            "detail_des": (
+                "- **终末地角色卡片**\n\n"
+                "```bash\n"
+                "skland zmdcard [@某人 | QQ号]\n"
+                "```\n\n"
+                " **快捷指令** ：`zmd`\n\n"
+                "查询终末地角色信息卡片。\n\n"
+                "**可选参数：**\n"
+                "- `-a` / `--all`：展示所有角色（默认按森空岛配置过滤）\n"
+                "- `-s` / `--simple`：使用简化背景\n"
+            ),
+        },
+        {
             "func": "<傀影|水月|萨米|萨卡兹|界园>肉鸽",
             "trigger_method": "**无限制**",
             "trigger_condition": "**<傀影|水月|萨米|萨卡兹|界园>肉鸽** | `skland rogue --topic <主题>`",

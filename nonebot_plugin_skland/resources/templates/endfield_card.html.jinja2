@@ -1,0 +1,205 @@
+{% from 'endfield_macros.html.jinja2' import endfield_char_card, domain_card %}
+
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Endfield Card</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+  <div class="relative w-176.5 h-auto bg-cover bg-center bg-no-repeat"
+    {% if simple_bg_enabled %}
+    style="background-color: #1a1a1a"
+    {% else %}
+    style="background-image: url({{ background_image }})"
+    {% endif %}>
+
+    {% if simple_bg_enabled %}
+    {# Simple模式：上半部分背景 - simple_bg底层 + simple_bg_top顶层 #}
+    <div class="absolute inset-x-0 top-0 h-106 bg-cover bg-center bg-no-repeat" style="background-image: url({{ simple_bg }})"></div>
+    <div class="absolute inset-x-0 top-0 h-106 bg-cover bg-center bg-no-repeat" style="background-image: url({{ simple_bg_top }})"></div>
+    {# Simple模式：下半部分背景 - simple_bg #}
+    <div class="absolute inset-x-0 top-108 bottom-0 bg-cover bg-center bg-no-repeat" style="background-image: url({{ simple_bg }})"></div>
+    {% else %}
+    {# 普通模式遮罩 #}
+    {# 上半部分遮罩 #}
+    <div class="absolute inset-x-0 top-0 h-106 bg-[#363636]/30 backdrop-blur-xs"></div>
+    {# 下半部分遮罩 #}
+    <div class="absolute inset-x-0 top-106 bottom-0 bg-[#DDDDDD]/20 backdrop-blur-xs"></div>
+    {% endif %}
+
+    {# 上半部分内容区域 #}
+    <div class="relative z-10 h-106 pt-8 pl-8">
+      <img
+        src="../images/endfield/endfield-industries.svg"
+        class="absolute top-5 right-7 h-25 opacity-60"
+        alt="endfield-industries" />
+
+      {# 头像信息 #}
+      <div class="flex items-start gap-4">
+        <img
+          src="{{ base.avatarUrl }}"
+          class="avater-shadow w-18.75 h-18.75 shrink-0"
+          alt="avatar" />
+        <div class="flex flex-col justify-center text-white">
+          <img src="../images/endfield/name_title.png" class="h-2.5 -mt-1.5" alt="name_title" />
+          <h1 class="text-2xl text-white font-bold font-[Akrobat] mt-1.5 mb-2.5">{{ base.name }}</h1>
+          <div class="relative w-40 h-5.5 bg-white/30 rounded-lg reg-shadow flex items-center">
+            <div class="w-15 h-full bg-[#E3D600]/80 rounded-lg reg-shadow-blue flex items-center justify-center">
+              <span class="text-[#080309]/80 text-sm font-[Bender]">苏醒日</span>
+            </div>
+            <span class="text-[#080309]/80 font-bold font-[Bender] ml-2">{{ base.createTime | format_date_ymd }}</span>
+          </div>
+        </div>
+      </div>
+
+      {# 卡片区域 #}
+      <div class="mt-4.5 mr-7 space-y-2.5">
+        {# 第一行：理智卡片 + 右侧两行小卡片 #}
+        <div class="flex items-start gap-3.25">
+          {# 理智卡片 #}
+          <div class="relative w-39.25 h-32.5 bg-[#E6E6E6]/60 rounded-sm card-shadow">
+            <img src="../images/ark_card/card_img/ap.png" class="absolute left-18 top-6.75 h-18.25" alt="ap" />
+            <div class="flex flex-col items-start pt-2 pl-4">
+              <span class="text-[#080808]/80 font-[Bender] text-xl">
+                {{ dungeon.curStamina }}<span class="text-[#080808]/60 text-base font-bold mx-0.5">/</span><span class="text-sm">{{ dungeon.maxStamina }}</span>
+              </span>
+              <span class="text-[#080808]/80 font-bold font-[Bender] text-xl">理智</span>
+            </div>
+            <span class="absolute left-4 top-18.25 text-[#080808]/80 font-bold font-[Bender] text-base">回复时间</span>
+            <div
+              class="w-auto h-4 absolute px-4 mx-4 bottom-4 bg-[#454545]/20 rounded-2xl backdrop-blur-xs flex items-center justify-center gap-2">
+              <div class="h-1 w-1 bg-[#FD7401] rounded-xs"></div>
+              <span class="text-[#3D3D3D] font-bold font-[Bender] text-sm">{{ stamina_remaining_seconds | format_stamina_time }}</span>
+            </div>
+            {# 底部进度条 #}
+            <div
+              class="w-full h-2 absolute bottom-0 left-0 bg-[#f0f0f0]/40 rounded-t-none rounded-b-sm backdrop-blur-xs">
+              <div class="h-full rounded-t-none rounded-b-sm blue-bar" style="width: {{ stamina_percent | int }}%"></div>
+            </div>
+          </div>
+
+          {# 右侧小卡片组 #}
+          <div class="flex flex-col gap-2.5">
+            {# 上排 #}
+            <div class="flex gap-5">
+              <div class="w-25 h-15 bg-[#E6E6E6]/60 rounded-sm card-shadow flex flex-col items-center justify-center">
+                <span class="text-[#080808]/80 font-[Bender] font-bold">{{ base.level }}</span>
+                <span class="text-[#080808]/60 font-[Bender] font-bold">探索等阶</span>
+              </div>
+              <div class="w-25 h-15 bg-[#E6E6E6]/60 rounded-sm card-shadow flex flex-col items-center justify-center">
+                <span class="text-[#080808]/80 font-[Bender] font-bold">{{ base.worldLevel }}</span>
+                <span class="text-[#080808]/60 font-[Bender] font-bold">探索等级</span>
+              </div>
+              <div class="w-25 h-15 bg-[#E6E6E6]/60 rounded-sm card-shadow flex flex-col items-center justify-center">
+                <span class="text-[#080808]/80 font-[Bender] font-bold">{{ base.charNum }}</span>
+                <span class="text-[#080808]/60 font-[Bender] font-bold">干员</span>
+              </div>
+              <div class="w-25 h-15 bg-[#E6E6E6]/60 rounded-sm card-shadow flex flex-col items-center justify-center">
+                <span class="text-[#080808]/80 font-[Bender] font-bold">{{ base.weaponNum }}</span>
+                <span class="text-[#080808]/60 font-[Bender] font-bold">武器</span>
+              </div>
+            </div>
+            {# 下排 #}
+            <div class="flex gap-5">
+              <div class="w-25 h-15 bg-[#E6E6E6]/60 rounded-sm card-shadow flex flex-col items-center justify-center">
+                <span class="text-[#080808]/80 font-[Bender] font-bold">{{ control_center_level }}</span>
+                <span class="text-[#080808]/60 font-[Bender] font-bold text-sm">总控中枢等级</span>
+              </div>
+              <div class="w-25 h-15 bg-[#E6E6E6]/60 rounded-sm card-shadow flex flex-col items-center justify-center">
+                <span class="text-[#080808]/80 font-[Bender] font-bold">{{ base.docNum }}</span>
+                <span class="text-[#080808]/60 font-[Bender] font-bold">醚质</span>
+              </div>
+              <div class="w-25 h-15 bg-[#E6E6E6]/60 rounded-sm card-shadow flex flex-col items-center justify-center">
+                <span class="text-[#080808]/80 font-[Bender] font-bold">{{ total_trchest_count }}</span>
+                <span class="text-[#080808]/60 font-[Bender] font-bold">储藏箱</span>
+              </div>
+              <div class="w-25 h-15 bg-[#E6E6E6]/60 rounded-sm card-shadow flex flex-col items-center justify-center">
+                <span class="text-[#080808]/80 font-[Bender] font-bold">{{ achieve.count }}</span>
+                <span class="text-[#080808]/60 font-[Bender] font-bold">光荣之路</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# 第二行：据点卡片 + 活跃度/通行证 #}
+        <div class="flex items-start gap-3.25 mt-5">
+          {# 据点卡片 - 遍历渲染 #}
+          {% for d in domain %}
+          {{ domain_card(d) }}
+          {% endfor %}
+
+          {# 活跃度和通行证卡片 #}
+          <div
+            class="relative w-57.75 min-h-32.5 bg-[#E6E6E6]/60 rounded-sm card-shadow flex flex-col justify-center gap-2.5 p-3">
+            {# 活跃度 #}
+            <div class="flex flex-col">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 flex items-center justify-center">
+                    <img src="../images/endfield/daily.png" class="w-9.25 h-6" alt="daily" />
+                  </div>
+                  <span class="text-[#080808]/80 font-[Bender] font-bold text-sm">活跃度</span>
+                </div>
+                <span class="text-[#080808]/80 font-[Bender] font-bold text-sm">
+                  {{ dailyMission.dailyActivation }}<span class="text-[#080808]/60">/</span>{{ dailyMission.maxDailyActivation }}
+                </span>
+              </div>
+              {% set daily_percent = (dailyMission.dailyActivation / dailyMission.maxDailyActivation * 100) | int if dailyMission.maxDailyActivation > 0 else 0 %}
+              <div class="w-51 h-1 mt-1 rounded-r-sm blue-bar" style="width: {{ daily_percent }}%"></div>
+              <div class="w-51 h-0.5 bg-[#454545]/15"></div>
+            </div>
+            {# 通行证 #}
+            <div class="flex flex-col">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 flex items-center justify-center">
+                    <img src="../images/endfield/protocol_pass.png" class="w-7 h-7" alt="protocol_pass" />
+                  </div>
+                  <span class="text-[#080808]/80 font-[Bender] font-bold text-sm">通行证</span>
+                </div>
+                <span class="text-[#080808]/80 font-[Bender] font-bold text-sm">
+                  {{ bpSystem.curLevel }}<span class="text-[#080808]/60">/</span>{{ bpSystem.maxLevel }}
+                </span>
+              </div>
+              {% set bp_percent = (bpSystem.curLevel / bpSystem.maxLevel * 100) | int if bpSystem.maxLevel > 0 else 0 %}
+              <div class="w-51 h-1 mt-1 rounded-r-sm green-bar" style="width: {{ bp_percent }}%"></div>
+              <div class="w-51 h-0.5 bg-[#454545]/15"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# 分隔线 #}
+    <div class="relative z-10 flex h-2">
+      <div class="w-8 bg-[#F441E9]"></div>
+      <div class="w-8 bg-[#00FFA3]"></div>
+      <div class="flex-1 bg-[#FFF100]"></div>
+    </div>
+
+    {# 下半部分内容区域 - 干员列表 #}
+    <div class="relative z-10 p-8 min-h-75">
+      <div class="flex items-center gap-2">
+        <img src="../images/endfield/operator.jpg" class="h-12" alt="operator" />
+        <h2 class="text-2xl font-[Bender] font-bold">干员</h2>
+      </div>
+      <div class="mt-8 grid grid-cols-4 gap-7.5">
+        {% for char in chars %}
+        {{ endfield_char_card(char) }}
+        {% endfor %}
+      </div>
+    </div>
+
+    {# 底部签名 #}
+    <div class="relative z-10 pb-4 text-center">
+      <span class="text-white/60 font-[Bender] tracking-wider">Generated by nonebot-plugin-skland</span>
+    </div>
+  </div>
+</body>
+
+</html>

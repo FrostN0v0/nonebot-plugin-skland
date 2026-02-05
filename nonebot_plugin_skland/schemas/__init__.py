@@ -16,6 +16,7 @@ from .arknights import AssistChar as AssistChar
 from .arknights import GachaGroup as GachaGroup
 from .arknights import GachaTable as GachaTable
 from .arknights import RogueCareer as RogueCareer
+from .endfield import EndfieldCard as EndfieldCard
 from .arknights import GachaDetails as GachaDetails
 from .arknights import RogueHistory as RogueHistory
 from .arknights import ArkSignResult as ArkSignResult

@@ -194,7 +194,7 @@ async def _(
     result: Arparma,
 ):
     """终末地森空岛签到"""
-    from .commands.zmdsign import zmdsign_sign_handler
+    from .commands.endfield import zmdsign_sign_handler
 
     await zmdsign_sign_handler(user_session, session, uid, result)
 
@@ -208,7 +208,7 @@ async def zmdsign_status(
     is_superuser: bool = Depends(SuperUser()),
 ):
     """查看终末地签到状态"""
-    from .commands.zmdsign import zmdsign_status_handler
+    from .commands.endfield import zmdsign_status_handler
 
     await zmdsign_status_handler(user_session, session, bot, result, is_superuser)
 
@@ -221,6 +221,21 @@ async def _(
     is_superuser: bool = Depends(SuperUser()),
 ):
     """签到所有终末地绑定角色"""
-    from .commands.zmdsign import zmdsign_all_handler
+    from .commands.endfield import zmdsign_all_handler
 
     await zmdsign_all_handler(user_session, session, bot, is_superuser)
+
+
+@skland.assign("zmdcard")
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+    target: Match[At | int],
+    result: Arparma,
+):
+    """查询终末地绑定角色"""
+    from .commands.endfield import zmdcard_handler
+
+    show_all = result.find("zmdcard.all")
+    is_simple = result.find("zmdcard.simple")
+    await zmdcard_handler(user_session, session, target, show_all, is_simple)

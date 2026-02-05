@@ -165,6 +165,8 @@ class ScopedConfig(BaseModel):
     """启动时检查资源更新"""
     background_source: Literal["default", "Lolicon", "random"] | CustomSource = "default"
     """背景图片来源"""
+    endfield_background_simple: bool = False
+    """终末地背景图片简化模式"""
     rogue_background_source: Literal["default", "rogue", "Lolicon"] | CustomSource = "rogue"
     """Rogue 战绩查询背景图片来源"""
     argot_expire: int = 300

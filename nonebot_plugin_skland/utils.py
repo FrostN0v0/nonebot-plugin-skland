@@ -154,22 +154,29 @@ def refresh_access_token_with_error_return(func: Refreshable[P, R]) -> Refreshab
     return wrapper
 
 
-async def get_lolicon_image() -> str:
+async def get_lolicon_image(tag: str = "arknights") -> str:
     async with httpx.AsyncClient() as client:
-        response = await client.get("https://api.lolicon.app/setu/v2?tag=arknights")
+        response = await client.get(f"https://api.lolicon.app/setu/v2?tag={tag}")
     return response.json()["data"][0]["urls"]["original"]
 
 
-async def get_background_image() -> str | Url:
-    default_background = RES_DIR / "images" / "background" / "bg.jpg"
+async def get_background_image(game_type: Literal["ark", "endfield"] = "ark") -> str | Url:
+    if game_type == "endfield":
+        default_background = RES_DIR / "images" / "background" / "endfield" / "default_bg.jpg"
+        random_dir = RES_DIR / "images" / "background" / "endfield"
+        lolicon_tag = "endfield"
+    else:
+        default_background = RES_DIR / "images" / "background" / "bg.jpg"
+        random_dir = RES_DIR / "images" / "background"
+        lolicon_tag = "arknights"
 
     match config.background_source:
         case "default":
             background_image = default_background.as_posix()
         case "Lolicon":
-            background_image = await get_lolicon_image()
+            background_image = await get_lolicon_image(lolicon_tag)
         case "random":
-            background_image = CustomSource(uri=RES_DIR / "images" / "background").to_uri()
+            background_image = CustomSource(uri=random_dir).to_uri()
         case CustomSource() as cs:
             background_image = cs.to_uri()
         case _:

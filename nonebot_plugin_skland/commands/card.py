@@ -52,7 +52,7 @@ async def card_handler(
     info = await get_character_info(user, str(ark_characters.uid))
     if not info:
         return
-    background = await get_background_image()
+    background = await get_background_image("ark")
     image = await render_ark_card(info, background)
     if str(background).startswith("http"):
         argot_seg = [Text(str(background)), Image(url=str(background))]

@@ -1,7 +1,7 @@
 [project]
 name = "nonebot-plugin-skland"
-version = "0.6.0"
-description = "通过森空岛查询游戏数据"
+version = "0.6.1"
+description = "通过森空岛查询游戏数据,支持明日方舟和终末地"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "FrostN0v0", email = "1614591760@qq.com" }]

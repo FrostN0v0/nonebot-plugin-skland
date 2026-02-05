@@ -123,15 +123,16 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 在 nonebot2 项目的`.env`文件中修改配置项
 
-|              配置项               | 必填  |   默认值    |               说明                |
-| :-------------------------------: | :---: | :---------: | :-------------------------------: |
-|    `skland__github_proxy_url`     |  否   |    `""`     |          GitHub 代理 URL          |
-|      `skland__github_token`       |  否   |    `""`     |           GitHub Token            |
-|    `skland__check_res_update`     |  否   |   `False`   |     是否在启动时检查资源更新      |
-|    `skland__background_source`    |  否   | `"default"` |           背景图片来源            |
-| `skland__rogue_background_source` |  否   |  `"rogue"`  |       肉鸽战绩背景图片来源        |
-|      `skland__argot_expire`       |  否   |    `300`    |      暗语消息过期时间（秒）       |
-|    `skland__gacha_render_max`     |  否   |    `30`     | 抽卡记录单图渲染上限（单位:卡池） |
+|                配置项                | 必填  |   默认值    |               说明                |
+| :----------------------------------: | :---: | :---------: | :-------------------------------: |
+|      `skland__github_proxy_url`      |  否   |    `""`     |          GitHub 代理 URL          |
+|        `skland__github_token`        |  否   |    `""`     |           GitHub Token            |
+|      `skland__check_res_update`      |  否   |   `False`   |     是否在启动时检查资源更新      |
+|     `skland__background_source`      |  否   | `"default"` |           背景图片来源            |
+| `skland__endfield_background_simple` |  否   |   `False`   |      终末地背景图片简化模式       |
+|  `skland__rogue_background_source`   |  否   |  `"rogue"`  |       肉鸽战绩背景图片来源        |
+|        `skland__argot_expire`        |  否   |    `300`    |      暗语消息过期时间（秒）       |
+|      `skland__gacha_render_max`      |  否   |    `30`     | 抽卡记录单图渲染上限（单位:卡池） |
 
 > [!TIP]
 > 以上配置项均~~没什么用~~按需填写，GitHub Token 用于解决 fetch_file_list 接口到达免费调用上限，但不会有那么频繁的更新频率，99.98%的概率是用不上的。~~只是因为我开发测试的时候上限了，所以有了这项~~,
@@ -231,6 +232,17 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 
 **快捷指令：** `终末地签到` `终末地签到详情` `终末地全体签到` `终末地全体签到详情`
 
+#### 终末地角色卡片
+
+| 指令                   | 权限 | 说明                         |
+| ---------------------- | ---- | ---------------------------- |
+| `skland zmdcard`       | 所有 | 查询终末地角色信息卡片       |
+| `skland zmdcard @某人` | 所有 | 查询指定用户的终末地角色信息 |
+| `skland zmdcard -a`    | 所有 | 展示所有角色                 |
+| `skland zmdcard -s`    | 所有 | 使用简化背景                 |
+
+**快捷指令：** `zmd`
+
 </details>
 
 > [!TIP]
@@ -329,6 +341,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `签到详情`           | `skland arksign status`       | 个人签到状态       |
 | `全体签到`           | `skland arksign all`          | 全部角色签到       |
 | `全体签到详情`       | `skland arksign status --all` | 全部签到状态       |
+| `zmd`                | `skland zmdcard`              | 终末地角色卡片     |
 | `终末地签到`         | `skland zmdsign sign --all`   | 终末地签到         |
 | `终末地签到详情`     | `skland zmdsign status`       | 终末地签到状态     |
 | `终末地全体签到`     | `skland zmdsign all`          | 终末地全部签到     |

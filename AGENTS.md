@@ -7,7 +7,7 @@
 **nonebot-plugin-skland** 是一个基于 NoneBot2 框架的 Python 插件，用于通过森空岛（Skland）API 查询鹰角网络旗下游戏的数据，目前支持：
 
 - **明日方舟（Arknights）**：角色信息卡片、签到、肉鸽战绩、抽卡记录
-- **终末地（Endfield）**：签到功能
+- **终末地（Endfield）**：角色信息卡片、签到功能
 
 ## 技术栈
 
@@ -66,7 +66,8 @@ nonebot_plugin_skland/
 │   │       └── ...          # 其他模型
 │   └── endfield/        # 终末地数据模型
 │       ├── __init__.py
-│       └── endfield_sign.py
+        ├── card.py          # 角色卡片（EndfieldCard）
+        └── sign.py          # 签到响应
 ├── render.py            # HTML 渲染函数
 ├── filters.py           # Jinja2 模板过滤器
 ├── utils.py             # 工具函数（Token刷新装饰器、资源下载等）

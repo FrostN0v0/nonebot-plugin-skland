@@ -288,11 +288,11 @@ class SklandAPI:
                 )
                 if status := response.json().get("code"):
                     if status == 10000:
-                        raise UnauthorizedException(f"获取终末地账号 game_info 失败：{response.json().get('message')}")
+                        raise UnauthorizedException(f"获取终末地角色卡片失败：{response.json().get('message')}")
                     elif status == 10002:
-                        raise LoginException(f"获取终末地账号 game_info 失败：{response.json().get('message')}")
+                        raise LoginException(f"获取终末地角色卡片失败：{response.json().get('message')}")
                     if status != 0:
-                        raise RequestException(f"获取终末地账号 game_info 失败：{response.json().get('message')}")
+                        raise RequestException(f"获取终末地角色卡片失败：{response.json().get('message')}")
                 return EndfieldCard(**response.json()["data"]["detail"])
             except httpx.HTTPError as e:
-                raise RequestException(f"获取终末地账号 userId 失败: {e}") from e
+                raise RequestException(f"获取终末地角色卡片失败: {e}") from e

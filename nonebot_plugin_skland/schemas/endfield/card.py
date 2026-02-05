@@ -208,7 +208,7 @@ class Room(BaseModel):
     type: int = 0
     level: int = 0
     chars: list[Any] = Field(default_factory=list)
-    reports: dict[str, RoomReport] | None
+    reports: dict[str, RoomReport] | None = None
 
 
 class SpaceShip(BaseModel):

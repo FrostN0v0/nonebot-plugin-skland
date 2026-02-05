@@ -185,7 +185,7 @@ async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = Fa
     stamina_percent = min(100, (cur_stamina / max_stamina) * 100) if max_stamina > 0 else 0
 
     # Simple 背景模式：命令行参数优先于配置
-    simple_bg_enabled = simple_bg or config.endfield_background_simple
+    simple_bg_enabled = is_simple or config.endfield_background_simple
     simple_bg = (RES_DIR / "images" / "background" / "endfield" / "simple" / "simple_bg.png").as_posix()
     simple_bg_top = (RES_DIR / "images" / "background" / "endfield" / "simple" / "simple_bg_top.png").as_posix()
 

@@ -31,7 +31,8 @@ R = TypeVar("R")
 Refreshable = Callable[Concatenate[SkUser, P], Coroutine[None, None, R]]
 
 
-async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
+async def bind_characters(user: SkUser, session: async_scoped_session):
+    """获取并合并角色绑定信息到 session，不执行 commit"""
     cred = CRED(cred=user.cred, token=user.cred_token)
     binding_app_list = await SklandAPI.get_binding(cred)
     new_uids = {char.uid for app in binding_app_list for char in app.bindingList}
@@ -65,6 +66,11 @@ async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
                         isdefault=len(app.bindingList) == 1 or character.isDefault,
                     )
                 )
+
+
+async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
+    """获取并合并角色绑定信息，并提交到数据库"""
+    await bind_characters(user, session)
     await session.commit()
 
 

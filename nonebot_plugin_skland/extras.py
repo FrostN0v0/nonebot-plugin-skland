@@ -260,8 +260,23 @@ extra_data = {
                 "```bash\n"
                 "skland char update\n"
                 "```\n\n"
-                "**快捷指令** ：角色更新\n\n"
+                "**快捷指令** ：`角色更新`\n\n"
                 "同步森空岛绑定的游戏角色信息。"
+            ),
+        },
+        {
+            "func": "全体角色更新",
+            "trigger_method": "**超级用户**",
+            "trigger_condition": "**全体角色更新** | `skland char update --all`",
+            "brief_des": "更新所有绑定用户的角色信息。",
+            "detail_des": (
+                "-  **全体角色更新**\n\n"
+                "```bash\n"
+                "skland char update --all\n"
+                "```\n\n"
+                "**快捷指令** ：`全体角色更新`\n\n"
+                "更新所有绑定到bot的用户角色信息。\n\n"
+                "> **注意：** 该指令仅超管可用。"
             ),
         },
         {

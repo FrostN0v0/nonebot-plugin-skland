@@ -71,7 +71,14 @@ skland_command = Alconna(
         Subcommand("all", help_text="签到所有绑定角色(仅超管可用)"),
         help_text="终末地森空岛签到相关功能",
     ),
-    Subcommand("char", Option("-u|--update|update"), help_text="更新绑定角色信息"),
+    Subcommand(
+        "char",
+        Subcommand(
+            "-u|--update|update",
+            Option("-a|--all|all", help_text="更新所有绑定的角色"),
+        ),
+        help_text="更新绑定角色信息",
+    ),
     Subcommand(
         "sync",
         Option("-f|--force|force", help_text="强制更新"),
@@ -145,6 +152,7 @@ skland.shortcut("萨米肉鸽", {"command": "skland rogue --topic 萨米", "fuzz
 skland.shortcut("水月肉鸽", {"command": "skland rogue --topic 水月", "fuzzy": True, "prefix": True})
 skland.shortcut("傀影肉鸽", {"command": "skland rogue --topic 傀影", "fuzzy": True, "prefix": True})
 skland.shortcut("角色更新", {"command": "skland char update", "fuzzy": False, "prefix": True})
+skland.shortcut("全体角色更新", {"command": "skland char update --all", "fuzzy": False, "prefix": True})
 skland.shortcut("资源更新", {"command": "skland sync", "fuzzy": True, "prefix": True})
 skland.shortcut("战绩详情", {"command": "skland rginfo", "fuzzy": True, "prefix": True})
 skland.shortcut("收藏战绩详情", {"command": "skland rginfo -f", "fuzzy": True, "prefix": True})

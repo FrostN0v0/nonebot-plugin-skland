@@ -117,11 +117,13 @@ async def _(
 
 
 @skland.assign("char.update")
-async def _(user_session: UserSession, session: async_scoped_session):
+async def _(
+    user_session: UserSession, session: async_scoped_session, result: Arparma, is_superuser: bool = Depends(SuperUser())
+):
     """更新森空岛角色信息"""
     from .commands.char import char_update_handler
 
-    await char_update_handler(user_session, session)
+    await char_update_handler(user_session, session, result, is_superuser)
 
 
 @skland.assign("sync")

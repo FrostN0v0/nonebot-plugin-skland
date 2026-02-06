@@ -347,6 +347,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `终末地全体签到`     | `skland zmdsign all`          | 终末地全部签到     |
 | `终末地全体签到详情` | `skland zmdsign status --all` | 终末地全部签到状态 |
 | `角色更新`           | `skland char update`          | 更新角色信息       |
+| `全体角色更新`       | `skland char update --all`    | 更新所有用户角色   |
 | `资源更新`           | `skland sync`                 | 更新资源文件       |
 | `界园肉鸽`           | `skland rogue --topic 界园`   | 界园主题战绩       |
 | `萨卡兹肉鸽`         | `skland rogue --topic 萨卡兹` | 萨卡兹主题战绩     |

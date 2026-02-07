@@ -412,21 +412,27 @@ Bot: skland::skland 的快捷指令: "查战绩" 添加成功
 <details id="效果图">
   <summary>🔮 游戏信息</summary>
 
-![示例图1](docs/example_1.png)
+#### 明日方舟
+
+![方舟卡片](docs/example_1.png)
+
+#### 明日方舟：终末地
+
+![终末地卡片](docs/zmd_card.png)
 
 </details>
 
 <details>
   <summary>🫖 肉鸽战绩</summary>
 
-![示例图2](docs/example_2.png)
+![肉鸽战绩](docs/example_2.png)
 
 </details>
 
 <details>
   <summary>🏆 战绩详情</summary>
 
-![示例图3](docs/example_3.png)
+![战绩详情](docs/example_3.png)
 
 </details>
 
@@ -478,6 +484,7 @@ Bot: skland::skland 的快捷指令: "查战绩" 添加成功
 - [x] 实现抽卡记录获取及渲染
 - [x] 支持抽卡记录导入(从小黑盒)
 - [x] 抽卡记录分页
+- [x] 支持终末地角色信息查询及签到
 - [ ] 实现 box 查询
 - [ ] 实现图鉴查询
 - [ ] 完善多服账号管理

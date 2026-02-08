@@ -145,6 +145,7 @@ async def render_gacha_history(
             "end_index": limit,
         },
         filters={
+            "charId_to_avatarUrl": charId_to_avatarUrl,
             "format_timestamp_md": format_timestamp_md,
         },
         pages={

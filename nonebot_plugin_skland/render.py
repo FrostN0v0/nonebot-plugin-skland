@@ -174,7 +174,8 @@ async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = Fa
 
     # 汇总所有据点的 trchestCount（储藏箱总数）
     total_trchest_count = sum(collection.trchestCount for domain in props.domain for collection in domain.collections)
-
+    # 汇总所有据点的 puzzleCount（醚质总数）
+    total_puzzle_count = sum(collection.puzzleCount for domain in props.domain for collection in domain.collections)
     # 计算理智恢复剩余时间
     current_ts = float(props.currentTs) if props.currentTs else datetime.now().timestamp()
     max_ts = float(props.dungeon.maxTs) if props.dungeon.maxTs else current_ts
@@ -208,6 +209,7 @@ async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = Fa
             "domain": props.domain,
             "control_center_level": control_center_level,
             "total_trchest_count": total_trchest_count,
+            "total_puzzle_count": total_puzzle_count,
             "stamina_remaining_seconds": stamina_remaining_seconds,
             "stamina_percent": stamina_percent,
         },

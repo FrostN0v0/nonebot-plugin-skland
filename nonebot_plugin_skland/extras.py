@@ -108,18 +108,18 @@ extra_data = {
         {
             "func": "终末地签到",
             "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**终末地签到** | `skland zmdsign sign --all`",
+            "trigger_condition": "**终末地签到** | `skland efsign sign --all`",
             "brief_des": "签到绑定的终末地账号。",
             "detail_des": (
                 "- **终末地签到**\n\n"
                 "```bash\n"
-                "skland zmdsign sign --all\n"
+                "skland efsign sign --all\n"
                 "```\n\n"
                 " **快捷指令** ：`终末地签到`\n\n"
                 "签到绑定森空岛账号下的所有终末地角色。\n\n"
                 "- **指定UID角色签到**\n\n"
                 "```bash\n"
-                "skland zmdsign sign -u <uid>\n"
+                "skland efsign sign -u <uid>\n"
                 "```\n\n"
                 "可以签到绑定的指定UID角色。\n\n"
                 "> **注意：** 一般不需要进行手动签到，插件会在每天的00:20以后自动签到。"
@@ -128,12 +128,12 @@ extra_data = {
         {
             "func": "终末地签到详情",
             "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**终末地签到详情** | `skland zmdsign status`",
+            "trigger_condition": "**终末地签到详情** | `skland efsign status`",
             "brief_des": "查看绑定角色的终末地自动签到状态。",
             "detail_des": (
                 "- **终末地签到详情**\n\n"
                 "```bash\n"
-                "skland zmdsign status\n"
+                "skland efsign status\n"
                 "```\n\n"
                 " **快捷指令** ：`终末地签到详情`\n\n"
                 "查看绑定角色的终末地签到详情。"
@@ -142,12 +142,12 @@ extra_data = {
         {
             "func": "终末地全体签到",
             "trigger_method": "**超级用户**",
-            "trigger_condition": "**终末地全体签到** | `skland zmdsign all`",
+            "trigger_condition": "**终末地全体签到** | `skland efsign all`",
             "brief_des": "签到所有绑定到bot的终末地账号。",
             "detail_des": (
                 "- **终末地全体签到**\n\n"
                 "```bash\n"
-                "skland zmdsign all\n"
+                "skland efsign all\n"
                 "```\n\n"
                 " **快捷指令** ：`终末地全体签到`\n\n"
                 "签到所有绑定到bot的终末地账号。\n\n"
@@ -156,12 +156,12 @@ extra_data = {
         {
             "func": "终末地全体签到详情",
             "trigger_method": "**超级用户**",
-            "trigger_condition": "**终末地全体签到详情** | `skland zmdsign status --all`",
+            "trigger_condition": "**终末地全体签到详情** | `skland efsign status --all`",
             "brief_des": "查看所有绑定角色的终末地签到状态。",
             "detail_des": (
                 "- **终末地全体签到详情**\n\n"
                 "```bash\n"
-                "skland zmdsign status --all\n"
+                "skland efsign status --all\n"
                 "```\n\n"
                 " **快捷指令** ：`终末地全体签到详情`\n\n"
                 "查看所有绑定角色的终末地签到状态。\n\n"
@@ -170,14 +170,14 @@ extra_data = {
         {
             "func": "终末地角色卡片",
             "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**zmd** | `skland zmdcard`",
+            "trigger_condition": "**ef** | `skland efcard`",
             "brief_des": "查询终末地角色信息卡片。",
             "detail_des": (
                 "- **终末地角色卡片**\n\n"
                 "```bash\n"
-                "skland zmdcard [@某人 | QQ号]\n"
+                "skland efcard [@某人 | QQ号]\n"
                 "```\n\n"
-                " **快捷指令** ：`zmd`\n\n"
+                " **快捷指令** ：`ef`\n\n"
                 "查询终末地角色信息卡片。\n\n"
                 "**可选参数：**\n"
                 "- `-a` / `--all`：展示所有角色（默认按森空岛配置过滤）\n"

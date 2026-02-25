@@ -188,7 +188,7 @@ async def _(url: Match[str], user_session: UserSession, session: async_scoped_se
     await import_handler(url, user_session, session)
 
 
-@skland.assign("zmdsign.sign")
+@skland.assign("efsign.sign")
 async def _(
     user_session: UserSession,
     session: async_scoped_session,
@@ -196,13 +196,13 @@ async def _(
     result: Arparma,
 ):
     """终末地森空岛签到"""
-    from .commands.endfield import zmdsign_sign_handler
+    from .commands.endfield import ef_sign_handler
 
-    await zmdsign_sign_handler(user_session, session, uid, result)
+    await ef_sign_handler(user_session, session, uid, result)
 
 
-@skland.assign("zmdsign.status")
-async def zmdsign_status(
+@skland.assign("efsign.status")
+async def efsign_status(
     user_session: UserSession,
     session: async_scoped_session,
     bot: Bot,
@@ -210,12 +210,12 @@ async def zmdsign_status(
     is_superuser: bool = Depends(SuperUser()),
 ):
     """查看终末地签到状态"""
-    from .commands.endfield import zmdsign_status_handler
+    from .commands.endfield import ef_sign_status_handler
 
-    await zmdsign_status_handler(user_session, session, bot, result, is_superuser)
+    await ef_sign_status_handler(user_session, session, bot, result, is_superuser)
 
 
-@skland.assign("zmdsign.all")
+@skland.assign("efsign.all")
 async def _(
     user_session: UserSession,
     session: async_scoped_session,
@@ -223,12 +223,12 @@ async def _(
     is_superuser: bool = Depends(SuperUser()),
 ):
     """签到所有终末地绑定角色"""
-    from .commands.endfield import zmdsign_all_handler
+    from .commands.endfield import ef_sign_all_handler
 
-    await zmdsign_all_handler(user_session, session, bot, is_superuser)
+    await ef_sign_all_handler(user_session, session, bot, is_superuser)
 
 
-@skland.assign("zmdcard")
+@skland.assign("efcard")
 async def _(
     user_session: UserSession,
     session: async_scoped_session,
@@ -236,8 +236,8 @@ async def _(
     result: Arparma,
 ):
     """查询终末地绑定角色"""
-    from .commands.endfield import zmdcard_handler
+    from .commands.endfield import efcard_handler
 
-    show_all = result.find("zmdcard.all")
-    is_simple = result.find("zmdcard.simple")
-    await zmdcard_handler(user_session, session, target, show_all, is_simple)
+    show_all = result.find("efcard.all")
+    is_simple = result.find("efcard.simple")
+    await efcard_handler(user_session, session, target, show_all, is_simple)

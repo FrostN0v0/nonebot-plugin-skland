@@ -224,11 +224,11 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 
 | 指令                           | 权限     | 说明                      |
 | ------------------------------ | -------- | ------------------------- |
-| `skland zmdsign sign --all`    | 所有     | 签到所有绑定角色          |
-| `skland zmdsign sign -u <uid>` | 所有     | 指定 UID 角色签到         |
-| `skland zmdsign status`        | 所有     | 查询个人角色签到状态      |
-| `skland zmdsign all`           | 超级用户 | 签到所有绑定到 bot 的角色 |
-| `skland zmdsign status --all`  | 超级用户 | 查询所有角色的签到状态    |
+| `skland efsign sign --all`    | 所有     | 签到所有绑定角色          |
+| `skland efsign sign -u <uid>` | 所有     | 指定 UID 角色签到         |
+| `skland efsign status`        | 所有     | 查询个人角色签到状态      |
+| `skland efsign all`           | 超级用户 | 签到所有绑定到 bot 的角色 |
+| `skland efsign status --all`  | 超级用户 | 查询所有角色的签到状态    |
 
 **快捷指令：** `终末地签到` `终末地签到详情` `终末地全体签到` `终末地全体签到详情`
 
@@ -236,12 +236,12 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 
 | 指令                   | 权限 | 说明                         |
 | ---------------------- | ---- | ---------------------------- |
-| `skland zmdcard`       | 所有 | 查询终末地角色信息卡片       |
-| `skland zmdcard @某人` | 所有 | 查询指定用户的终末地角色信息 |
-| `skland zmdcard -a`    | 所有 | 展示所有角色                 |
-| `skland zmdcard -s`    | 所有 | 使用简化背景                 |
+| `skland efcard`       | 所有 | 查询终末地角色信息卡片       |
+| `skland efcard @某人` | 所有 | 查询指定用户的终末地角色信息 |
+| `skland efcard -a`    | 所有 | 展示所有角色                 |
+| `skland efcard -s`    | 所有 | 使用简化背景                 |
 
-**快捷指令：** `zmd`
+**快捷指令：** `ef`
 
 </details>
 
@@ -341,11 +341,11 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `签到详情`           | `skland arksign status`       | 个人签到状态       |
 | `全体签到`           | `skland arksign all`          | 全部角色签到       |
 | `全体签到详情`       | `skland arksign status --all` | 全部签到状态       |
-| `zmd`                | `skland zmdcard`              | 终末地角色卡片     |
-| `终末地签到`         | `skland zmdsign sign --all`   | 终末地签到         |
-| `终末地签到详情`     | `skland zmdsign status`       | 终末地签到状态     |
-| `终末地全体签到`     | `skland zmdsign all`          | 终末地全部签到     |
-| `终末地全体签到详情` | `skland zmdsign status --all` | 终末地全部签到状态 |
+| `ef`                | `skland efcard`              | 终末地角色卡片     |
+| `终末地签到`         | `skland efsign sign --all`   | 终末地签到         |
+| `终末地签到详情`     | `skland efsign status`       | 终末地签到状态     |
+| `终末地全体签到`     | `skland efsign all`          | 终末地全部签到     |
+| `终末地全体签到详情` | `skland efsign status --all` | 终末地全部签到状态 |
 | `角色更新`           | `skland char update`          | 更新角色信息       |
 | `全体角色更新`       | `skland char update --all`    | 更新所有用户角色   |
 | `资源更新`           | `skland sync`                 | 更新资源文件       |
@@ -418,7 +418,7 @@ Bot: skland::skland 的快捷指令: "查战绩" 添加成功
 
 #### 明日方舟：终末地
 
-![终末地卡片](docs/zmd_card.png)
+![终末地卡片](docs/ef_card.png)
 
 </details>
 

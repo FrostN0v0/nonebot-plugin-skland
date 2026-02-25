@@ -52,7 +52,7 @@ skland_command = Alconna(
         help_text="明日方舟森空岛签到相关功能",
     ),
     Subcommand(
-        "zmdsign",
+        "efsign",
         Subcommand(
             "sign",
             Option(
@@ -117,7 +117,7 @@ skland_command = Alconna(
         "import", Args["url", str, Field(completion=lambda: "请输入抽卡记录导出链接")], help_text="导入抽卡记录"
     ),
     Subcommand(
-        "zmdcard",
+        "efcard",
         Args["target?#目标", At | int],
         Option("-a|--all|all", help_text="展示所有角色"),
         Option("-s|--simple|simple", help_text="使用简化背景"),
@@ -158,8 +158,8 @@ skland.shortcut("战绩详情", {"command": "skland rginfo", "fuzzy": True, "pre
 skland.shortcut("收藏战绩详情", {"command": "skland rginfo -f", "fuzzy": True, "prefix": True})
 skland.shortcut("方舟抽卡记录", {"command": "skland gacha", "fuzzy": True, "prefix": True})
 skland.shortcut("导入抽卡记录", {"command": "skland import", "fuzzy": True, "prefix": True})
-skland.shortcut("终末地签到", {"command": "skland zmdsign sign --all", "fuzzy": False, "prefix": True})
-skland.shortcut("终末地全体签到", {"command": "skland zmdsign all", "fuzzy": False, "prefix": True})
-skland.shortcut("终末地签到详情", {"command": "skland zmdsign status", "fuzzy": False, "prefix": True})
-skland.shortcut("终末地全体签到详情", {"command": "skland zmdsign status --all", "fuzzy": False, "prefix": True})
-skland.shortcut("zmd", {"command": "skland zmdcard", "fuzzy": True, "prefix": True})
+skland.shortcut("终末地签到", {"command": "skland efsign sign --all", "fuzzy": False, "prefix": True})
+skland.shortcut("终末地全体签到", {"command": "skland efsign all", "fuzzy": False, "prefix": True})
+skland.shortcut("终末地签到详情", {"command": "skland efsign status", "fuzzy": False, "prefix": True})
+skland.shortcut("终末地全体签到详情", {"command": "skland efsign status --all", "fuzzy": False, "prefix": True})
+skland.shortcut("ef", {"command": "skland efcard", "fuzzy": True, "prefix": True})

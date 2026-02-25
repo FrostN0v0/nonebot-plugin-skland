@@ -1,4 +1,4 @@
-from .card import zmdcard_handler as zmdcard_handler
-from .sign import zmdsign_all_handler as zmdsign_all_handler
-from .sign import zmdsign_sign_handler as zmdsign_sign_handler
-from .sign import zmdsign_status_handler as zmdsign_status_handler
+from .card import efcard_handler as efcard_handler
+from .sign import ef_sign_handler as ef_sign_handler
+from .sign import ef_sign_all_handler as ef_sign_all_handler
+from .sign import ef_sign_status_handler as ef_sign_status_handler

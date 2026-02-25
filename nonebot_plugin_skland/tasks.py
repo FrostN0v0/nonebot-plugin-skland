@@ -53,8 +53,8 @@ async def run_daily_arksign():
     await session.close()
 
 
-@scheduler.scheduled_job("cron", hour=0, minute=20, id="daily_zmdsign")
-async def run_daily_zmdsign():
+@scheduler.scheduled_job("cron", hour=0, minute=20, id="daily_efsign")
+async def run_daily_efsign():
     """终末地每日自动签到"""
     session = get_scoped_session()
     sign_result: dict[str, EndfieldSignResponse | str] = {}

@@ -41,7 +41,7 @@ nonebot_plugin_skland/
 │   ├── rogue.py         # 肉鸽战绩查询
 │   ├── gacha.py         # 抽卡记录查询和导入
 │   ├── arksign.py       # 明日方舟签到
-│   └── zmdsign.py       # 终末地签到
+│   └── efsign.py        # 终末地签到
 ├── schemas/             # Pydantic 数据模型
 │   ├── __init__.py      # 模块导出（向后兼容）
 │   ├── binding.py       # 绑定角色数据
@@ -96,7 +96,7 @@ skland_command = Alconna(
     Subcommand("bind", ...),      # 绑定账号
     Subcommand("qrcode", ...),    # 扫码绑定
     Subcommand("arksign", ...),   # 明日方舟签到
-    Subcommand("zmdsign", ...),   # 终末地签到
+    Subcommand("efsign", ...),   # 终末地签到
     Subcommand("rogue", ...),     # 肉鸽战绩
     Subcommand("gacha", ...),     # 抽卡记录
     # ...
@@ -117,8 +117,8 @@ async def run_daily_arksign():
     # 每日 00:15 执行明日方舟签到
     ...
 
-@scheduler.scheduled_job("cron", hour=0, minute=20, id="daily_zmdsign")
-async def run_daily_zmdsign():
+@scheduler.scheduled_job("cron", hour=0, minute=20, id="daily_efsign")
+async def run_daily_efsign():
     # 每日 00:20 执行终末地签到
     ...
 ```

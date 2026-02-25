@@ -48,7 +48,8 @@ async def bind_characters(user: SkUser, session: async_scoped_session):
                     await session.merge(
                         Character(
                             id=user.id,
-                            uid=role.roleId,
+                            uid=character.uid,
+                            role_id=role.roleId,
                             nickname=role.nickname,
                             app_code=app.appCode,
                             channel_master_id=role.serverId,

@@ -84,12 +84,12 @@ async def get_default_endfield_character(user: SkUser, session: async_scoped_ses
     return character
 
 
-async def get_endfield_character_by_uid(user: SkUser, uid: str, session: async_scoped_session) -> Character:
+async def get_endfield_character_by_role_id(user: SkUser, role_id: str, session: async_scoped_session) -> Character:
     character = (
         await session.execute(
             select(Character).where(
                 Character.id == user.id,
-                Character.uid == int(uid),
+                Character.role_id == role_id,
                 Character.app_code == "endfield",
             )
         )

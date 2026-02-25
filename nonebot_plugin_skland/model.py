@@ -27,6 +27,8 @@ class Character(Model):
     """Character ID"""
     uid: Mapped[str] = mapped_column(primary_key=True)
     """Character UID"""
+    role_id: Mapped[str] = mapped_column(VARCHAR, comment="角色ID", nullable=True)
+    """Role ID"""
     app_code: Mapped[str] = mapped_column(Text)
     """APP Code"""
     channel_master_id: Mapped[str] = mapped_column(Text)

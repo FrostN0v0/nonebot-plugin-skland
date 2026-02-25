@@ -239,7 +239,8 @@ class SklandAPI:
                 raise RequestException(f"获取抽卡记录失败: {e}") from e
 
     @classmethod
-    async def endfield_sign(cls, cred: CRED, uid: str, server_id: str) -> EndfieldSignResponse:
+    @classmethod
+    async def endfield_sign(cls, cred: CRED, role_id: str, server_id: str) -> EndfieldSignResponse:
         """进行明日方舟：终末地签到"""
         sign_url = "https://zonai.skland.com/web/v1/game/endfield/attendance"
         headers = cls.get_sign_header(
@@ -248,7 +249,7 @@ class SklandAPI:
             method="post",
             query_body=None,
         )
-        game_role = f"3_{uid}_{server_id}"
+        game_role = f"3_{role_id}_{server_id}"
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
@@ -262,19 +263,19 @@ class SklandAPI:
                 logger.debug(f"终末地签到回复：{response.json()}")
                 if status := response.json().get("code"):
                     if status == 10000:
-                        raise UnauthorizedException(f"角色 {uid} 终末地签到失败：{response.json().get('message')}")
+                        raise UnauthorizedException(f"角色 {role_id} 终末地签到失败：{response.json().get('message')}")
                     elif status == 10002:
-                        raise LoginException(f"角色 {uid} 终末地签到失败：{response.json().get('message')}")
+                        raise LoginException(f"角色 {role_id} 终末地签到失败：{response.json().get('message')}")
                     elif status != 0:
-                        raise RequestException(f"角色 {uid} 终末地签到失败：{response.json().get('message')}")
+                        raise RequestException(f"角色 {role_id} 终末地签到失败：{response.json().get('message')}")
             except httpx.HTTPError as e:
-                raise RequestException(f"角色 {uid} 终末地签到失败: {e}") from e
+                raise RequestException(f"角色 {role_id} 终末地签到失败: {e}") from e
             return EndfieldSignResponse(**response.json()["data"])
 
     @classmethod
     async def endfield_card(cls, cred: CRED, uid: str, char: Character) -> EndfieldCard:
         """获取终末地角色信息"""
-        game_info_url = f"https://zonai.skland.com/web/v1/game/endfield/card/detail?roleId={char.uid}&serverId={char.channel_master_id}&userId={uid}"
+        game_info_url = f"https://zonai.skland.com/web/v1/game/endfield/card/detail?roleId={char.role_id}&serverId={char.channel_master_id}&userId={uid}"
         headers = cls.get_sign_header(
             cred,
             game_info_url,

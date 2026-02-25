@@ -31,7 +31,7 @@ from ...utils import (
 )
 
 
-async def zmdsign_sign_handler(
+async def ef_sign_handler(
     user_session: UserSession,
     session: async_scoped_session,
     uid: Match[str],
@@ -53,7 +53,7 @@ async def zmdsign_sign_handler(
 
     if uid.available:
         chars = [await get_endfield_character_by_uid(user, uid.result, session)]
-    elif result.find("zmdsign.sign.all"):
+    elif result.find("efsign.sign.all"):
         chars = await get_endfield_characters(user, session)
     elif character := await get_default_endfield_character(user, session):
         chars = [character]
@@ -85,7 +85,7 @@ async def endfield_sign_in(user: SkUser, uid: str, server_id: str) -> EndfieldSi
     return await SklandAPI.endfield_sign(cred, uid, server_id=server_id)
 
 
-async def zmdsign_status_handler(
+async def ef_sign_status_handler(
     user_session: UserSession,
     session: async_scoped_session,
     bot: Bot,
@@ -103,7 +103,7 @@ async def zmdsign_status_handler(
             sign_result = json.load(f)
     sign_data = sign_result.get("data", {})
     sign_time = sign_result.get("timestamp", "未记录签到时间")
-    if isinstance(result, Arparma) and result.find("zmdsign.status.all"):
+    if isinstance(result, Arparma) and result.find("efsign.status.all"):
         if not is_superuser:
             await UniMessage.text("该指令仅超管可用").finish()
     elif isinstance(result, bool) and result:
@@ -143,7 +143,7 @@ async def zmdsign_status_handler(
         await UniMessage.text(prased_sign_result.summary + "\n".join(formatted_messages)).finish()
 
 
-async def zmdsign_all_handler(
+async def ef_sign_all_handler(
     user_session: UserSession,
     session: async_scoped_session,
     bot: Bot,
@@ -171,4 +171,4 @@ async def zmdsign_all_handler(
         sign_result_file.parent.mkdir(parents=True, exist_ok=True)
     with open(sign_result_file, "w", encoding="utf-8") as f:
         json.dump(serializable_sign_result, f, ensure_ascii=False, indent=2)
-    await zmdsign_status_handler(user_session, session, bot, True, is_superuser=is_superuser)
+    await ef_sign_status_handler(user_session, session, bot, True, is_superuser=is_superuser)

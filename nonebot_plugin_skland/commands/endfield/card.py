@@ -12,7 +12,7 @@ from .utils import check_user_character
 from ...utils import send_reaction, get_background_image, refresh_cred_token_if_needed, refresh_access_token_if_needed
 
 
-async def zmdcard_handler(
+async def efcard_handler(
     user_session: UserSession,
     session: async_scoped_session,
     target: Match[At | int],

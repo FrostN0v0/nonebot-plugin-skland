@@ -150,7 +150,6 @@ class EfWeaponGachaResponse(BaseModel):
 EfGachaResponse = EfCharGachaResponse | EfWeaponGachaResponse
 
 
-
 class EfGachaPull(BaseModel):
     """终末地单次抽卡记录（内部表示）"""
 

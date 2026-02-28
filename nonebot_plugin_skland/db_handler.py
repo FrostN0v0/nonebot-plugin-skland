@@ -108,3 +108,21 @@ async def get_endfield_characters(user: SkUser, session: async_scoped_session) -
         .all()
     )
     return list(characters)
+
+
+async def select_all_ef_gacha_records(user: SkUser, char_uid: str, session: async_scoped_session) -> list[GachaRecord]:
+    """查询指定用户和角色的所有终末地抽卡记录"""
+    records = (
+        (
+            await session.execute(
+                select(GachaRecord).where(
+                    GachaRecord.uid == user.id,
+                    GachaRecord.char_uid == char_uid,
+                    GachaRecord.app_code == "endfield",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return list(records)

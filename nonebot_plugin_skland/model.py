@@ -58,25 +58,31 @@ class GachaRecord(Model):
         primaryjoin="and_(GachaRecord.char_pk_id == Character.id, GachaRecord.char_uid == Character.uid)",
     )
     """关联的角色"""
+    app_code: Mapped[str] = mapped_column(Text, default="arknights", server_default="arknights", index=True)
+    """Game App Code: arknights / endfield"""
+    item_type: Mapped[str] = mapped_column(Text, default="char", server_default="char")
+    """Item Type: char / weapon"""
     pool_id: Mapped[str] = mapped_column(Text, index=True)
     """Gacha Pool ID"""
     pool_name: Mapped[str] = mapped_column(Text)
     """Gacha Pool Name"""
     char_id: Mapped[str] = mapped_column(Text)
-    """Character ID"""
+    """Item ID (Character ID or Weapon ID)"""
     char_name: Mapped[str] = mapped_column(Text)
-    """Character Name"""
+    """Item Name (Character Name or Weapon Name)"""
     rarity: Mapped[int]
-    """Character Rarity"""
+    """Item Rarity"""
     is_new: Mapped[bool]
-    """Is New Character"""
+    """Is New Item"""
+    is_free: Mapped[bool] = mapped_column(default=False, server_default="0")
+    """Is Free Pull (终末地角色池专用)"""
     gacha_ts: Mapped[BigInteger] = mapped_column(BigInteger, comment="Gacha Timestamp")
     """Gacha Timestamp"""
     pos: Mapped[int]
-    """Gacha Position"""
+    """Gacha Position / Sequence ID"""
 
     __table_args__ = (
-        UniqueConstraint("char_id", "gacha_ts", "pos", name="_character_ts_pos_uc"),
+        UniqueConstraint("char_uid", "app_code", "gacha_ts", "pos", name="_app_char_ts_pos_uc"),
         ForeignKeyConstraint(
             ["char_pk_id", "char_uid"],
             ["skland_characters.id", "skland_characters.uid"],

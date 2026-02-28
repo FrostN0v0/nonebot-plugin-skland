@@ -123,6 +123,13 @@ skland_command = Alconna(
         Option("-s|--simple|simple", help_text="使用简化背景"),
         help_text="终末地角色面板查询",
     ),
+    Subcommand(
+        "efgacha",
+        Args["target?#目标", At | int],
+        Option("-b|--begin|begin", Args["begin", int], help_text="查询起始位置"),
+        Option("-l|--limit|limit", Args["limit", int], help_text="查询抽卡记录卡池渲染上限"),
+        help_text="终末地抽卡记录查询",
+    ),
     namespace=alc_config.namespaces["skland"],
     meta=CommandMeta(
         description="通过森空岛查询游戏数据",
@@ -163,3 +170,4 @@ skland.shortcut("终末地全体签到", {"command": "skland efsign all", "fuzzy
 skland.shortcut("终末地签到详情", {"command": "skland efsign status", "fuzzy": False, "prefix": True})
 skland.shortcut("终末地全体签到详情", {"command": "skland efsign status --all", "fuzzy": False, "prefix": True})
 skland.shortcut("ef", {"command": "skland efcard", "fuzzy": True, "prefix": True})
+skland.shortcut("终末地抽卡记录", {"command": "skland efgacha", "fuzzy": True, "prefix": True})

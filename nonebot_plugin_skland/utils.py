@@ -22,8 +22,13 @@ from .schemas import (
     GachaPool,
     GachaPull,
     GachaGroup,
+    EfGachaPull,
+    EfGachaGroup,
     ArkSignResult,
+    EfGachaPoolInfo,
+    EndfieldPoolType,
     GroupedGachaRecord,
+    EfGroupedGachaRecord,
 )
 
 P = ParamSpec("P")
@@ -341,6 +346,42 @@ async def get_all_gacha_records(char: Character, cate: GachaCate, access_token: 
         )
 
 
+async def get_all_ef_gacha_records(
+    char: Character,
+    pool_type: EndfieldPoolType,
+    role_token: str,
+):
+    """异步生成器，获取指定卡池类型下的所有终末地抽卡记录。
+
+    自动处理分页，持续请求数据直到获取全部记录。
+
+    Args:
+        char: 角色信息（包含 channel_master_id 作为 server_id）。
+        pool_type: 卡池类型（STANDARD / SPECIAL / BEGINNER / WEAPON）。
+        role_token: 角色令牌。
+
+    Yields:
+        EfCharGachaInfo | EfWeaponGachaInfo: 单条抽卡记录。
+    """
+    page = await SklandAPI.get_ef_gacha_history(pool_type, char.channel_master_id, role_token)
+    prev_seq = None
+
+    while page and page.gacha_list:
+        for record in page.gacha_list:
+            yield record
+        if not page.hasMore:
+            break
+        if page.next_seq == prev_seq:
+            break
+        prev_seq = page.next_seq
+        page = await SklandAPI.get_ef_gacha_history(
+            pool_type,
+            char.channel_master_id,
+            role_token,
+            seq_id=page.next_seq,
+        )
+
+
 def _get_up_chars(pool_id):
     """获取up五星和六星角色列表"""
     up_five_chars, up_six_chars = [], []
@@ -410,6 +451,75 @@ def group_gacha_records(records: list[GachaRecord]) -> GroupedGachaRecord:
         )
         final_pools_data.append(gacha_pool)
     return GroupedGachaRecord(pools=final_pools_data)
+
+
+def _infer_pool_category(pool_id: str) -> str:
+    """根据 pool_id 推导卡池类别"""
+    pid = pool_id.lower()
+    if pid.startswith("special"):
+        return "special"
+    if pid.startswith("wepon") or pid.startswith("weapon"):
+        return "weapon"
+    if pid == "beginner":
+        return "beginner"
+    return "standard"
+
+
+def group_ef_gacha_records(records: list[GachaRecord]) -> EfGroupedGachaRecord:
+    """将终末地抽卡记录按卡池分组，并根据 pool_id 分类"""
+    temp_grouped_records = defaultdict(lambda: defaultdict(list))
+    for record in records:
+        temp_grouped_records[record.pool_id][record.gacha_ts].append(record)
+
+    beginner_pools: list[EfGachaPoolInfo] = []
+    standard_pools: list[EfGachaPoolInfo] = []
+    special_pools: list[EfGachaPoolInfo] = []
+    weapon_pools: list[EfGachaPoolInfo] = []
+
+    for pool_id, ts_dict in temp_grouped_records.items():
+        gacha_groups: list[EfGachaGroup] = [
+            EfGachaGroup(
+                gacha_ts=gacha_ts,
+                pulls=[
+                    EfGachaPull(
+                        pool_name=p.pool_name,
+                        item_id=p.char_id,
+                        item_name=p.char_name,
+                        item_type=p.item_type,
+                        rarity=p.rarity,
+                        is_new=p.is_new,
+                        is_free=p.is_free,
+                        seq_id=p.pos,
+                    )
+                    for p in pulls
+                ],
+            )
+            for gacha_ts, pulls in ts_dict.items()
+        ]
+        first_record = next(iter(next(iter(ts_dict.values()))))
+        pool_type = first_record.item_type if first_record.item_type else "char"
+        pool_info = EfGachaPoolInfo(
+            pool_id=pool_id,
+            pool_name=gacha_groups[0].pulls[0].pool_name,
+            pool_type=pool_type,
+            records=gacha_groups,
+        )
+        category = _infer_pool_category(pool_id)
+        if category == "beginner":
+            beginner_pools.append(pool_info)
+        elif category == "special":
+            special_pools.append(pool_info)
+        elif category == "weapon":
+            weapon_pools.append(pool_info)
+        else:
+            standard_pools.append(pool_info)
+
+    return EfGroupedGachaRecord(
+        beginner_pools=beginner_pools,
+        standard_pools=standard_pools,
+        special_pools=special_pools,
+        weapon_pools=weapon_pools,
+    )
 
 
 async def import_heybox_gacha_data(url: str) -> dict:

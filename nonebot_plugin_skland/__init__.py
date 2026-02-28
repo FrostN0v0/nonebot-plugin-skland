@@ -241,3 +241,18 @@ async def _(
     show_all = result.find("efcard.all")
     is_simple = result.find("efcard.simple")
     await efcard_handler(user_session, session, target, show_all, is_simple)
+
+
+@skland.assign("efgacha")
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+    begin: Match[int],
+    limit: Match[int],
+    target: Match[At | int],
+    bot: Bot,
+):
+    """查询终末地抽卡记录"""
+    from .commands.endfield import ef_gacha_history_handler
+
+    await ef_gacha_history_handler(user_session, session, begin, limit, target, bot)

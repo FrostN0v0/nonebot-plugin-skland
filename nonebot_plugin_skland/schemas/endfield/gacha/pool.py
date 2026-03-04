@@ -28,7 +28,11 @@ class EfGachaPoolInfo(BaseModel):
     records: list[EfGachaGroup]
     """该卡池的抽卡记录分组（按时间倒序）"""
     up_six_chars: list[str] = []
-    """UP六星角色/武器列表"""
+    """UP六星角色/武器列表（仅up6_name对应的角色ID）"""
+    up6_img: str = ""
+    """UP六星角色横幅图片URL（用于模板banner背景）"""
+    up6_name: str = ""
+    """UP六星角色名称（用于模板显示）"""
 
     @property
     def pool_category(self) -> str:
@@ -81,6 +85,11 @@ class EfGachaPoolInfo(BaseModel):
     def paid_pulls(self) -> int:
         """该卡池的付费抽数（不含 isFree）"""
         return sum(1 for record in self.records for pull in record.pulls if not pull.is_free)
+
+    @property
+    def free_pulls(self) -> int:
+        """该卡池的免费抽数（isFree=True）"""
+        return sum(1 for record in self.records for pull in record.pulls if pull.is_free)
 
     @property
     def total_six_stars(self) -> int:

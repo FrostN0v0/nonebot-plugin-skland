@@ -204,21 +204,23 @@ class EfGachaContentPool(BaseModel):
     pool_name: str = ""
     pool_type: str = ""
     up6_name: str = ""
+    up6_image: str = ""
+    """UP六星角色横幅图片URL"""
     up5_name: str = ""
+    up5_image: str = ""
+    rotate_image: str = ""
+    """轮换UP横幅图片URL"""
     all: list[EfGachaContentChar] = Field(default=[])
     rotate_list: list[EfGachaContentRotateItem] = Field(default=[])
 
     @property
     def up_six_char_ids(self) -> list[str]:
-        """获取该卡池中所有UP六星角色的ID列表
+        """获取该卡池中UP六星角色的ID列表
 
-        优先通过 rotate_list 匹配名称获取（含多期轮换UP），
-        否则使用 up6_name 匹配。
+        仅返回 up6_name 对应的角色ID（当期真正的UP角色），
+        rotate_list 中的其他轮换角色不算UP（抽到算歪）。
         all 列表中 rarity 为 1-indexed（6=6★）。
         """
-        if self.rotate_list:
-            up_names = {r.name for r in self.rotate_list}
-            return [c.id for c in self.all if c.rarity == 6 and c.name in up_names]
         if self.up6_name:
             return [c.id for c in self.all if c.rarity == 6 and c.name == self.up6_name]
         return []

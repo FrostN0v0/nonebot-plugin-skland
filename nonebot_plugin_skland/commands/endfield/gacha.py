@@ -4,15 +4,19 @@ from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_alconna import At, Match, UniMessage
 
-from ...model import GachaRecord
 from .utils import check_user_character
 from ...api import SklandAPI, SklandLoginAPI
-from ...schemas import EfGachaInfo, EndfieldPoolType
+from ...data_source import ef_gacha_pool_data
+from ...render import render_ef_gacha_history
+from ...model import SkUser, Character, GachaRecord
 from ...db_handler import select_all_ef_gacha_records
+from ...schemas import CRED, EfGachaInfo, EndfieldPoolType
 from ...utils import (
     send_reaction,
     group_ef_gacha_records,
     get_all_ef_gacha_records,
+    refresh_cred_token_if_needed,
+    refresh_access_token_if_needed,
 )
 
 # 需要遍历的角色池类型
@@ -32,6 +36,11 @@ async def ef_gacha_history_handler(
     bot: Bot,
 ):
     """查询终末地抽卡记录"""
+
+    @refresh_cred_token_if_needed
+    @refresh_access_token_if_needed
+    async def get_user_info(user: SkUser, char: Character):
+        return await SklandAPI.endfield_card(CRED(cred=user.cred, token=user.cred_token), user.user_id, char)
 
     if target.available:
         target_platform_id = target.result.target if isinstance(target.result, At) else target.result
@@ -100,73 +109,43 @@ async def ef_gacha_history_handler(
     gacha_data = group_ef_gacha_records(all_gacha_records)
 
     # 获取每个 SPECIAL 卡池的 UP 角色信息
-    for pool in gacha_data.special_pools:
-        try:
-            content = await SklandAPI.get_ef_gacha_content(pool.pool_id, character.channel_master_id)
-            pool.up_six_chars = content.pool.up_six_char_ids
-            logger.debug(f"卡池 {pool.pool_name}({pool.pool_id}) UP六星: {pool.up_six_chars}")
-        except Exception as e:
-            logger.warning(f"获取卡池 {pool.pool_name} UP信息失败: {e}")
+    for pool in gacha_data.special_pools + gacha_data.weapon_pools:
+        # 优先从本地卡池数据查询 UP 信息
+        local_pool = ef_gacha_pool_data.get_pool(pool.pool_id)
+        if local_pool:
+            pool.up_six_chars = local_pool.up_six_char_ids
+            pool.up6_img = local_pool.up6_image or local_pool.rotate_image
+            pool.up6_name = local_pool.up6_name
+            logger.debug(f"卡池 {pool.pool_name}({pool.pool_id}) UP六星(本地): {pool.up_six_chars}")
+        else:
+            # 本地无数据时 fallback 到实时 API
+            try:
+                content = await SklandAPI.get_ef_gacha_content(pool.pool_id, character.channel_master_id)
+                pool.up_six_chars = content.pool.up_six_char_ids
+                pool.up6_img = content.pool.up6_image or content.pool.rotate_image
+                pool.up6_name = content.pool.up6_name
+                logger.debug(f"卡池 {pool.pool_name}({pool.pool_id}) UP六星(API): {pool.up_six_chars}")
+            except Exception as e:
+                logger.warning(f"获取卡池 {pool.pool_name} UP信息失败: {e}")
 
     total = gacha_data.total_pulls
     char_total = gacha_data.char_total_pulls
     weapon_total = gacha_data.weapon_total_pulls
     new_count = len(record_to_save)
 
-    msg_lines = [
-        f"📊 {character.nickname} 的终末地抽卡统计",
-        f"🎰 总计: {total} 抽 (角色池 {char_total} + 武器池 {weapon_total})",
-        f"🆕 本次新增: {new_count} 条记录",
-        f"🏭 武库配额: 产出 {gacha_data.char_arsenal_quota_earned}"
-        f" | 消耗 {gacha_data.weapon_arsenal_quota_consumed}"
-        f" | 净值 {gacha_data.arsenal_quota_net}",
-    ]
+    user_info = await get_user_info(user, character)
+    if not user_info:
+        await UniMessage.text("获取用户信息失败，无法渲染抽卡记录").send(reply_to=True)
+        return
+    # ── 渲染图片 ──
+    img = await render_ef_gacha_history(gacha_data, user_info.base, character)
+    await UniMessage.image(raw=img).send(at_sender=True)
 
-    # BEGINNER 池信息
-    if gacha_data.beginner_pools:
-        bg = gacha_data.beginner_pools[0]
-        msg_lines.append(
-            f"🌟 新手池: {bg.total_pulls}/40 抽, 6⭐×{bg.total_six_stars}, 产出配额 {bg.arsenal_quota_earned}"
-        )
-
-    # STANDARD 池信息
-    if gacha_data.standard_pools:
-        sp = gacha_data.standard_pools[0]
-        pity_remaining = gacha_data.standard_pity_remaining
-        msg_lines.append(
-            f"📦 常驻池: {sp.total_pulls} 抽, "
-            f"{pity_remaining}次寻访内必出6⭐, "
-            f"垫{sp.pity_count}"
-            f", 产出配额 {sp.arsenal_quota_earned}"
-        )
-
-    # SPECIAL 池信息（跨池小保底 + 每池大保底）
-    if gacha_data.special_pools:
-        small_remaining = gacha_data.special_pity_remaining
-        msg_lines.append(f"🎯 限定池: {gacha_data.special_total_pulls} 抽, {small_remaining}次寻访内必出6⭐")
-        for pool in gacha_data.special_pools:
-            parts = [f"  ├ {pool.pool_name}: {pool.total_pulls} 抽"]
-            parts.append(f"垫{pool.pity_count}")
-            # UP保底信息
-            if pool.up_six_chars:
-                if pool.has_pulled_up_six:
-                    parts.append("已获得UP")
-                else:
-                    up_remaining = gacha_data.special_pool_up_pity_remaining(pool)
-                    parts.append(f"距UP保底 {up_remaining} 抽")
-            parts.append(f"产出配额 {pool.arsenal_quota_earned}")
-            msg_lines.append(", ".join(parts))
-
-    # 武器池信息（各池独立）
-    if gacha_data.weapon_pools:
-        for pool in gacha_data.weapon_pools:
-            msg_lines.append(
-                f"🗡️ {pool.pool_name}: {pool.total_pulls} 抽, "
-                f"垫 {pool.pity_count} 抽, "
-                f"消耗配额 {pool.arsenal_quota_consumed}"
-            )
-
-    await UniMessage("\n".join(msg_lines)).send(at_sender=True)
+    logger.info(
+        f"{character.nickname} 的终末地抽卡统计: "
+        f"总计 {total} 抽 (角色池 {char_total} + 武器池 {weapon_total}), "
+        f"本次新增 {new_count} 条记录"
+    )
     send_reaction(user_session, "done")
 
     # ── 保存 ──

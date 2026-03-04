@@ -1,0 +1,268 @@
+{# 终末地单卡池渲染宏 #}
+{% macro ef_pool_card(pool, pool_label, pool_color, gacha_data=none) %}
+{% set stats = namespace(pity_count=0, five_stars=[]) %}
+
+<div class="flex flex-col gap-1.5 w-full rounded-xl p-2 border border-white/10"
+     style="background-color: #24243e; box-shadow: 0 4px 20px rgba(0,0,0,0.35);">
+    {# 卡池头部 #}
+    <div class="relative rounded-lg overflow-hidden gacha-info-shadow">
+        {# Banner 装饰图 (1151×146 宽幅横条) #}
+        {% if pool.up6_img %}
+        <div class="w-full overflow-hidden" style="aspect-ratio: 1151/146;">
+            <img src="{{ pool.up6_img }}" class="w-full h-full object-cover object-center" />
+        </div>
+        {% else %}
+        <div class="w-full" style="aspect-ratio: 1151/146; background: linear-gradient(90deg, {{ pool_color }}44, {{ pool_color }}11);"></div>
+        {% endif %}
+
+        {# 卡池名称 + 抽数 #}
+        <div class="bg-[#1a1a2e] px-2 py-1">
+            <div class="flex items-center justify-between">
+                <div class="flex flex-col">
+                    <span class="text-white font-[Akrobat] font-bold text-xs truncate max-w-28">{{ pool.pool_name }}</span>
+                    {% if pool.up6_name %}
+                    <span class="text-[#FFCC00] text-[9px] font-[Akrobat] truncate max-w-28">UP: {{ pool.up6_name }}</span>
+                    {% endif %}
+                </div>
+                <div class="flex items-center gap-0.5 bg-[{{ pool_color }}]/90 rounded-md px-1.5 py-0.5">
+                    <span class="text-white font-[Akrobat] font-bold text-sm">{{ pool.total_pulls }}</span>
+                    <span class="text-white/80 text-[9px]">抽</span>
+                </div>
+            </div>
+        </div>
+
+        {# 卡池统计条 #}
+        <div class="bg-[#1a1a2e]/80 px-2 py-1.5 border-t border-white/5">
+            <div class="flex justify-between text-center gap-1">
+                <div class="flex flex-col items-center flex-1">
+                    <span class="font-[Akrobat] font-bold text-sm">
+                        <span class="text-[#FFCC00]">{{ pool.total_six_stars }}</span>{% if pool.up_six_chars %}<span class="text-white/30">/</span><span class="text-[#C04855]">{{ pool.total_six_spook }}</span>{% endif %}
+                    </span>
+                    <span class="text-white/50 text-[9px]">{% if pool.up_six_chars %}6★/歪{% else %}6★{% endif %}</span>
+                </div>
+                <div class="flex flex-col items-center flex-1">
+                    <span class="text-white font-[Akrobat] font-bold text-sm">{{ pool.pity_count }}</span>
+                    <span class="text-white/50 text-[9px]">已垫</span>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    {# 卡池记录列表 #}
+    <div class="flex flex-col-reverse gap-0.5 bg-[#2a2a3e] rounded-lg overflow-hidden gacha-info-shadow">
+        {% for record in pool.records | reverse %}
+        {# 分离免费和付费抽 #}
+        {% set free_pulls_in_group = record.pulls | selectattr('is_free') | list %}
+        {% set paid_pulls_in_group = record.pulls | rejectattr('is_free') | list %}
+
+        {# ── 免费十连条目（不计入保底） ── #}
+        {% if free_pulls_in_group %}
+        {% set free_sixes = free_pulls_in_group | selectattr('rarity', 'equalto', 6) | list %}
+        {% set free_fives = free_pulls_in_group | selectattr('rarity', 'equalto', 5) | list %}
+        {% if free_sixes %}
+        {# 免费十连出了6★，每个6★单独显示 #}
+        {% set multi_free_six = free_sixes | length >= 2 %}
+        {% set free_six_idx = namespace(value=0) %}
+        {% for pull in free_sixes | reverse %}
+        {% set free_six_idx.value = free_six_idx.value + 1 %}
+        <div class="flex flex-col px-2 py-1 border-l-2 border-[#74b9ff] {% if multi_free_six %}multi-six-bg{% endif %}">
+            {% if free_six_idx.value == free_sixes | length %}
+            <div class="flex items-center mb-0.5">
+                <span class="text-[9px] text-[#74b9ff] font-[Akrobat] font-bold">免费10连{% if multi_free_six %} · {{ free_sixes | length }}金{% endif %}</span>
+            </div>
+            {% endif %}
+
+            <div class="flex items-start gap-1.5">
+                {# 左侧：角色头像 + 日期 #}
+                <div class="flex flex-col items-center flex-shrink-0">
+                    <div class="w-7 h-7 rounded-md overflow-hidden bg-[#3a3a4e]">
+                        <img src="{{ pull.item_id | ef_charId_to_avatarUrl }}" class="w-full h-full object-cover" />
+                    </div>
+                    <span class="text-white/40 text-[7px] font-[Bender] mt-0.5">{{ record.gacha_ts | format_timestamp_md }}</span>
+                </div>
+
+                {# 右侧：角色名 + 进度条 + 五星 #}
+                <div class="flex flex-col flex-1 gap-0.5 min-w-0">
+                    <div class="flex items-center gap-1">
+                        <span class="text-white font-[Akrobat] font-bold text-xs truncate">{{ pull.item_name }}</span>
+                        {% if pool.up_six_chars and pull.item_id not in pool.up_six_chars %}
+                        <span class="text-[7px] text-white bg-[#C04855] rounded-xs px-0.5">歪</span>
+                        {% endif %}
+                        {% if pool.up_six_chars and pull.item_id in pool.up_six_chars %}
+                        <span class="text-[7px] text-white bg-[#6C5CE7] rounded-xs px-0.5">UP</span>
+                        {% endif %}
+                        <span class="text-[7px] text-white bg-[#74b9ff] rounded-xs px-0.5">FREE</span>
+                    </div>
+                    <div class="h-4 rounded-md flex items-center" style="width: 100%; background: linear-gradient(90deg, #74b9ff88, #a29bfe88);">
+                        <span class="text-[10px] font-[Bender] font-bold px-1.5 whitespace-nowrap">不计入保底</span>
+                    </div>
+                    {# 免费十连中出的5星 #}
+                    {% if free_six_idx.value == 1 and free_fives %}
+                    <div class="flex flex-wrap gap-0.5 mt-0.5">
+                        {% for group in free_fives | sort(attribute='item_id') | groupby('item_id') %}
+                        <div class="relative inline-block">
+                            <img src="{{ group.list[0].item_id | ef_charId_to_avatarUrl }}" class="w-5 h-5 rounded-sm bg-[#3a3a4e]" />
+                            {% if group.list | length > 1 %}
+                            <div class="absolute right-0 bottom-0 w-2.5 h-2.5 bg-[#080808]/60 text-white text-[8px] flex items-center justify-center">
+                                {{ group.list | length }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        {# 免费十连未出6★，显示汇总条目 #}
+        <div class="flex flex-col px-2 py-1 border-l-2 border-[#74b9ff]">
+            <div class="flex items-start gap-1.5">
+                <div class="flex flex-col items-center flex-shrink-0">
+                    <div class="w-7 h-7 rounded-md overflow-hidden bg-[#3a3a4e] flex items-center justify-center">
+                        <span class="text-[12px]">🎁</span>
+                    </div>
+                    <span class="text-white/40 text-[7px] font-[Bender] mt-0.5">{{ record.gacha_ts | format_timestamp_md }}</span>
+                </div>
+                <div class="flex flex-col flex-1 gap-0.5 min-w-0">
+                    <div class="flex items-center gap-1">
+                        <span class="text-white font-[Akrobat] font-bold text-xs">免费10连</span>
+                        <span class="text-[7px] text-white bg-[#74b9ff] rounded-xs px-0.5">FREE</span>
+                    </div>
+                    <div class="h-4 rounded-md flex items-center" style="width: 100%; background: linear-gradient(90deg, #74b9ff88, #a29bfe88);">
+                        <span class="text-[10px] font-[Bender] font-bold px-1.5 whitespace-nowrap">未出6★</span>
+                    </div>
+                    {# 免费十连中出的5星 #}
+                    {% if free_fives %}
+                    <div class="flex flex-wrap gap-0.5 mt-0.5">
+                        {% for group in free_fives | sort(attribute='item_id') | groupby('item_id') %}
+                        <div class="relative inline-block">
+                            <img src="{{ group.list[0].item_id | ef_charId_to_avatarUrl }}" class="w-5 h-5 rounded-sm bg-[#3a3a4e]" />
+                            {% if group.list | length > 1 %}
+                            <div class="absolute right-0 bottom-0 w-2.5 h-2.5 bg-[#080808]/60 text-white text-[8px] flex items-center justify-center">
+                                {{ group.list | length }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        {# ── 付费抽卡记录（正常保底逻辑） ── #}
+        {% if paid_pulls_in_group %}
+        {% set six_count = paid_pulls_in_group | selectattr('rarity', 'equalto', 6) | list | length %}
+        {% set is_multi_six = six_count >= 2 %}
+        {% set six_index = namespace(value=0) %}
+
+        {% for pull in paid_pulls_in_group | reverse %}
+        {% set stats.pity_count = stats.pity_count + 1 %}
+
+        {% if pull.rarity == 5 %}
+        {% set stats.five_stars = stats.five_stars + [pull] %}
+        {% endif %}
+
+        {% if pull.rarity == 6 %}
+        {% set six_index.value = six_index.value + 1 %}
+
+        <div class="flex flex-col px-2 py-1 {% if is_multi_six %}multi-six-bg{% endif %} {% if is_multi_six and six_index.value == six_count %}border-l-2 border-[#30B63E]{% endif %}">
+            {% if is_multi_six and six_index.value == six_count %}
+            <div class="flex items-center mb-0.5">
+                <span class="text-[9px] text-[#30B63E] font-[Akrobat] font-bold">十连{{ six_count }}金</span>
+            </div>
+            {% endif %}
+
+            <div class="flex items-start gap-1.5">
+                {# 左侧：角色头像 + 日期 #}
+                <div class="flex flex-col items-center flex-shrink-0">
+                    <div class="w-7 h-7 rounded-md overflow-hidden bg-[#3a3a4e]">
+                        <img src="{{ pull.item_id | ef_charId_to_avatarUrl }}" class="w-full h-full object-cover" />
+                    </div>
+                    <span class="text-white/40 text-[7px] font-[Bender] mt-0.5">{{ record.gacha_ts | format_timestamp_md }}</span>
+                </div>
+
+                {# 右侧：角色名（压在进度条上方）+ 进度条 + 五星头像 #}
+                <div class="flex flex-col flex-1 gap-0.5 min-w-0">
+                    {# 角色名 + 标记，压在进度条上方 #}
+                    <div class="flex items-center gap-1">
+                        <span class="text-white font-[Akrobat] font-bold text-xs truncate">{{ pull.item_name }}</span>
+                        {% if pool.up_six_chars and pull.item_id not in pool.up_six_chars %}
+                        <span class="text-[7px] text-white bg-[#C04855] rounded-xs px-0.5">歪</span>
+                        {% endif %}
+                        {% if pool.up_six_chars and pull.item_id in pool.up_six_chars %}
+                        <span class="text-[7px] text-white bg-[#6C5CE7] rounded-xs px-0.5">UP</span>
+                        {% endif %}
+                        {% if pull.is_new %}
+                        <span class="text-[7px] text-white bg-[#30B63E] rounded-xs px-0.5">NEW</span>
+                        {% endif %}
+                        {% if stats.pity_count <= 10 or stats.pity_count >= 70 %}
+                        <span class="text-[8px] font-[Bender] px-1 rounded-xs whitespace-nowrap {% if stats.pity_count <= 10 %}bg-[#30B63E]{% else %}bg-[#ef6853]{% endif %}">
+                            {% if stats.pity_count <= 10 %}超欧{% elif stats.pity_count >= 70 %}超非{% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                    {# 进度条（抽数显示在条内，限定最小宽度） #}
+                    {% set bar_class = 'green-stripe-bar' %}
+                    {% if stats.pity_count >= 70 %}
+                    {% set bar_class = 'red-stripe-bar' %}
+                    {% elif stats.pity_count >= 45 %}
+                    {% set bar_class = 'yellow-stripe-bar' %}
+                    {% endif %}
+                    <div class="h-4 rounded-md flex items-center {{ bar_class }}"
+                        style="width: {{ [15 + (stats.pity_count / 80) * 85, 100] | min }}%; min-width: 36px;">
+                        <span class="text-[10px] font-[Bender] font-bold px-1 whitespace-nowrap">{{ stats.pity_count }}抽</span>
+                    </div>
+                    {# 中间出的5星（头像形式，重复角色带数字角标） #}
+                    {% if stats.five_stars %}
+                    <div class="flex flex-wrap gap-0.5 mt-0.5">
+                        {% for group in stats.five_stars | sort(attribute='item_id') | groupby('item_id') %}
+                        <div class="relative inline-block">
+                            <img src="{{ group.list[0].item_id | ef_charId_to_avatarUrl }}" class="w-5 h-5 rounded-sm bg-[#3a3a4e]" />
+                            {% if group.list | length > 1 %}
+                            <div class="absolute right-0 bottom-0 w-2.5 h-2.5 bg-[#080808]/60 text-white text-[8px] flex items-center justify-center">
+                                {{ group.list | length }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% set stats.pity_count = 0 %}
+        {% set stats.five_stars = [] %}
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+
+        {% endfor %}
+    </div>
+</div>
+{% endmacro %}
+
+
+{# 卡池分类列渲染 #}
+{% macro ef_pool_column(pools, category_label, category_color, gacha_data=none) %}
+{% if pools %}
+<div class="flex flex-col gap-2 flex-1">
+    {# 分类标题 #}
+    <div class="flex items-center gap-1.5">
+        <div class="w-1 h-3.5 rounded-full" style="background-color: {{ category_color }}"></div>
+        <span class="text-white font-[Akrobat] font-bold text-sm">{{ category_label }}</span>
+        <span class="text-white/40 font-[Akrobat] text-[10px]">({{ pools | sum(attribute='total_pulls') }}抽)</span>
+    </div>
+
+    {% for pool in pools %}
+    {{ ef_pool_card(pool, category_label, category_color, gacha_data=gacha_data) }}
+    {% endfor %}
+</div>
+{% endif %}
+{% endmacro %}

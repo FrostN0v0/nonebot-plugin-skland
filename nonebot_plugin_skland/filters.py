@@ -81,6 +81,17 @@ def loads_json(json_str: str) -> dict:
     return json.loads(json_str)
 
 
+def ef_charId_to_avatarUrl(item_id: str) -> str:
+    """终末地角色/武器头像URL拼接
+
+    角色ID以 chr_ 开头，使用 charremoteicon 路径；
+    武器ID以 wpn_ 开头，使用 itemiconbig 路径。
+    """
+    if item_id.startswith("wpn_"):
+        return f"https://lulush.microgg.cn/BeyondUID/resource/itemiconbig/{item_id}.png"
+    return f"https://lulush.microgg.cn/BeyondUID/resource/charremoteicon/icon_{item_id}.png"
+
+
 def format_stamina_time(remaining_seconds: float) -> str:
     """将剩余秒数格式化为 XXh XXmin 格式"""
     if remaining_seconds <= 0:

@@ -6,9 +6,9 @@ from nonebot.permission import SuperUser
 from nonebot_plugin_user import UserSession
 from nonebot_plugin_alconna import Arparma, UniMessage
 
-from ..config import gacha_table_data
 from ..exception import RequestException
 from ..utils import send_reaction, download_img_resource
+from ..data_source import gacha_table_data, ef_gacha_pool_data
 
 
 async def sync_handler(
@@ -59,13 +59,21 @@ async def sync_handler(
             try:
                 downloaded = await gacha_table_data.load(force=bool(force_update))
                 if not downloaded and not force_update:
-                    messages.append("📦 数据资源已是最新版本")
+                    messages.append("📦 明日方舟数据资源已是最新版本")
                 else:
                     version = gacha_table_data.version or gacha_table_data.origin_version or "未知"
-                    messages.append(f"✅ 数据资源更新成功，版本: {version}")
+                    messages.append(f"✅ 明日方舟数据资源更新成功，版本: {version}")
             except RequestException as e:
-                logger.error(f"下载数据资源失败: {e}")
-                messages.append(f"❌ 数据资源更新失败: {e.args[0]}")
+                logger.error(f"下载明日方舟数据资源失败: {e}")
+                messages.append(f"❌ 明日方舟数据资源更新失败: {e.args[0]}")
+                has_error = True
+
+            try:
+                await ef_gacha_pool_data.load()
+                messages.append(f"✅ 终末地卡池数据更新成功，共 {len(ef_gacha_pool_data.pool_table)} 个卡池")
+            except RequestException as e:
+                logger.error(f"下载终末地卡池数据失败: {e}")
+                messages.append(f"❌ 终末地卡池数据更新失败: {e.args[0]}")
                 has_error = True
 
         if has_error:

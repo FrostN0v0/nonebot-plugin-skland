@@ -36,7 +36,11 @@ class EfGroupedGachaRecord(BaseModel):
         if isinstance(values, dict):
             for key in ("beginner_pools", "standard_pools", "special_pools", "weapon_pools"):
                 if key in values and values[key]:
-                    values[key] = sorted(values[key], key=lambda x: x.pool_id, reverse=True)
+                    values[key] = sorted(
+                        values[key],
+                        key=lambda x: max((r.gacha_ts for r in x.records), default=0),
+                        reverse=True,
+                    )
         return values
 
     # ── 分类属性 ──
@@ -62,8 +66,54 @@ class EfGroupedGachaRecord(BaseModel):
         return sum(pool.total_pulls for pool in self.standard_pools)
 
     @property
+    def standard_total_six(self) -> int:
+        """常驻池总6★数"""
+        return sum(pool.total_six_stars for pool in self.standard_pools)
+
+    @property
+    def standard_six_avg(self) -> float:
+        """常驻池六星平均抽数
+
+        计算方式：去掉免费十连，去掉距上次出6★的垫抽后，总付费抽数除以6★总数
+        """
+        six_count = self.standard_total_six
+        if six_count == 0:
+            return 0.0
+        total_paid = sum(pool.paid_pulls for pool in self.standard_pools)
+        return (total_paid - self.standard_pity) / six_count
+
+    @property
     def special_total_pulls(self) -> int:
         return sum(pool.total_pulls for pool in self.special_pools)
+
+    @property
+    def special_total_six(self) -> int:
+        """限定池总6★数"""
+        return sum(pool.total_six_stars for pool in self.special_pools)
+
+    @property
+    def special_total_spook(self) -> int:
+        """限定池总歪卡数"""
+        return sum(pool.total_six_spook for pool in self.special_pools)
+
+    @property
+    def special_up_count(self) -> int:
+        """限定池出UP角色总数"""
+        return self.special_total_six - self.special_total_spook
+
+    @property
+    def special_up_avg(self) -> float:
+        """限定池UP平均抽数
+
+        计算方式：去掉免费十连，去掉距上次出UP的垫抽后，总付费抽数除以UP角色总数
+        """
+        up_count = self.special_up_count
+        if up_count == 0:
+            return 0.0
+        total_paid = sum(pool.paid_pulls for pool in self.special_pools)
+        # 去掉距上次出UP后的垫抽
+        pity_after_last_up = self._special_up_pity()
+        return (total_paid - pity_after_last_up) / up_count
 
     @property
     def char_total_pulls(self) -> int:
@@ -162,6 +212,74 @@ class EfGroupedGachaRecord(BaseModel):
         排除 isFree 抽。
         """
         return max(0, 120 - pool.up_pity_count)
+
+    def _special_up_pity(self) -> int:
+        """限定池距上次出UP后的付费抽数
+
+        从最新记录往回数，跳过 isFree，直到遇到非免费的 UP 6★。
+        """
+        all_pulls = self._special_all_pulls_chronological()
+        count = 0
+        for pull, pool_id in reversed(all_pulls):
+            if pull.is_free:
+                continue
+            # 找到对应卡池的 up_six_chars
+            pool_obj = next((p for p in self.special_pools if p.pool_id == pool_id), None)
+            if pool_obj and pull.rarity == 6 and pull.item_id in pool_obj.up_six_chars:
+                return count
+            count += 1
+        return count
+
+    @property
+    def weapon_total_six(self) -> int:
+        """武器池总6★数"""
+        return sum(pool.total_six_stars for pool in self.weapon_pools)
+
+    @property
+    def weapon_total_spook(self) -> int:
+        """武器池总歪卡数"""
+        return sum(pool.total_six_spook for pool in self.weapon_pools)
+
+    @property
+    def weapon_up_count(self) -> int:
+        """武器池出UP武器总数"""
+        return self.weapon_total_six - self.weapon_total_spook
+
+    @property
+    def weapon_up_avg(self) -> float:
+        """武器池UP平均抽数
+
+        计算方式：去掉免费十连，去掉距上次出UP的垫抽后，总付费抽数除以UP武器总数
+        """
+        up_count = self.weapon_up_count
+        if up_count == 0:
+            return 0.0
+        total_paid = sum(pool.paid_pulls for pool in self.weapon_pools)
+        # 武器池各池独立保底，取最新池的垫抽
+        pity_after_last_up = self._weapon_up_pity()
+        return (total_paid - pity_after_last_up) / up_count
+
+    def _weapon_up_pity(self) -> int:
+        """武器池距上次出UP后的付费抽数
+
+        武器池各池独立，从所有武器池的最新记录往回数。
+        """
+        all_entries: list[tuple[int, int, EfGachaPull, str]] = []
+        for pool in self.weapon_pools:
+            for group in pool.records:
+                for pull in group.pulls:
+                    all_entries.append((group.gacha_ts, pull.seq_id, pull, pool.pool_id))
+        all_entries.sort(key=lambda x: (x[0], x[1]))
+
+        count = 0
+        for _, _, pull, pool_id in reversed(all_entries):
+            if pull.is_free:
+                continue
+            pool_obj = next((p for p in self.weapon_pools if p.pool_id == pool_id), None)
+            if pool_obj and pull.rarity == 6 and pull.item_id in pool_obj.up_six_chars:
+                return count
+            count += 1
+        return count
 
     # ── 武器池保底（各池独立） ──
 

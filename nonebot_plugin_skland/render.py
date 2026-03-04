@@ -5,7 +5,16 @@ from nonebot_plugin_htmlrender import template_to_pic
 
 from .model import Character
 from .config import RES_DIR, TEMPLATES_DIR, config
-from .schemas import Clue, Status, ArkCard, RogueData, EndfieldCard, GroupedGachaRecord
+from .schemas import (
+    Clue,
+    Status,
+    ArkCard,
+    RogueData,
+    PlayerBase,
+    EndfieldCard,
+    GroupedGachaRecord,
+    EfGroupedGachaRecord,
+)
 from .filters import (
     loads_json,
     format_date_ymd,
@@ -20,6 +29,7 @@ from .filters import (
     get_profession_icon,
     format_timestamp_str,
     charId_to_portraitUrl,
+    ef_charId_to_avatarUrl,
     get_equip_rarity_color,
     time_to_next_monday_4am,
 )
@@ -150,6 +160,27 @@ async def render_gacha_history(
         },
         pages={
             "viewport": {"width": 720, "height": 1},
+            "base_url": f"file://{TEMPLATES_DIR}",
+        },
+        device_scale_factor=1.5,
+    )
+
+
+async def render_ef_gacha_history(props: EfGroupedGachaRecord, player: PlayerBase, char: Character) -> bytes:
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="ef_gacha.html.jinja2",
+        templates={
+            "avatar_url": player.avatarUrl,
+            "record": props,
+            "character": char,
+        },
+        filters={
+            "format_timestamp_md": format_timestamp_md,
+            "ef_charId_to_avatarUrl": ef_charId_to_avatarUrl,
+        },
+        pages={
+            "viewport": {"width": 800, "height": 1},
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         device_scale_factor=1.5,

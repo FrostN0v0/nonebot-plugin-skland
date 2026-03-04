@@ -12,6 +12,7 @@ from .arknights import GachaPool as GachaPool
 from .arknights import GachaPull as GachaPull
 from .arknights import RogueData as RogueData
 from .binding import BindingApp as BindingApp
+from .endfield import PlayerBase as PlayerBase
 from .arknights import AssistChar as AssistChar
 from .arknights import GachaGroup as GachaGroup
 from .arknights import GachaTable as GachaTable

@@ -10,12 +10,13 @@ from nonebot_plugin_user import UserSession
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_alconna import UniMessage, message_reaction
 
+from .data_source import gacha_table_data
 from .api import SklandAPI, SklandLoginAPI
 from .model import SkUser, Character, GachaRecord
 from .download import DownloadResult, GameResourceDownloader
+from .config import RES_DIR, CACHE_DIR, RESOURCE_ROUTES, CustomSource, config
 from .db_handler import select_user_characters, delete_character_gacha_records
 from .exception import LoginException, RequestException, UnauthorizedException
-from .config import RES_DIR, CACHE_DIR, RESOURCE_ROUTES, CustomSource, config, gacha_table_data
 from .schemas import (
     CRED,
     GachaCate,

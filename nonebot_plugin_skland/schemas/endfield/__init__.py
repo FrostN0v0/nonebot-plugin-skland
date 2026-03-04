@@ -1,3 +1,4 @@
+from .card import PlayerBase as PlayerBase
 from .gacha import EfGachaInfo as EfGachaInfo
 from .gacha import EfGachaPull as EfGachaPull
 from .card import EndfieldCard as EndfieldCard

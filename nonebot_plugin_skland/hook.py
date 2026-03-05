@@ -1,9 +1,10 @@
 from nonebot import logger, get_driver
 from nonebot_plugin_alconna import command_manager
 
+from .config import CACHE_DIR, config
 from .exception import RequestException
 from .utils import download_img_resource
-from .config import CACHE_DIR, config, gacha_table_data
+from .data_source import gacha_table_data, ef_gacha_pool_data
 
 driver = get_driver()
 shortcut_cache = CACHE_DIR / "shortcut.db"
@@ -16,6 +17,11 @@ async def startup():
     except RequestException as e:
         logger.error(f"检查卡池数据更新加载失败: {e}")
     logger.debug("Skland gacha table data loaded")
+    try:
+        await ef_gacha_pool_data.load()
+    except RequestException as e:
+        logger.error(f"终末地卡池数据加载失败: {e}")
+    logger.debug("Endfield gacha pool table data loaded")
     command_manager.load_cache(shortcut_cache)
     logger.debug("Skland shortcuts cache loaded")
     if config.check_res_update:

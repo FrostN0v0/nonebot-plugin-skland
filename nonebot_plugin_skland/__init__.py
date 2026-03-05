@@ -40,7 +40,7 @@ __plugin_meta__ = PluginMetadata(
     supported_adapters=inherit_supported_adapters("nonebot_plugin_alconna"),
     extra={
         "author": "FrostN0v0 <1614591760@qq.com>",
-        "version": "0.6.3",
+        "version": "0.6.4-rc.1",
     },
 )
 __plugin_meta__.extra.update(extra_data)
@@ -241,3 +241,20 @@ async def _(
     show_all = result.find("efcard.all")
     is_simple = result.find("efcard.simple")
     await efcard_handler(user_session, session, target, show_all, is_simple)
+
+
+@skland.assign("efgacha")
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+    begin: Match[int],
+    limit: Match[int],
+    target: Match[At | int],
+    bot: Bot,
+    result: Arparma,
+):
+    """查询终末地抽卡记录"""
+    from .commands.endfield import ef_gacha_history_handler
+
+    update = result.find("efgacha.update")
+    await ef_gacha_history_handler(user_session, session, begin, limit, target, bot, update)

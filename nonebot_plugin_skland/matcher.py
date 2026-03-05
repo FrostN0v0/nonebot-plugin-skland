@@ -123,6 +123,14 @@ skland_command = Alconna(
         Option("-s|--simple|simple", help_text="使用简化背景"),
         help_text="终末地角色面板查询",
     ),
+    Subcommand(
+        "efgacha",
+        Args["target?#目标", At | int],
+        Option("-b|--begin|begin", Args["begin", int], help_text="查询起始位置"),
+        Option("-l|--limit|limit", Args["limit", int], help_text="查询抽卡记录卡池渲染上限"),
+        Option("-u|--update|update", help_text="从接口拉取最新数据并更新"),
+        help_text="终末地抽卡记录查询",
+    ),
     namespace=alc_config.namespaces["skland"],
     meta=CommandMeta(
         description="通过森空岛查询游戏数据",
@@ -156,10 +164,12 @@ skland.shortcut("全体角色更新", {"command": "skland char update --all", "f
 skland.shortcut("资源更新", {"command": "skland sync", "fuzzy": True, "prefix": True})
 skland.shortcut("战绩详情", {"command": "skland rginfo", "fuzzy": True, "prefix": True})
 skland.shortcut("收藏战绩详情", {"command": "skland rginfo -f", "fuzzy": True, "prefix": True})
-skland.shortcut("方舟抽卡记录", {"command": "skland gacha", "fuzzy": True, "prefix": True})
+skland.shortcut("方舟抽卡记录", {"command": "skland gacha -l 3", "fuzzy": True, "prefix": True})
 skland.shortcut("导入抽卡记录", {"command": "skland import", "fuzzy": True, "prefix": True})
 skland.shortcut("终末地签到", {"command": "skland efsign sign --all", "fuzzy": False, "prefix": True})
 skland.shortcut("终末地全体签到", {"command": "skland efsign all", "fuzzy": False, "prefix": True})
 skland.shortcut("终末地签到详情", {"command": "skland efsign status", "fuzzy": False, "prefix": True})
 skland.shortcut("终末地全体签到详情", {"command": "skland efsign status --all", "fuzzy": False, "prefix": True})
 skland.shortcut("ef", {"command": "skland efcard", "fuzzy": True, "prefix": True})
+skland.shortcut("终末地抽卡记录", {"command": "skland efgacha", "fuzzy": True, "prefix": True})
+skland.shortcut("终末地抽卡更新", {"command": "skland efgacha -u", "fuzzy": True, "prefix": True})

@@ -123,16 +123,17 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 在 nonebot2 项目的`.env`文件中修改配置项
 
-|                配置项                | 必填  |   默认值    |               说明                |
-| :----------------------------------: | :---: | :---------: | :-------------------------------: |
-|      `skland__github_proxy_url`      |  否   |    `""`     |          GitHub 代理 URL          |
-|        `skland__github_token`        |  否   |    `""`     |           GitHub Token            |
-|      `skland__check_res_update`      |  否   |   `False`   |     是否在启动时检查资源更新      |
-|     `skland__background_source`      |  否   | `"default"` |           背景图片来源            |
-| `skland__endfield_background_simple` |  否   |   `False`   |      终末地背景图片简化模式       |
-|  `skland__rogue_background_source`   |  否   |  `"rogue"`  |       肉鸽战绩背景图片来源        |
-|        `skland__argot_expire`        |  否   |    `300`    |      暗语消息过期时间（秒）       |
-|      `skland__gacha_render_max`      |  否   |    `30`     | 抽卡记录单图渲染上限（单位:卡池） |
+|                配置项                | 必填  |   默认值    |                   说明                    |
+| :----------------------------------: | :---: | :---------: | :---------------------------------------: |
+|      `skland__github_proxy_url`      |  否   |    `""`     |              GitHub 代理 URL              |
+|        `skland__github_token`        |  否   |    `""`     |               GitHub Token                |
+|      `skland__check_res_update`      |  否   |   `False`   |         是否在启动时检查资源更新          |
+|     `skland__background_source`      |  否   | `"default"` |               背景图片来源                |
+| `skland__endfield_background_simple` |  否   |   `False`   |          终末地背景图片简化模式           |
+|  `skland__rogue_background_source`   |  否   |  `"rogue"`  |           肉鸽战绩背景图片来源            |
+|        `skland__argot_expire`        |  否   |    `300`    |          暗语消息过期时间（秒）           |
+|      `skland__gacha_render_max`      |  否   |    `30`     | 明日方舟抽卡记录单图渲染上限（单位:卡池） |
+|    `skland__ef_gacha_render_max`     |  否   |     `5`     |      终末地抽卡记录单图渲染卡池上限       |
 
 > [!TIP]
 > 以上配置项均~~没什么用~~按需填写，GitHub Token 用于解决 fetch_file_list 接口到达免费调用上限，但不会有那么频繁的更新频率，99.98%的概率是用不上的。~~只是因为我开发测试的时候上限了，所以有了这项~~,
@@ -222,8 +223,8 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 
 #### 终末地签到
 
-| 指令                           | 权限     | 说明                      |
-| ------------------------------ | -------- | ------------------------- |
+| 指令                          | 权限     | 说明                      |
+| ----------------------------- | -------- | ------------------------- |
 | `skland efsign sign --all`    | 所有     | 签到所有绑定角色          |
 | `skland efsign sign -u <uid>` | 所有     | 指定 UID 角色签到         |
 | `skland efsign status`        | 所有     | 查询个人角色签到状态      |
@@ -234,8 +235,8 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 
 #### 终末地角色卡片
 
-| 指令                   | 权限 | 说明                         |
-| ---------------------- | ---- | ---------------------------- |
+| 指令                  | 权限 | 说明                         |
+| --------------------- | ---- | ---------------------------- |
 | `skland efcard`       | 所有 | 查询终末地角色信息卡片       |
 | `skland efcard @某人` | 所有 | 查询指定用户的终末地角色信息 |
 | `skland efcard -a`    | 所有 | 展示所有角色                 |
@@ -292,6 +293,27 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 > - 单页卡池数超过配置的 `skland__gacha_render_max` 会输出多张图片
 
 <details open>
+<summary><b>🎰 终末地抽卡记录</b></summary>
+
+| 指令                                 | 权限 | 说明                               |
+| ------------------------------------ | ---- | ---------------------------------- |
+| `skland efgacha`                     | 所有 | 查询终末地抽卡记录（从数据库缓存） |
+| `skland efgacha -u`                  | 所有 | 从接口拉取最新数据并更新           |
+| `skland efgacha -b <起始> -l <结束>` | 所有 | 指定各类别卡池渲染范围             |
+| `skland efgacha -u -l 3`             | 所有 | 更新数据并只渲染各类别前3个卡池    |
+
+**快捷指令：** `终末地抽卡记录` `终末地抽卡更新`
+
+</details>
+
+> [!TIP]
+> 终末地抽卡记录使用提示：
+>
+> - 默认从数据库缓存读取渲染，首次使用或需要更新时请加 `-u` 参数
+> - `-b`/`-l` 对各类别卡池（限定/武器/常驻/新手）分别计数
+> - 单页卡池数超过配置的 `skland__ef_gacha_render_max` 会自动分页发送多张图片
+
+<details open>
 <summary><b>🔧 资源管理</b></summary>
 
 | 指令                   | 权限     | 说明                   |
@@ -341,11 +363,11 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `签到详情`           | `skland arksign status`       | 个人签到状态       |
 | `全体签到`           | `skland arksign all`          | 全部角色签到       |
 | `全体签到详情`       | `skland arksign status --all` | 全部签到状态       |
-| `ef`                | `skland efcard`              | 终末地角色卡片     |
-| `终末地签到`         | `skland efsign sign --all`   | 终末地签到         |
-| `终末地签到详情`     | `skland efsign status`       | 终末地签到状态     |
-| `终末地全体签到`     | `skland efsign all`          | 终末地全部签到     |
-| `终末地全体签到详情` | `skland efsign status --all` | 终末地全部签到状态 |
+| `ef`                 | `skland efcard`               | 终末地角色卡片     |
+| `终末地签到`         | `skland efsign sign --all`    | 终末地签到         |
+| `终末地签到详情`     | `skland efsign status`        | 终末地签到状态     |
+| `终末地全体签到`     | `skland efsign all`           | 终末地全部签到     |
+| `终末地全体签到详情` | `skland efsign status --all`  | 终末地全部签到状态 |
 | `角色更新`           | `skland char update`          | 更新角色信息       |
 | `全体角色更新`       | `skland char update --all`    | 更新所有用户角色   |
 | `资源更新`           | `skland sync`                 | 更新资源文件       |
@@ -356,8 +378,10 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `傀影肉鸽`           | `skland rogue --topic 傀影`   | 傀影主题战绩       |
 | `战绩详情`           | `skland rginfo`               | 查询战绩详情       |
 | `收藏战绩详情`       | `skland rginfo -f`            | 查询收藏战绩       |
-| `方舟抽卡记录`       | `skland gacha`                | 查询抽卡记录       |
+| `方舟抽卡记录`       | `skland gacha -l 3`           | 查询抽卡记录       |
 | `导入抽卡记录`       | `skland import`               | 导入抽卡数据       |
+| `终末地抽卡记录`     | `skland efgacha`              | 终末地抽卡记录     |
+| `终末地抽卡更新`     | `skland efgacha -u`           | 拉取最新抽卡数据   |
 
 </details>
 
@@ -485,6 +509,7 @@ Bot: skland::skland 的快捷指令: "查战绩" 添加成功
 - [x] 支持抽卡记录导入(从小黑盒)
 - [x] 抽卡记录分页
 - [x] 支持终末地角色信息查询及签到
+- [x] 支持终末地抽卡记录查询及分页
 - [ ] 实现 box 查询
 - [ ] 实现图鉴查询
 - [ ] 完善多服账号管理

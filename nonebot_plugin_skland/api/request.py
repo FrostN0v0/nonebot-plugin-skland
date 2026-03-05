@@ -21,7 +21,11 @@ from ..schemas import (
     EndfieldCard,
     GachaResponse,
     ArkSignResponse,
+    EndfieldPoolType,
+    EfCharGachaResponse,
     EndfieldSignResponse,
+    EfWeaponGachaResponse,
+    EfGachaContentResponse,
 )
 
 base_url = "https://zonai.skland.com/api/v1"
@@ -209,7 +213,7 @@ class SklandAPI:
         gachaTs: str | None = None,
         pos: int | None = None,
     ) -> GachaResponse:
-        """获取抽卡记录"""
+        """获取明日方舟抽卡记录"""
         gacha_history_url = "https://ak.hypergryph.com/user/api/inquiry/gacha/history"
         query_params = {
             "uid": uid,
@@ -239,7 +243,77 @@ class SklandAPI:
                 raise RequestException(f"获取抽卡记录失败: {e}") from e
 
     @classmethod
-    async def endfield_sign(cls, cred: CRED, uid: str, server_id: str) -> EndfieldSignResponse:
+    async def get_ef_gacha_history(
+        cls,
+        pool_type: EndfieldPoolType,
+        server_id: str,
+        role_token: str,
+        seq_id: str | None = None,
+    ) -> EfCharGachaResponse | EfWeaponGachaResponse:
+        """获取终末地抽卡记录"""
+        is_weapon = pool_type == EndfieldPoolType.WEAPON
+        pool_url = "weapon" if is_weapon else "char"
+        ef_gacha_url = f"https://ef-webview.hypergryph.com/api/record/{pool_url}"
+        query_params: dict = {
+            "token": role_token,
+            "server_id": server_id,
+            "lang": "zh-cn",
+        }
+        if not is_weapon:
+            query_params["pool_type"] = pool_type.value
+        if seq_id is not None:
+            query_params["seq_id"] = seq_id
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    ef_gacha_url,
+                    params=query_params,
+                )
+                if status := response.json().get("code"):
+                    if status == 10000:
+                        raise UnauthorizedException(f"获取终末地抽卡记录失败：{response.json().get('message')}")
+                    elif status == 10002:
+                        raise LoginException(f"获取终末地抽卡记录失败：{response.json().get('message')}")
+                    if status != 0:
+                        raise RequestException(f"获取终末地抽卡记录失败：{response.json().get('message')}")
+                data = response.json()["data"]
+                if is_weapon:
+                    return EfWeaponGachaResponse(**data)
+                return EfCharGachaResponse(**data)
+            except httpx.HTTPError as e:
+                raise RequestException(f"获取终末地抽卡记录失败: {e}") from e
+
+    @classmethod
+    async def get_ef_gacha_content(
+        cls,
+        pool_id: str,
+        server_id: str,
+    ) -> EfGachaContentResponse:
+        """获取终末地卡池内容（UP角色信息）
+
+        Args:
+            pool_id: 卡池ID（如 special_xxx）。
+            server_id: 服务器ID。
+        """
+        content_url = "https://ef-webview.hypergryph.com/api/content"
+        query_params = {
+            "pool_id": pool_id,
+            "server_id": server_id,
+            "lang": "zh-cn",
+        }
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(content_url, params=query_params)
+                resp_json = response.json()
+                if status := resp_json.get("code"):
+                    if status != 0:
+                        raise RequestException(f"获取终末地卡池内容失败：{resp_json.get('message')}")
+                return EfGachaContentResponse(**resp_json["data"])
+            except httpx.HTTPError as e:
+                raise RequestException(f"获取终末地卡池内容失败: {e}") from e
+
+    @classmethod
+    async def endfield_sign(cls, cred: CRED, role_id: str, server_id: str) -> EndfieldSignResponse:
         """进行明日方舟：终末地签到"""
         sign_url = "https://zonai.skland.com/web/v1/game/endfield/attendance"
         headers = cls.get_sign_header(
@@ -248,7 +322,7 @@ class SklandAPI:
             method="post",
             query_body=None,
         )
-        game_role = f"3_{uid}_{server_id}"
+        game_role = f"3_{role_id}_{server_id}"
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
@@ -262,19 +336,19 @@ class SklandAPI:
                 logger.debug(f"终末地签到回复：{response.json()}")
                 if status := response.json().get("code"):
                     if status == 10000:
-                        raise UnauthorizedException(f"角色 {uid} 终末地签到失败：{response.json().get('message')}")
+                        raise UnauthorizedException(f"角色 {role_id} 终末地签到失败：{response.json().get('message')}")
                     elif status == 10002:
-                        raise LoginException(f"角色 {uid} 终末地签到失败：{response.json().get('message')}")
+                        raise LoginException(f"角色 {role_id} 终末地签到失败：{response.json().get('message')}")
                     elif status != 0:
-                        raise RequestException(f"角色 {uid} 终末地签到失败：{response.json().get('message')}")
+                        raise RequestException(f"角色 {role_id} 终末地签到失败：{response.json().get('message')}")
             except httpx.HTTPError as e:
-                raise RequestException(f"角色 {uid} 终末地签到失败: {e}") from e
+                raise RequestException(f"角色 {role_id} 终末地签到失败: {e}") from e
             return EndfieldSignResponse(**response.json()["data"])
 
     @classmethod
     async def endfield_card(cls, cred: CRED, uid: str, char: Character) -> EndfieldCard:
         """获取终末地角色信息"""
-        game_info_url = f"https://zonai.skland.com/web/v1/game/endfield/card/detail?roleId={char.uid}&serverId={char.channel_master_id}&userId={uid}"
+        game_info_url = f"https://zonai.skland.com/web/v1/game/endfield/card/detail?roleId={char.role_id}&serverId={char.channel_master_id}&userId={uid}"
         headers = cls.get_sign_header(
             cred,
             game_info_url,

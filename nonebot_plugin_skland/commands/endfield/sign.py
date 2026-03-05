@@ -18,8 +18,8 @@ from ...schemas import CRED, EndfieldSignResponse
 from ...db_handler import (
     select_all_users,
     get_endfield_characters,
-    get_endfield_character_by_uid,
     get_default_endfield_character,
+    get_endfield_character_by_role_id,
 )
 from ...utils import (
     send_reaction,
@@ -41,10 +41,10 @@ async def ef_sign_handler(
 
     @refresh_cred_token_if_needed
     @refresh_access_token_if_needed
-    async def sign_in(user: SkUser, uid: str, server_id: str):
+    async def sign_in(user: SkUser, role_id: str, server_id: str):
         """执行签到逻辑"""
         cred = CRED(cred=user.cred, token=user.cred_token)
-        return await SklandAPI.endfield_sign(cred, uid, server_id=server_id)
+        return await SklandAPI.endfield_sign(cred, role_id, server_id=server_id)
 
     user = await session.get(SkUser, user_session.user_id)
     if not user:
@@ -52,7 +52,7 @@ async def ef_sign_handler(
         await UniMessage("未绑定 skland 账号").finish(at_sender=True)
 
     if uid.available:
-        chars = [await get_endfield_character_by_uid(user, uid.result, session)]
+        chars = [await get_endfield_character_by_role_id(user, uid.result, session)]
     elif result.find("efsign.sign.all"):
         chars = await get_endfield_characters(user, session)
     elif character := await get_default_endfield_character(user, session):
@@ -63,7 +63,7 @@ async def ef_sign_handler(
 
     sign_result: dict[str, EndfieldSignResponse] = {}
     for character in chars:
-        if res := await sign_in(user, str(character.uid), character.channel_master_id):
+        if res := await sign_in(user, character.role_id, character.channel_master_id):
             sign_result[character.nickname] = res
 
     if sign_result:
@@ -79,10 +79,10 @@ async def ef_sign_handler(
 
 @refresh_cred_token_with_error_return
 @refresh_access_token_with_error_return
-async def endfield_sign_in(user: SkUser, uid: str, server_id: str) -> EndfieldSignResponse:
+async def endfield_sign_in(user: SkUser, role_id: str, server_id: str) -> EndfieldSignResponse:
     """执行终末地签到逻辑（带错误返回）"""
     cred = CRED(cred=user.cred, token=user.cred_token)
-    return await SklandAPI.endfield_sign(cred, uid, server_id=server_id)
+    return await SklandAPI.endfield_sign(cred, role_id, server_id=server_id)
 
 
 async def ef_sign_status_handler(
@@ -159,7 +159,7 @@ async def ef_sign_all_handler(
         characters = await get_endfield_characters(user, session)
         for character in characters:
             sign_result[character.nickname] = await endfield_sign_in(
-                user, str(character.uid), character.channel_master_id
+                user, character.role_id, character.channel_master_id
             )
     serializable_sign_result["data"] = {
         nickname: model_dump(res) if isinstance(res, EndfieldSignResponse) else res

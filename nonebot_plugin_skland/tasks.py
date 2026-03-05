@@ -25,10 +25,10 @@ async def _ark_sign_in(user: SkUser, uid: str, channel_master_id: str) -> ArkSig
 
 @refresh_cred_token_with_error_return
 @refresh_access_token_with_error_return
-async def _endfield_sign_in(user: SkUser, uid: str, server_id: str) -> EndfieldSignResponse:
+async def _endfield_sign_in(user: SkUser, role_id: str, server_id: str) -> EndfieldSignResponse:
     """执行终末地签到逻辑"""
     cred = CRED(cred=user.cred, token=user.cred_token)
-    return await SklandAPI.endfield_sign(cred, uid, server_id=server_id)
+    return await SklandAPI.endfield_sign(cred, role_id, server_id=server_id)
 
 
 @scheduler.scheduled_job("cron", hour=0, minute=15, id="daily_arksign")
@@ -63,7 +63,7 @@ async def run_daily_efsign():
         characters = await get_endfield_characters(user, session)
         for character in characters:
             sign_result[character.nickname] = await _endfield_sign_in(
-                user, str(character.uid), character.channel_master_id
+                user, character.role_id, character.channel_master_id
             )
     serializable_sign_result["data"] = {
         nickname: model_dump(res) if isinstance(res, EndfieldSignResponse) else res

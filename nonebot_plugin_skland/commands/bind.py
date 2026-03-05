@@ -5,6 +5,7 @@ from io import BytesIO
 from datetime import datetime, timedelta
 
 import qrcode
+from nonebot_plugin_waiter import prompt
 from nonebot_plugin_user import UserSession
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_alconna import Match, Arparma, MsgTarget, UniMessage
@@ -140,7 +141,6 @@ async def unbind_handler(
     session: async_scoped_session,
 ):
     """解绑森空岛账号"""
-    from nonebot_plugin_waiter import prompt
 
     user = await session.get(SkUser, user_session.user_id)
     if not user:

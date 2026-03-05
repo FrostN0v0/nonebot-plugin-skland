@@ -6,8 +6,8 @@ from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_alconna import At, Match, CustomNode, UniMessage
 
-from .utils import check_user_character
 from ...config import config
+from .utils import check_user_character
 from ...api import SklandAPI, SklandLoginAPI
 from ...data_source import ef_gacha_pool_data
 from ...render import render_ef_gacha_history
@@ -37,8 +37,13 @@ async def ef_gacha_history_handler(
     limit: Match[int],
     target: Match[At | int],
     bot: Bot,
+    update: bool = False,
 ):
-    """查询终末地抽卡记录"""
+    """查询终末地抽卡记录
+
+    Args:
+        update: 是否从接口拉取最新数据并更新，默认仅从数据库读取渲染
+    """
 
     @refresh_cred_token_if_needed
     @refresh_access_token_if_needed
@@ -53,56 +58,68 @@ async def ef_gacha_history_handler(
 
     user, character = await check_user_character(target_id, session)
     send_reaction(user_session, "processing")
-    token = user.access_token
-    grant_code = await SklandLoginAPI.get_grant_code(token, 1)
-    role_token = await SklandLoginAPI.get_role_token_by_uid(character.uid, grant_code)
 
-    # ── 获取所有角色池记录 ──
-    all_gacha_records_flat: list[EfGachaInfo] = []
-    for pool_type in EF_CHAR_POOL_TYPES:
+    new_count = 0
+    if update:
+        # ── 从接口拉取最新数据 ──
+        token = user.access_token
+        grant_code = await SklandLoginAPI.get_grant_code(token, 1)
+        role_token = await SklandLoginAPI.get_role_token_by_uid(character.uid, grant_code)
+
+        # 获取所有角色池记录
+        all_gacha_records_flat: list[EfGachaInfo] = []
+        for pool_type in EF_CHAR_POOL_TYPES:
+            count_before = len(all_gacha_records_flat)
+            async for record in get_all_ef_gacha_records(character, pool_type, role_token):
+                all_gacha_records_flat.append(record)
+            new_pool_count = len(all_gacha_records_flat) - count_before
+            logger.debug(
+                f"正在获取角色：{character.nickname} 的终末地抽卡记录，"
+                f"卡池类型：{pool_type.name}, 本次获取记录条数: {new_pool_count}"
+            )
+
+        # 获取武器池记录
         count_before = len(all_gacha_records_flat)
-        async for record in get_all_ef_gacha_records(character, pool_type, role_token):
+        async for record in get_all_ef_gacha_records(character, EndfieldPoolType.WEAPON, role_token):
             all_gacha_records_flat.append(record)
-        new_count = len(all_gacha_records_flat) - count_before
-        logger.debug(
-            f"正在获取角色：{character.nickname} 的终末地抽卡记录，"
-            f"卡池类型：{pool_type.name}, 本次获取记录条数: {new_count}"
-        )
+        weapon_count = len(all_gacha_records_flat) - count_before
+        logger.debug(f"正在获取角色：{character.nickname} 的终末地武器池抽卡记录，本次获取记录条数: {weapon_count}")
 
-    # ── 获取武器池记录 ──
-    count_before = len(all_gacha_records_flat)
-    async for record in get_all_ef_gacha_records(character, EndfieldPoolType.WEAPON, role_token):
-        all_gacha_records_flat.append(record)
-    weapon_count = len(all_gacha_records_flat) - count_before
-    logger.debug(f"正在获取角色：{character.nickname} 的终末地武器池抽卡记录，本次获取记录条数: {weapon_count}")
+        # 去重 + 构建 GachaRecord
+        db_records = await select_all_ef_gacha_records(user, character.uid, session)
+        existing_records_set = {(r.gacha_ts, r.pos) for r in db_records}
 
-    # ── 去重 + 构建 GachaRecord + 修正旧记录 is_free ──
-    db_records = await select_all_ef_gacha_records(user, character.uid, session)
-    existing_records_set = {(r.gacha_ts, r.pos) for r in db_records}
+        record_to_save: list[GachaRecord] = []
+        for gacha_record in all_gacha_records_flat:
+            if (gacha_record.gacha_ts_sec, gacha_record.seq_id_int) in existing_records_set:
+                continue
+            record = GachaRecord(
+                uid=user.id,
+                char_pk_id=character.id,
+                char_uid=character.uid,
+                app_code="endfield",
+                item_type=gacha_record.item_type,
+                pool_id=gacha_record.poolId,
+                pool_name=gacha_record.poolName,
+                char_id=gacha_record.item_id,
+                char_name=gacha_record.item_name,
+                rarity=gacha_record.rarity,
+                is_new=gacha_record.isNew,
+                is_free=gacha_record.is_free_pull,
+                gacha_ts=gacha_record.gacha_ts_sec,
+                pos=gacha_record.seq_id_int,
+            )
+            record_to_save.append(record)
 
-    record_to_save: list[GachaRecord] = []
-    for gacha_record in all_gacha_records_flat:
-        if (gacha_record.gacha_ts_sec, gacha_record.seq_id_int) in existing_records_set:
-            continue
-        record = GachaRecord(
-            uid=user.id,
-            char_pk_id=character.id,
-            char_uid=character.uid,
-            app_code="endfield",
-            item_type=gacha_record.item_type,
-            pool_id=gacha_record.poolId,
-            pool_name=gacha_record.poolName,
-            char_id=gacha_record.item_id,
-            char_name=gacha_record.item_name,
-            rarity=gacha_record.rarity,
-            is_new=gacha_record.isNew,
-            is_free=gacha_record.is_free_pull,
-            gacha_ts=gacha_record.gacha_ts_sec,
-            pos=gacha_record.seq_id_int,
-        )
-        record_to_save.append(record)
-
-    all_gacha_records = db_records + record_to_save
+        all_gacha_records = db_records + record_to_save
+        new_count = len(record_to_save)
+    else:
+        # ── 仅从数据库读取 ──
+        all_gacha_records = await select_all_ef_gacha_records(user, character.uid, session)
+        if not all_gacha_records:
+            await UniMessage.text("暂无抽卡记录，请先使用 -u 参数从接口拉取数据").send(reply_to=True)
+            return
+        record_to_save = []
 
     # ── 分组 ──
     gacha_data = group_ef_gacha_records(all_gacha_records)
@@ -160,9 +177,7 @@ async def ef_gacha_history_handler(
                         gacha_data, user_info.base, character, idx, min(idx + render_max, effective_end)
                     )
 
-            imgs = await asyncio.gather(
-                *(render(i) for i in range(effective_start, effective_end, render_max))
-            )
+            imgs = await asyncio.gather(*(render(i) for i in range(effective_start, effective_end, render_max)))
             nodes = []
             for index, content in enumerate(imgs, 1):
                 s = effective_start + (index - 1) * render_max

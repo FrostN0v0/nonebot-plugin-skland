@@ -251,8 +251,10 @@ async def _(
     limit: Match[int],
     target: Match[At | int],
     bot: Bot,
+    result: Arparma,
 ):
     """查询终末地抽卡记录"""
     from .commands.endfield import ef_gacha_history_handler
 
-    await ef_gacha_history_handler(user_session, session, begin, limit, target, bot)
+    update = result.find("efgacha.update")
+    await ef_gacha_history_handler(user_session, session, begin, limit, target, bot, update)

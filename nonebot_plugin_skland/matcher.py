@@ -128,6 +128,7 @@ skland_command = Alconna(
         Args["target?#目标", At | int],
         Option("-b|--begin|begin", Args["begin", int], help_text="查询起始位置"),
         Option("-l|--limit|limit", Args["limit", int], help_text="查询抽卡记录卡池渲染上限"),
+        Option("-u|--update|update", help_text="从接口拉取最新数据并更新"),
         help_text="终末地抽卡记录查询",
     ),
     namespace=alc_config.namespaces["skland"],

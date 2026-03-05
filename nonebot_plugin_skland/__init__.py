@@ -17,6 +17,7 @@ require("nonebot_plugin_alconna")
 require("nonebot_plugin_localstore")
 require("nonebot_plugin_htmlrender")
 require("nonebot_plugin_apscheduler")
+require("nonebot_plugin_waiter")
 
 from nonebot_plugin_user import UserSession
 from nonebot_plugin_orm import async_scoped_session
@@ -40,7 +41,7 @@ __plugin_meta__ = PluginMetadata(
     supported_adapters=inherit_supported_adapters("nonebot_plugin_alconna"),
     extra={
         "author": "FrostN0v0 <1614591760@qq.com>",
-        "version": "0.6.4-rc.1",
+        "version": "0.6.3",
     },
 )
 __plugin_meta__.extra.update(extra_data)
@@ -74,6 +75,17 @@ async def _(user_session: UserSession, session: async_scoped_session):
     from .commands.bind import qrcode_handler
 
     await qrcode_handler(user_session, session)
+
+
+@skland.assign("unbind")
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+):
+    """解绑森空岛账号"""
+    from .commands.bind import unbind_handler
+
+    await unbind_handler(user_session, session)
 
 
 @skland.assign("arksign.sign")

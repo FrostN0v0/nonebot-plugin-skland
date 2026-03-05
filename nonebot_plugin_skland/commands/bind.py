@@ -5,6 +5,7 @@ from io import BytesIO
 from datetime import datetime, timedelta
 
 import qrcode
+from nonebot_plugin_waiter import prompt
 from nonebot_plugin_user import UserSession
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_alconna import Match, Arparma, MsgTarget, UniMessage
@@ -14,6 +15,7 @@ from ..schemas import CRED
 from ..exception import RequestException
 from ..api import SklandAPI, SklandLoginAPI
 from ..utils import send_reaction, get_characters_and_bind
+from ..db_handler import delete_user, delete_characters, delete_user_all_gacha_records
 
 
 async def bind_handler(
@@ -132,3 +134,27 @@ async def qrcode_handler(
     else:
         send_reaction(user_session, "fail")
         await UniMessage("二维码超时,请重新获取并扫码").finish(at_sender=True)
+
+
+async def unbind_handler(
+    user_session: UserSession,
+    session: async_scoped_session,
+):
+    """解绑森空岛账号"""
+
+    user = await session.get(SkUser, user_session.user_id)
+    if not user:
+        send_reaction(user_session, "unmatch")
+        await UniMessage("你还没有绑定森空岛账号").finish(at_sender=True)
+
+    resp = await prompt("确认解绑将删除所有绑定数据（包括角色和抽卡记录），回复「确认」继续", timeout=30)
+    if resp is None or resp.extract_plain_text().strip() != "确认":
+        await UniMessage("已取消解绑操作").finish(at_sender=True)
+
+    await delete_user_all_gacha_records(user, session)
+    await delete_characters(user, session)
+    await delete_user(user, session)
+    await session.commit()
+
+    send_reaction(user_session, "done")
+    await UniMessage("解绑成功，已清除所有绑定数据").finish(at_sender=True)

@@ -31,6 +31,7 @@ skland_command = Alconna(
         help_text="绑定森空岛账号",
     ),
     Subcommand("-q|--qrcode|qrcode", help_text="获取二维码进行扫码绑定"),
+    Subcommand("unbind", help_text="解绑森空岛账号"),
     Subcommand(
         "arksign",
         Subcommand(
@@ -150,6 +151,7 @@ skland = on_alconna(
 
 skland.shortcut("森空岛绑定", {"command": "skland bind", "fuzzy": True, "prefix": True})
 skland.shortcut("扫码绑定", {"command": "skland qrcode", "fuzzy": False, "prefix": True})
+skland.shortcut("森空岛解绑", {"command": "skland unbind", "fuzzy": False, "prefix": True})
 skland.shortcut("明日方舟签到", {"command": "skland arksign sign --all", "fuzzy": False, "prefix": True})
 skland.shortcut("签到详情", {"command": "skland arksign status", "fuzzy": False, "prefix": True})
 skland.shortcut("全体签到", {"command": "skland arksign all", "fuzzy": False, "prefix": True})

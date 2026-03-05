@@ -1,10 +1,13 @@
+import asyncio
+
 from nonebot import logger
 from nonebot.adapters import Bot
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_user import UserSession, get_user
-from nonebot_plugin_alconna import At, Match, UniMessage
+from nonebot_plugin_alconna import At, Match, CustomNode, UniMessage
 
 from .utils import check_user_character
+from ...config import config
 from ...api import SklandAPI, SklandLoginAPI
 from ...data_source import ef_gacha_pool_data
 from ...render import render_ef_gacha_history
@@ -56,13 +59,10 @@ async def ef_gacha_history_handler(
 
     # ── 获取所有角色池记录 ──
     all_gacha_records_flat: list[EfGachaInfo] = []
-    # 构建 API 返回记录的 is_free 映射，用于修正数据库中旧记录
-    api_is_free_map: dict[tuple[int, int], bool] = {}
     for pool_type in EF_CHAR_POOL_TYPES:
         count_before = len(all_gacha_records_flat)
         async for record in get_all_ef_gacha_records(character, pool_type, role_token):
             all_gacha_records_flat.append(record)
-            api_is_free_map[(record.gacha_ts_sec, record.seq_id_int)] = record.is_free_pull
         new_count = len(all_gacha_records_flat) - count_before
         logger.debug(
             f"正在获取角色：{character.nickname} 的终末地抽卡记录，"
@@ -73,7 +73,6 @@ async def ef_gacha_history_handler(
     count_before = len(all_gacha_records_flat)
     async for record in get_all_ef_gacha_records(character, EndfieldPoolType.WEAPON, role_token):
         all_gacha_records_flat.append(record)
-        api_is_free_map[(record.gacha_ts_sec, record.seq_id_int)] = record.is_free_pull
     weapon_count = len(all_gacha_records_flat) - count_before
     logger.debug(f"正在获取角色：{character.nickname} 的终末地武器池抽卡记录，本次获取记录条数: {weapon_count}")
 
@@ -137,9 +136,62 @@ async def ef_gacha_history_handler(
     if not user_info:
         await UniMessage.text("获取用户信息失败，无法渲染抽卡记录").send(reply_to=True)
         return
-    # ── 渲染图片 ──
-    img = await render_ef_gacha_history(gacha_data, user_info.base, character)
-    await UniMessage.image(raw=img).send(at_sender=True)
+
+    # ── 渲染图片（分页） ──
+    gacha_begin = begin.result if begin.available else None
+    gacha_limit = limit.result if limit.available else None
+    render_max = config.ef_gacha_render_max
+
+    # begin/limit 对各类别分别计数，取最大值判断是否需要分页
+    effective_start = gacha_begin if gacha_begin is not None else 0
+    max_end = gacha_data.max_category_pool_count
+    effective_end = min(gacha_limit, max_end) if gacha_limit is not None else max_end
+    page_pool_count = max(0, effective_end - effective_start)
+
+    if page_pool_count > render_max:
+        await UniMessage.text("抽卡记录过多，将以多张图片形式发送").send(reply_to=True)
+
+        if user_session.platform == "QQClient":
+            render_semaphore = asyncio.Semaphore(4)
+
+            async def render(idx: int) -> bytes:
+                async with render_semaphore:
+                    return await render_ef_gacha_history(
+                        gacha_data, user_info.base, character, idx, min(idx + render_max, effective_end)
+                    )
+
+            imgs = await asyncio.gather(
+                *(render(i) for i in range(effective_start, effective_end, render_max))
+            )
+            nodes = []
+            for index, content in enumerate(imgs, 1):
+                s = effective_start + (index - 1) * render_max
+                e = min(effective_start + index * render_max, effective_end)
+                nodes.append(
+                    CustomNode(
+                        bot.self_id,
+                        f"{character.nickname} | 卡池 {s + 1}-{e}",
+                        UniMessage.image(raw=content),
+                    )
+                )
+            await UniMessage.reference(*nodes).send()
+        else:
+            send_lock = asyncio.Lock()
+
+            async def send(img: bytes) -> None:
+                async with send_lock:
+                    await UniMessage.image(raw=img).send()
+
+            tasks: list[asyncio.Task] = []
+            for i in range(effective_start, effective_end, render_max):
+                img = await render_ef_gacha_history(
+                    gacha_data, user_info.base, character, i, min(i + render_max, effective_end)
+                )
+                tasks.append(asyncio.create_task(send(img)))
+            await asyncio.gather(*tasks)
+    else:
+        img = await render_ef_gacha_history(gacha_data, user_info.base, character, gacha_begin, gacha_limit)
+        await UniMessage.image(raw=img).send(at_sender=True)
 
     logger.info(
         f"{character.nickname} 的终末地抽卡统计: "

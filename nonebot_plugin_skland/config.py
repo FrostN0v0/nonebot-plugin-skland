@@ -64,6 +64,8 @@ class ScopedConfig(BaseModel):
     """Argot 缓存过期时间"""
     gacha_render_max: int = 30
     """抽卡记录单图渲染上限"""
+    ef_gacha_render_max: int = 5
+    """终末地抽卡记录单图渲染卡池上限"""
 
 
 class Config(BaseModel):

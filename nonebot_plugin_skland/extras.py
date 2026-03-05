@@ -236,6 +236,22 @@ extra_data = {
             ),
         },
         {
+            "func": "终末地抽卡记录",
+            "trigger_method": "**无限制**",
+            "trigger_condition": "**终末地抽卡记录** | `skland efgacha`",
+            "brief_des": "查询绑定到bot的终末地账号的抽卡记录。",
+            "detail_des": (
+                "- **终末地抽卡记录**\n\n"
+                "```bash\n"
+                "skland efgacha -b <起始卡池序号> -l <结束卡池序号>\n"
+                "```\n\n"
+                " **快捷指令** ：`终末地抽卡记录`\n\n"
+                "查询绑定到bot的终末地账号的抽卡记录。\n"
+                "支持 `-b` 和 `-l` 参数控制渲染的卡池范围，"
+                "卡池数量超过上限时将自动分页发送多张图片。"
+            ),
+        },
+        {
             "func": "导入抽卡记录",
             "trigger_method": "**已绑定用户**",
             "trigger_condition": "**导入抽卡记录** | `skland import`",

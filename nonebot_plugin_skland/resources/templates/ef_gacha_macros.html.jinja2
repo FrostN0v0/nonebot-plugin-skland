@@ -250,17 +250,22 @@
 
 
 {# 卡池分类列渲染 #}
-{% macro ef_pool_column(pools, category_label, category_color, gacha_data=none) %}
-{% if pools %}
+{% macro ef_pool_column(pools, category_label, category_color, gacha_data=none, visible_pool_ids=none) %}
+{% if visible_pool_ids is not none %}
+{% set filtered_pools = pools | selectattr('pool_id', 'in', visible_pool_ids) | list %}
+{% else %}
+{% set filtered_pools = pools %}
+{% endif %}
+{% if filtered_pools %}
 <div class="flex flex-col gap-2 flex-1">
     {# 分类标题 #}
     <div class="flex items-center gap-1.5">
         <div class="w-1 h-3.5 rounded-full" style="background-color: {{ category_color }}"></div>
         <span class="text-white font-[Akrobat] font-bold text-sm">{{ category_label }}</span>
-        <span class="text-white/40 font-[Akrobat] text-[10px]">({{ pools | sum(attribute='total_pulls') }}抽)</span>
+        <span class="text-white/40 font-[Akrobat] text-[10px]">({{ filtered_pools | sum(attribute='total_pulls') }}抽)</span>
     </div>
 
-    {% for pool in pools %}
+    {% for pool in filtered_pools %}
     {{ ef_pool_card(pool, category_label, category_color, gacha_data=gacha_data) }}
     {% endfor %}
 </div>

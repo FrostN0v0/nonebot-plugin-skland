@@ -204,31 +204,46 @@
         </div>
 
         {# ═══════════════════ 下半部分：卡池详情 从左到右 ═══════════════════ #}
+        {# 计算可见卡池ID集合（基于 start_index/end_index 对 flat_pools 切片） #}
+        {% if start_index is not none or end_index is not none %}
+        {% set visible_ids = record.get_visible_pool_ids(start_index, end_index) %}
+        {% else %}
+        {% set visible_ids = none %}
+        {% endif %}
+
         <div class="flex flex-row gap-3 items-start">
-            {{ ef_pool_column(record.special_pools, "限定池", "#e17055", gacha_data=record) }}
-            {{ ef_pool_column(record.weapon_pools, "武器池", "#fdcb6e", gacha_data=record) }}
+            {{ ef_pool_column(record.special_pools, "限定池", "#e17055", gacha_data=record, visible_pool_ids=visible_ids) }}
+            {{ ef_pool_column(record.weapon_pools, "武器池", "#fdcb6e", gacha_data=record, visible_pool_ids=visible_ids) }}
 
             {# 新手池 + 常驻池合并列 #}
-            {% if record.standard_pools or record.beginner_pools %}
+            {% if visible_ids is not none %}
+            {% set vis_beginner = record.beginner_pools | selectattr('pool_id', 'in', visible_ids) | list %}
+            {% set vis_standard = record.standard_pools | selectattr('pool_id', 'in', visible_ids) | list %}
+            {% else %}
+            {% set vis_beginner = record.beginner_pools %}
+            {% set vis_standard = record.standard_pools %}
+            {% endif %}
+
+            {% if vis_standard or vis_beginner %}
             <div class="flex flex-col gap-2 flex-1">
-                {% if record.beginner_pools %}
+                {% if vis_beginner %}
                 <div class="flex items-center gap-1.5">
                     <div class="w-1 h-3.5 rounded-full" style="background-color: #74b9ff"></div>
                     <span class="text-white font-[Akrobat] font-bold text-sm">新手池</span>
-                    <span class="text-white/40 font-[Akrobat] text-[10px]">({{ record.beginner_pools | sum(attribute='total_pulls') }}抽)</span>
+                    <span class="text-white/40 font-[Akrobat] text-[10px]">({{ vis_beginner | sum(attribute='total_pulls') }}抽)</span>
                 </div>
-                {% for pool in record.beginner_pools %}
+                {% for pool in vis_beginner %}
                 {{ ef_pool_card(pool, "新手池", "#74b9ff", gacha_data=record) }}
                 {% endfor %}
                 {% endif %}
 
-                {% if record.standard_pools %}
+                {% if vis_standard %}
                 <div class="flex items-center gap-1.5">
                     <div class="w-1 h-3.5 rounded-full" style="background-color: #00b894"></div>
                     <span class="text-white font-[Akrobat] font-bold text-sm">常驻池</span>
-                    <span class="text-white/40 font-[Akrobat] text-[10px]">({{ record.standard_pools | sum(attribute='total_pulls') }}抽)</span>
+                    <span class="text-white/40 font-[Akrobat] text-[10px]">({{ vis_standard | sum(attribute='total_pulls') }}抽)</span>
                 </div>
-                {% for pool in record.standard_pools %}
+                {% for pool in vis_standard %}
                 {{ ef_pool_card(pool, "常驻池", "#00b894", gacha_data=record) }}
                 {% endfor %}
                 {% endif %}

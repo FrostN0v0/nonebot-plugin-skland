@@ -55,6 +55,44 @@ class EfGroupedGachaRecord(BaseModel):
         """所有卡池"""
         return self.char_pools + self.weapon_pools
 
+    @property
+    def flat_pools(self) -> list[EfGachaPoolInfo]:
+        """所有卡池按最新记录时间降序排列的扁平列表"""
+        return sorted(
+            self.all_pools,
+            key=lambda p: max((r.gacha_ts for r in p.records), default=0),
+            reverse=True,
+        )
+
+    @property
+    def max_category_pool_count(self) -> int:
+        """各类别卡池数量的最大值，用于分页计算"""
+        return max(
+            len(self.special_pools),
+            len(self.weapon_pools),
+            len(self.standard_pools),
+            len(self.beginner_pools),
+        )
+
+    def get_visible_pool_ids(self, begin: int | None = None, limit: int | None = None) -> set[str]:
+        """根据 begin/limit 切片返回可见卡池的 pool_id 集合
+
+        begin/limit 对各类别（限定/武器/常驻/新手）分别切片，
+        返回所有类别切片结果的 pool_id 并集。
+
+        Args:
+            begin: 各类别内的起始索引
+            limit: 各类别内的结束索引
+
+        Returns:
+            切片范围内的 pool_id 集合，若 begin 和 limit 均为 None 则返回全部
+        """
+        visible: set[str] = set()
+        for pools in (self.special_pools, self.weapon_pools, self.standard_pools, self.beginner_pools):
+            for p in pools[begin:limit]:
+                visible.add(p.pool_id)
+        return visible
+
     # ── 抽数统计 ──
 
     @property

@@ -166,7 +166,13 @@ async def render_gacha_history(
     )
 
 
-async def render_ef_gacha_history(props: EfGroupedGachaRecord, player: PlayerBase, char: Character) -> bytes:
+async def render_ef_gacha_history(
+    props: EfGroupedGachaRecord,
+    player: PlayerBase,
+    char: Character,
+    begin: int | None = None,
+    limit: int | None = None,
+) -> bytes:
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),
         template_name="ef_gacha.html.jinja2",
@@ -174,6 +180,8 @@ async def render_ef_gacha_history(props: EfGroupedGachaRecord, player: PlayerBas
             "avatar_url": player.avatarUrl,
             "record": props,
             "character": char,
+            "start_index": begin,
+            "end_index": limit,
         },
         filters={
             "format_timestamp_md": format_timestamp_md,

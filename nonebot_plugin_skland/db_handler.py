@@ -126,3 +126,13 @@ async def select_all_ef_gacha_records(user: SkUser, char_uid: str, session: asyn
         .all()
     )
     return list(records)
+
+
+async def delete_user_all_gacha_records(user: SkUser, session: async_scoped_session):
+    """删除用户的所有抽卡记录"""
+    await session.execute(delete(GachaRecord).where(GachaRecord.uid == user.id))
+
+
+async def delete_user(user: SkUser, session: async_scoped_session):
+    """删除用户"""
+    await session.delete(user)

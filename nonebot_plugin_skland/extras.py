@@ -31,6 +31,21 @@ extra_data = {
             ),
         },
         {
+            "func": "森空岛解绑",
+            "trigger_method": "无限制",
+            "trigger_condition": "**森空岛解绑** | `skland unbind`",
+            "brief_des": "解绑森空岛账号",
+            "detail_des": (
+                "- **解绑账号**\n\n"
+                "```bash\n"
+                "skland unbind\n"
+                "```\n\n"
+                " **快捷指令** ：`森空岛解绑`\n\n"
+                "解绑当前绑定的森空岛账号，将删除所有绑定数据（包括角色和抽卡记录）。\n"
+                "执行后需要回复「确认」以确认解绑操作。\n"
+            ),
+        },
+        {
             "func": "skland",
             "trigger_method": "**已绑定用户**",
             "trigger_condition": "**skland**",

@@ -25,7 +25,7 @@ nonebot_plugin_skland/
 ├── __init__.py          # 插件入口，命令处理器注册
 ├── matcher.py           # Alconna 命令定义和快捷指令
 ├── tasks.py             # 定时任务（每日签到）
-├── config.py            # 配置管理，数据加载
+├── config.py            # 配置管理（含 gacha_render_max、ef_gacha_render_max 等）
 ├── data_source.py       # 游戏数据加载与管理（卡池数据）
 ├── model.py             # SQLAlchemy ORM 模型（SkUser, Character, GachaRecord）
 ├── db_handler.py        # 数据库操作函数
@@ -46,7 +46,7 @@ nonebot_plugin_skland/
 │       ├── __init__.py  # 导出所有 handler
 │       ├── card.py      # 终末地角色卡片查询
 │       ├── sign.py      # 终末地签到
-│       ├── gacha.py     # 终末地抽卡记录查询
+│       ├── gacha.py     # 终末地抽卡记录查询（支持 -u 更新、分页渲染）
 │       └── utils.py     # 终末地工具函数（签到结果格式化等）
 ├── schemas/             # Pydantic 数据模型
 │   ├── __init__.py      # 模块导出（向后兼容）
@@ -78,7 +78,7 @@ nonebot_plugin_skland/
 │           ├── __init__.py
 │           ├── base.py      # 基础类型（EndfieldPoolType, EfCharGachaInfo, EfWeaponGachaInfo, EfGachaContentPool 等）
 │           ├── pool.py      # 卡池信息（EfGachaPoolInfo，含保底与武库配额计算）
-│           └── statistics.py # 分组统计（EfGroupedGachaRecord，角色池/武器池/新手池分类）
+│           └── statistics.py # 分组统计（EfGroupedGachaRecord，含 flat_pools/max_category_pool_count/get_visible_pool_ids）
 ├── render.py            # HTML 渲染函数
 ├── filters.py           # Jinja2 模板过滤器
 ├── utils.py             # 工具函数（Token刷新装饰器、资源下载、抽卡记录分组等）
@@ -125,7 +125,7 @@ skland_command = Alconna(
     Subcommand("rogue", ...),     # 肉鸽战绩
     Subcommand("gacha", ...),     # 明日方舟抽卡记录
     Subcommand("efcard", ...),    # 终末地角色面板
-    Subcommand("efgacha", ...),   # 终末地抽卡记录
+    Subcommand("efgacha", ...),   # 终末地抽卡记录（-u 更新, -b/-l 分页）
     Subcommand("rginfo", ...),    # 单局肉鸽战绩详情
     # ...
 )
@@ -215,7 +215,7 @@ async def run_daily_efsign():
 - `render_ark_card()` - 明日方舟角色卡片
 - `render_ef_card()` - 终末地角色卡片（支持 simple 模式）
 - `render_gacha_history()` - 明日方舟抽卡记录
-- `render_ef_gacha_history()` - 终末地抽卡记录
+- `render_ef_gacha_history()` - 终末地抽卡记录（支持 begin/limit 分片渲染）
 - `render_rogue_card()` / `render_rogue_info()` - 肉鸽战绩总览 / 单局战绩详情
 - `render_clue_board()` - 线索看板
 

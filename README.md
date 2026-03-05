@@ -1,4 +1,4 @@
-<!-- markdownlint-disable MD028 MD033 MD036 MD041 MD046 -->
+<!-- markdownlint-disable MD024 MD028 MD033 MD036 MD041 MD046 -->
 <div align="center">
   <a href="https://v2.nonebot.dev/store"><img src="https://github.com/FrostN0v0/nonebot-plugin-template/blob/resources/NoneBotPlugin.svg" width="300"  alt="NoneBotPluginLogo"></a>
   <br>
@@ -189,9 +189,10 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `skland bind <token\|cred>`    | 所有 | 绑定森空岛账号           |
 | `skland bind -u <token\|cred>` | 所有 | 更新绑定的 token 或 cred |
 | `skland qrcode`                | 所有 | 扫码绑定森空岛账号       |
+| `skland unbind`                | 所有 | 解绑森空岛账号           |
 | `skland char update`           | 所有 | 更新森空岛绑定角色信息   |
 
-**快捷指令：** `森空岛绑定` `扫码绑定` `角色更新`
+**快捷指令：** `森空岛绑定` `扫码绑定` `森空岛解绑` `角色更新`
 
 </details>
 
@@ -359,6 +360,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | -------------------- | ----------------------------- | ------------------ |
 | `森空岛绑定`         | `skland bind`                 | 绑定账号           |
 | `扫码绑定`           | `skland qrcode`               | 扫码绑定           |
+| `森空岛解绑`         | `skland unbind`               | 解绑账号           |
 | `明日方舟签到`       | `skland arksign sign --all`   | 签到所有角色       |
 | `签到详情`           | `skland arksign status`       | 个人签到状态       |
 | `全体签到`           | `skland arksign all`          | 全部角色签到       |
@@ -470,7 +472,13 @@ Bot: skland::skland 的快捷指令: "查战绩" 添加成功
 <details>
   <summary>🦭 抽卡记录</summary>
 
-![抽卡记录](docs/gacha_record.png)
+#### 明日方舟
+
+![明日方舟抽卡记录](docs/gacha_record.png)
+
+#### 终末地
+
+![终末地抽卡记录](docs/ef_gacha.png)
 
 </details>
 

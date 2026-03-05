@@ -210,8 +210,8 @@ class EfGachaContentPool(BaseModel):
     up5_image: str = ""
     rotate_image: str = ""
     """轮换UP横幅图片URL"""
-    all: list[EfGachaContentChar] = Field(default=[])
-    rotate_list: list[EfGachaContentRotateItem] = Field(default=[])
+    all: list[EfGachaContentChar] = Field(default_factory=list)
+    rotate_list: list[EfGachaContentRotateItem] = Field(default_factory=list)
 
     @property
     def up_six_char_ids(self) -> list[str]:

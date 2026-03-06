@@ -73,7 +73,7 @@ async def rogue_handler(
         argot_seg = Image(path=str(background))
     await UniMessage(
         Image(raw=img)
-        + Argot("data", json.dumps(model_dump(rogue)), command=False)
+        + Argot("data", json.dumps(model_dump(rogue)), command=False, expired_at=config.argot_expire)
         + Argot("background", argot_seg, command="background", expired_at=config.argot_expire)
     ).send()
     send_reaction(user_session, "done")

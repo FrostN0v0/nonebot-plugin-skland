@@ -16,6 +16,9 @@ _✨ 通过森空岛查询游戏数据 ✨_
 <a href="https://pypi.python.org/pypi/nonebot-plugin-skland">
     <img src="https://img.shields.io/pypi/v/nonebot-plugin-skland.svg" alt="pypi">
 </a>
+<a href="https://pypi.python.org/pypi/nonebot-plugin-skland">
+    <img src="https://img.shields.io/pypi/dm/nonebot-plugin-skland.svg" alt="pypi downloads">
+</a>
 <img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="python">
 <br>
 <a href="https://results.pre-commit.ci/latest/github/FrostN0v0/nonebot-plugin-skland/master">

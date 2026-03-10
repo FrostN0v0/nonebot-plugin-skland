@@ -65,6 +65,7 @@ async def _get_cred_by_cred_str(cred_str: str) -> dict:
 async def _get_cred_by_qrcode() -> dict:
     """通过扫码登录获取 CRED，同时在终端打印二维码并保存图片到本地"""
     from nonebot_plugin_skland.api import SklandLoginAPI
+    from nonebot_plugin_skland.exception import RequestException
 
     scan_id = await SklandLoginAPI.get_scan()
     scan_url = f"hypergryph://scan_login?scanId={scan_id}"
@@ -89,7 +90,7 @@ async def _get_cred_by_qrcode() -> dict:
         try:
             scan_code = await SklandLoginAPI.get_scan_status(scan_id)
             break
-        except Exception:
+        except RequestException:
             pass
         await asyncio.sleep(2)
 
@@ -106,6 +107,7 @@ async def _get_cred_by_qrcode() -> dict:
 async def _try_refresh_cred(cached: dict) -> dict:
     """尝试刷新凭证；若成功则更新并返回，若失败则抛出异常"""
     from nonebot_plugin_skland.api import SklandLoginAPI
+    from nonebot_plugin_skland.exception import RequestException
 
     if access_token := cached.get("access_token"):
         try:
@@ -113,7 +115,7 @@ async def _try_refresh_cred(cached: dict) -> dict:
             _save_cred_cache(refreshed)
             logger.success("通过 access_token 刷新凭证成功")
             return refreshed
-        except Exception:
+        except RequestException:
             pass
 
     try:

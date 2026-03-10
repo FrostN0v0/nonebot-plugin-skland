@@ -35,6 +35,12 @@ dev = [
     "nonebot2[fastapi,aiohttp]>=2.4.1",
 ]
 
+test = [
+    "nonebug>=0.4.3",
+    "pytest-asyncio>=0.25.0",
+    "aiosqlite>=0.20.0",
+]
+
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
@@ -68,6 +74,10 @@ ignore = ["E402", "C901"]
 pythonVersion = "3.10"
 pythonPlatform = "All"
 typeCheckingMode = "standard"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
 
 [tool.pdm.scripts]
 build_css = "npx tailwindcss -i ./tailwind.css -o ./nonebot_plugin_skland/resources/templates/index.css -w"

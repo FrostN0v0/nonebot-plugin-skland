@@ -243,7 +243,7 @@ class Domain(BaseModel):
     domainId: str = ""
     level: int = 0
     settlements: list[Settlement] = Field(default_factory=list)
-    moneyMgr: str = ""
+    moneyMgr: str | None = None
     collections: list[Collection] = Field(default_factory=list)
     factory: Any = None
     name: str = ""

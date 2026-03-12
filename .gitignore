@@ -177,3 +177,7 @@ pyrightconfig.json
 node_modules/
 
 # End of https://www.toptal.com/developers/gitignore/api/python
+
+# Test credentials & QR code
+tests/cred_cache.json
+tests/qrcode.png

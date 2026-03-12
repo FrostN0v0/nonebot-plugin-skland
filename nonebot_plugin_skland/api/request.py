@@ -48,7 +48,7 @@ class SklandAPI:
             try:
                 response = await client.get(
                     binding_url,
-                    headers=cls.get_sign_header(cred, binding_url, method="get"),
+                    headers=await cls.get_sign_header(cred, binding_url, method="get"),
                 )
                 if status := response.json().get("code"):
                     if status == 10000:
@@ -62,23 +62,37 @@ class SklandAPI:
                 raise RequestException(f"获取绑定角色失败: {e}")
 
     @classmethod
-    def get_sign_header(
+    async def get_sign_header(
         cls,
         cred: CRED,
         url: str,
         method: Literal["get", "post"],
         query_body: dict | None = None,
+        use_did: bool = False,
     ) -> dict:
-        """获取带sign请求头"""
+        """获取带sign请求头
+
+        Args:
+            cred: 认证凭据。
+            url: 请求 URL。
+            method: 请求方法。
+            query_body: POST 请求体。
+            use_did: 是否获取并使用设备 ID 参与签名计算。
+        """
         timestamp = int(datetime.now().timestamp()) - 1
-        header_ca = {**cls._header_for_sign, "timestamp": str(timestamp)}
+        header_for_sign = {**cls._header_for_sign}
+        if use_did:
+            from .dId import get_dId
+
+            header_for_sign["dId"] = await get_dId()
+        header_ca = {**header_for_sign, "timestamp": str(timestamp)}
         parsed_url = urlparse(url)
         if method == "post":
             query_params = json.dumps(query_body) if query_body is not None else ""
         else:
             query_params = parsed_url.query
         header_ca_str = json.dumps(
-            {**cls._header_for_sign, "timestamp": str(timestamp)},
+            {**header_for_sign, "timestamp": str(timestamp)},
             separators=(",", ":"),
         )
         secret = f"{parsed_url.path}{query_params}{timestamp}{header_ca_str}"
@@ -92,7 +106,7 @@ class SklandAPI:
         body = {"uid": uid, "gameId": channel_master_id}
         json_body = json.dumps(body, ensure_ascii=False, separators=(", ", ": "), allow_nan=False)
         sign_url = f"{base_url}/game/attendance"
-        headers = cls.get_sign_header(
+        headers = await cls.get_sign_header(
             cred,
             sign_url,
             method="post",
@@ -124,7 +138,7 @@ class SklandAPI:
             try:
                 response = await client.get(
                     uid_url,
-                    headers=cls.get_sign_header(cred, uid_url, method="get"),
+                    headers=await cls.get_sign_header(cred, uid_url, method="get"),
                 )
                 if status := response.json().get("code"):
                     if status == 10000:
@@ -145,7 +159,7 @@ class SklandAPI:
             try:
                 response = await client.get(
                     game_info_url,
-                    headers=cls.get_sign_header(cred, game_info_url, method="get"),
+                    headers=await cls.get_sign_header(cred, game_info_url, method="get"),
                 )
                 if status := response.json().get("code"):
                     if status == 10000:
@@ -166,7 +180,7 @@ class SklandAPI:
             try:
                 response = await client.get(
                     rogue_url,
-                    headers=cls.get_sign_header(cred, rogue_url, method="get"),
+                    headers=await cls.get_sign_header(cred, rogue_url, method="get"),
                 )
                 if status := response.json().get("code"):
                     if status == 10000:
@@ -316,7 +330,7 @@ class SklandAPI:
     async def endfield_sign(cls, cred: CRED, role_id: str, server_id: str) -> EndfieldSignResponse:
         """进行明日方舟：终末地签到"""
         sign_url = "https://zonai.skland.com/web/v1/game/endfield/attendance"
-        headers = cls.get_sign_header(
+        headers = await cls.get_sign_header(
             cred,
             sign_url,
             method="post",
@@ -349,7 +363,7 @@ class SklandAPI:
     async def endfield_card(cls, cred: CRED, uid: str, char: Character) -> EndfieldCard:
         """获取终末地角色信息"""
         game_info_url = f"https://zonai.skland.com/web/v1/game/endfield/card/detail?roleId={char.role_id}&serverId={char.channel_master_id}&userId={uid}"
-        headers = cls.get_sign_header(
+        headers = await cls.get_sign_header(
             cred,
             game_info_url,
             method="get",

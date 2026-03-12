@@ -7,45 +7,44 @@
 <head>
   <meta charset="UTF-8">
   <title>Endfield Card</title>
-  <link rel="stylesheet" href="index.css">
+  <style>
+    {% include "index.css" %} 
+  </style>
+
 </head>
 
 <body>
-  <div class="relative w-176.5 h-auto bg-cover bg-center bg-no-repeat"
-    {% if simple_bg_enabled %}
-    style="background-color: #1a1a1a"
-    {% else %}
-    style="background-image: url({{ background_image }})"
-    {% endif %}>
+  <div class="relative w-176.5 h-auto bg-cover bg-center bg-no-repeat" {% if simple_bg_enabled %}
+    style="background-color: #1a1a1a" {% else %} style="background-image: url({{ background_image }})" {% endif %}>
 
     {% if simple_bg_enabled %}
-    {# Simple模式：上半部分背景 - simple_bg底层 + simple_bg_top顶层 #}
-    <div class="absolute inset-x-0 top-0 h-106 bg-cover bg-center bg-no-repeat" style="background-image: url({{ simple_bg }})"></div>
-    <div class="absolute inset-x-0 top-0 h-106 bg-cover bg-center bg-no-repeat" style="background-image: url({{ simple_bg_top }})"></div>
+    {# Simple模式：上半部分背景 - simple_bg底层 + simple_bg_top顶层（自适应高度） #}
+    <div id="upper-bg" class="absolute inset-x-0 top-0 bg-cover bg-center bg-no-repeat"
+      style="background-image: url({{ simple_bg }})"></div>
+    <div id="upper-bg-top" class="absolute inset-x-0 top-0 bg-cover bg-center bg-no-repeat"
+      style="background-image: url({{ simple_bg_top }})"></div>
     {# Simple模式：下半部分背景 - simple_bg #}
-    <div class="absolute inset-x-0 top-108 bottom-0 bg-cover bg-center bg-no-repeat" style="background-image: url({{ simple_bg }})"></div>
+    <div id="lower-bg" class="absolute inset-x-0 bottom-0 bg-cover bg-center bg-no-repeat"
+      style="background-image: url({{ simple_bg }})"></div>
     {% else %}
     {# 普通模式遮罩 #}
-    {# 上半部分遮罩 #}
-    <div class="absolute inset-x-0 top-0 h-106 bg-[#363636]/30 backdrop-blur-xs"></div>
+    {# 上半部分遮罩（自适应高度） #}
+    <div id="upper-mask" class="absolute inset-x-0 top-0 bg-[#363636]/30 backdrop-blur-xs"></div>
     {# 下半部分遮罩 #}
-    <div class="absolute inset-x-0 top-106 bottom-0 bg-[#DDDDDD]/20 backdrop-blur-xs"></div>
+    <div id="lower-mask" class="absolute inset-x-0 bottom-0 bg-[#DDDDDD]/20 backdrop-blur-xs"></div>
     {% endif %}
 
-    {# 上半部分内容区域 #}
-    <div class="relative z-10 h-106 pt-8 pl-8">
-      <img
-        src="../images/endfield/endfield-industries.svg"
-        class="absolute top-5 right-7 h-25 opacity-60"
+    {# 上半部分内容区域（自适应高度） #}
+    <div id="upper-content" class="relative z-10 h-auto pt-8 pl-8 pb-6">
+      <img src="../images/endfield/endfield-industries.svg" class="absolute top-5 right-7 h-25 opacity-60"
         alt="endfield-industries" />
-      <span class="absolute top-2 right-7 w-25 text-center text-[#080808]/60 font-[Bender] text-xs tracking-wider">UID:{{ base.roleId }}</span>
+      <span
+        class="absolute top-2 right-7 w-25 text-center text-[#080808]/60 font-[Bender] text-xs tracking-wider">UID:{{
+        base.roleId }}</span>
 
       {# 头像信息 #}
       <div class="flex items-start gap-4">
-        <img
-          src="{{ base.avatarUrl }}"
-          class="avater-shadow w-18.75 h-18.75 shrink-0"
-          alt="avatar" />
+        <img src="{{ base.avatarUrl }}" class="avater-shadow w-18.75 h-18.75 shrink-0" alt="avatar" />
         <div class="flex flex-col justify-center text-white">
           <img src="../images/endfield/name_title.png" class="h-2.5 -mt-1.5" alt="name_title" />
           <h1 class="text-2xl text-white font-bold font-[Akrobat] mt-1.5 mb-2.5">{{ base.name }}</h1>
@@ -67,7 +66,8 @@
             <img src="../images/ark_card/card_img/ap.png" class="absolute left-18 top-6.75 h-18.25" alt="ap" />
             <div class="flex flex-col items-start pt-2 pl-4">
               <span class="text-[#080808]/80 font-[Bender] text-xl">
-                {{ dungeon.curStamina }}<span class="text-[#080808]/60 text-base font-bold mx-0.5">/</span><span class="text-sm">{{ dungeon.maxStamina }}</span>
+                {{ dungeon.curStamina }}<span class="text-[#080808]/60 text-base font-bold mx-0.5">/</span><span
+                  class="text-sm">{{ dungeon.maxStamina }}</span>
               </span>
               <span class="text-[#080808]/80 font-bold font-[Bender] text-xl">理智</span>
             </div>
@@ -75,12 +75,14 @@
             <div
               class="w-auto h-4 absolute px-4 mx-4 bottom-4 bg-[#454545]/20 rounded-2xl backdrop-blur-xs flex items-center justify-center gap-2">
               <div class="h-1 w-1 bg-[#FD7401] rounded-xs"></div>
-              <span class="text-[#3D3D3D] font-bold font-[Bender] text-sm">{{ stamina_remaining_seconds | format_stamina_time }}</span>
+              <span class="text-[#3D3D3D] font-bold font-[Bender] text-sm">{{ stamina_remaining_seconds |
+                format_stamina_time }}</span>
             </div>
             {# 底部进度条 #}
             <div
               class="w-full h-2 absolute bottom-0 left-0 bg-[#f0f0f0]/40 rounded-t-none rounded-b-sm backdrop-blur-xs">
-              <div class="h-full rounded-t-none rounded-b-sm blue-bar" style="width: {{ stamina_percent | int }}%"></div>
+              <div class="h-full rounded-t-none rounded-b-sm blue-bar" style="width: {{ stamina_percent | int }}%">
+              </div>
             </div>
           </div>
 
@@ -127,16 +129,11 @@
           </div>
         </div>
 
-        {# 第二行：据点卡片 + 活跃度/通行证 #}
+        {# 第二行：活跃度/通行证（左） + 据点卡片（右，可换行） #}
         <div class="flex items-start gap-3.25 mt-5">
-          {# 据点卡片 - 遍历渲染 #}
-          {% for d in domain %}
-          {{ domain_card(d) }}
-          {% endfor %}
-
-          {# 活跃度和通行证卡片 #}
+          {# 左侧：活跃度和通行证卡片 #}
           <div
-            class="relative w-57.75 min-h-32.5 bg-[#E6E6E6]/60 rounded-sm card-shadow flex flex-col justify-center gap-2.5 p-3">
+            class="relative w-39.25 shrink-0 bg-[#E6E6E6]/60 rounded-sm card-shadow flex flex-col justify-center gap-2.5 p-3">
             {# 活跃度 #}
             <div class="flex flex-col">
               <div class="flex items-center justify-between">
@@ -147,12 +144,14 @@
                   <span class="text-[#080808]/80 font-[Bender] font-bold text-sm">活跃度</span>
                 </div>
                 <span class="text-[#080808]/80 font-[Bender] font-bold text-sm">
-                  {{ dailyMission.dailyActivation }}<span class="text-[#080808]/60">/</span>{{ dailyMission.maxDailyActivation }}
+                  {{ dailyMission.dailyActivation }}<span class="text-[#080808]/60">/</span>{{
+                  dailyMission.maxDailyActivation }}
                 </span>
               </div>
-              {% set daily_percent = (dailyMission.dailyActivation / dailyMission.maxDailyActivation * 100) | int if dailyMission.maxDailyActivation > 0 else 0 %}
-              <div class="w-51 h-1 mt-1 rounded-r-sm blue-bar" style="width: {{ daily_percent }}%"></div>
-              <div class="w-51 h-0.5 bg-[#454545]/15"></div>
+              {% set daily_percent = (dailyMission.dailyActivation / dailyMission.maxDailyActivation * 100) | int if
+              dailyMission.maxDailyActivation > 0 else 0 %}
+              <div class="h-1 mt-1 rounded-r-sm blue-bar" style="width: {{ daily_percent }}%"></div>
+              <div class="h-0.5 bg-[#454545]/15"></div>
             </div>
             {# 通行证 #}
             <div class="flex flex-col">
@@ -168,20 +167,47 @@
                 </span>
               </div>
               {% set bp_percent = (bpSystem.curLevel / bpSystem.maxLevel * 100) | int if bpSystem.maxLevel > 0 else 0 %}
-              <div class="w-51 h-1 mt-1 rounded-r-sm green-bar" style="width: {{ bp_percent }}%"></div>
-              <div class="w-51 h-0.5 bg-[#454545]/15"></div>
+              <div class="h-1 mt-1 rounded-r-sm green-bar" style="width: {{ bp_percent }}%"></div>
+              <div class="h-0.5 bg-[#454545]/15"></div>
             </div>
+          </div>
+
+          {# 右侧：据点卡片 - 可换行，同行等高 #}
+          <div class="flex flex-wrap gap-5 items-stretch flex-1 min-w-0">
+            {% for d in domain %}
+            {{ domain_card(d) }}
+            {% endfor %}
           </div>
         </div>
       </div>
     </div>
 
     {# 分隔线 #}
-    <div class="relative z-10 flex h-2">
+    <div id="divider" class="relative z-10 flex h-2">
       <div class="w-8 bg-[#F441E9]"></div>
       <div class="w-8 bg-[#00FFA3]"></div>
       <div class="flex-1 bg-[#FFF100]"></div>
     </div>
+
+    {# 使遮罩/背景高度与上半部分内容同步的脚本 #}
+    <script>
+      (function () {
+        var upper = document.getElementById('upper-content');
+        var divider = document.getElementById('divider');
+        if (!upper || !divider) return;
+        var h = divider.offsetTop;
+        var ids = ['upper-bg', 'upper-bg-top', 'upper-mask'];
+        ids.forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) el.style.height = h + 'px';
+        });
+        var lowerIds = ['lower-bg', 'lower-mask'];
+        lowerIds.forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) el.style.top = h + 'px';
+        });
+      })();
+    </script>
 
     {# 下半部分内容区域 - 干员列表 #}
     <div class="relative z-10 p-8 min-h-75">

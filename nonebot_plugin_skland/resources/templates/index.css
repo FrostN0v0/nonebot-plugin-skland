@@ -251,12 +251,6 @@
   .top-18\.25 {
     top: calc(var(--spacing) * 18.25);
   }
-  .top-106 {
-    top: calc(var(--spacing) * 106);
-  }
-  .top-108 {
-    top: calc(var(--spacing) * 108);
-  }
   .top-\[-20px\] {
     top: -20px;
   }
@@ -569,9 +563,6 @@
   .h-75 {
     height: calc(var(--spacing) * 75);
   }
-  .h-106 {
-    height: calc(var(--spacing) * 106);
-  }
   .h-110 {
     height: calc(var(--spacing) * 110);
   }
@@ -592,9 +583,6 @@
   }
   .h-px {
     height: 1px;
-  }
-  .min-h-32\.5 {
-    min-height: calc(var(--spacing) * 32.5);
   }
   .min-h-75 {
     min-height: calc(var(--spacing) * 75);
@@ -701,14 +689,8 @@
   .w-43\.75 {
     width: calc(var(--spacing) * 43.75);
   }
-  .w-46\.5 {
-    width: calc(var(--spacing) * 46.5);
-  }
-  .w-51 {
-    width: calc(var(--spacing) * 51);
-  }
-  .w-57\.75 {
-    width: calc(var(--spacing) * 57.75);
+  .w-55 {
+    width: calc(var(--spacing) * 55);
   }
   .w-101\.75 {
     width: calc(var(--spacing) * 101.75);
@@ -852,6 +834,9 @@
   }
   .items-start {
     align-items: flex-start;
+  }
+  .items-stretch {
+    align-items: stretch;
   }
   .justify-around {
     justify-content: space-around;
@@ -1006,6 +991,9 @@
       border-color: #5A5A5A;
     }
   }
+  .self-stretch {
+    align-self: stretch;
+  }
   .truncate {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1041,10 +1029,6 @@
   .rounded-t-none {
     border-top-left-radius: 0;
     border-top-right-radius: 0;
-  }
-  .rounded-l-2xl {
-    border-top-left-radius: var(--radius-2xl);
-    border-bottom-left-radius: var(--radius-2xl);
   }
   .rounded-l-\[5px\] {
     border-top-left-radius: 5px;
@@ -1255,9 +1239,6 @@
   .bg-\[\#C04855\] {
     background-color: #C04855;
   }
-  .bg-\[\#D1D1D7\]\/60 {
-    background-color: color-mix(in oklab, #D1D1D7 60%, transparent);
-  }
   .bg-\[\#DDDDDD\]\/20 {
     background-color: color-mix(in oklab, #DDDDDD 20%, transparent);
   }
@@ -1269,6 +1250,9 @@
   }
   .bg-\[\#EFEFEF\]\/25 {
     background-color: color-mix(in oklab, #EFEFEF 25%, transparent);
+  }
+  .bg-\[\#F0F0F0\]\/60 {
+    background-color: color-mix(in oklab, #F0F0F0 60%, transparent);
   }
   .bg-\[\#F0F0F0\]\/80 {
     background-color: color-mix(in oklab, #F0F0F0 80%, transparent);
@@ -1499,6 +1483,9 @@
   }
   .pb-4 {
     padding-bottom: calc(var(--spacing) * 4);
+  }
+  .pb-6 {
+    padding-bottom: calc(var(--spacing) * 6);
   }
   .pl-1\.25 {
     padding-left: calc(var(--spacing) * 1.25);

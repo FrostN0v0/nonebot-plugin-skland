@@ -182,3 +182,20 @@ def get_property_icon(property_key: str) -> str:
     """根据属性 key 获取图片文件名"""
     name = PROPERTY_MAP.get(property_key, "unknown")
     return f"property/{name}.png"
+
+
+def format_money_wan(value: str | int | None) -> str:
+    """将字符串或数字形式的货币数值格式化为：
+    - >= 10000 时以万为单位显示整数部分（不保留小数），返回不带单位的数字字符串
+    - < 10000 时直接显示原值
+    非法或空值返回空字符串
+    """
+    if value is None:
+        return ""
+    try:
+        iv = int(float(value))
+    except Exception:
+        return ""
+    if iv >= 10000:
+        return f"{iv // 10000}万"
+    return str(iv)

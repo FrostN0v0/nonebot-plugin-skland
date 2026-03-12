@@ -222,8 +222,12 @@ class Settlement(BaseModel):
 
     id: str = ""
     level: int = 0
+    exp: str = "0"
+    expToLevelUp: str = "0"
     remainMoney: str = "0"
+    moneyMax: str = "0"
     officerCharIds: str = ""
+    officerCharAvatar: str = ""
     name: str = ""
 
 
@@ -237,13 +241,20 @@ class Collection(BaseModel):
     blackboxCount: int = 0
 
 
+class MoneyMgr(BaseModel):
+    """调度券"""
+
+    total: str
+    count: str
+
+
 class Domain(BaseModel):
     """据点信息"""
 
     domainId: str = ""
     level: int = 0
     settlements: list[Settlement] = Field(default_factory=list)
-    moneyMgr: str | None = None
+    moneyMgr: MoneyMgr | None = None
     collections: list[Collection] = Field(default_factory=list)
     factory: Any = None
     name: str = ""

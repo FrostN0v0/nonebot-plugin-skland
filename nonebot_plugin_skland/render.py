@@ -19,6 +19,7 @@ from .filters import (
     loads_json,
     format_date_ymd,
     get_domain_info,
+    format_money_wan,
     format_timestamp,
     get_rarity_color,
     time_to_next_4am,
@@ -207,7 +208,7 @@ async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = Fa
     # 提取总控中枢等级
     control_center_level = 0
     for room in props.spaceShip.rooms:
-        if room.id == "control_center":
+        if room.type == 0:
             control_center_level = room.level
             break
 
@@ -260,6 +261,7 @@ async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = Fa
             "get_rarity_color": get_rarity_color,
             "get_equip_rarity_color": get_equip_rarity_color,
             "get_profession_icon": get_profession_icon,
+            "format_money_wan": format_money_wan,
             "get_property_icon": get_property_icon,
         },
         pages={

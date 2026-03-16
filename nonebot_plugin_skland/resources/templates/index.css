@@ -991,6 +991,9 @@
       border-color: #5A5A5A;
     }
   }
+  .self-end {
+    align-self: flex-end;
+  }
   .self-stretch {
     align-self: stretch;
   }

@@ -8,7 +8,7 @@
   <meta charset="UTF-8">
   <title>Endfield Card</title>
   <style>
-    {% include "index.css" %} 
+    {% include "index.css" %}
   </style>
 
 </head>
@@ -170,6 +170,25 @@
               <div class="h-1 mt-1 rounded-r-sm green-bar" style="width: {{ bp_percent }}%"></div>
               <div class="h-0.5 bg-[#454545]/15"></div>
             </div>
+            {# 周任务 #}
+            <div class="flex flex-col">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 flex items-center justify-center">
+                    <img src="../images/ark_card/card_img/weekly.png" class="w-6" alt="weekly" />
+                  </div>
+                  <span class="text-[#080808]/80 font-[Bender] font-bold text-sm">每周事务</span>
+                </div>
+                <span class="text-[#080808]/80 font-[Bender] font-bold text-sm">
+                  {{ weeklyMission.score }}<span class="text-[#080808]/60">/</span>{{ weeklyMission.total }}
+                </span>
+              </div>
+              {% set weekly_percent = (weeklyMission.score / weeklyMission.total * 100) | int if weeklyMission.total > 0
+              else 0 %}
+              <div class="h-1 mt-1 rounded-r-sm blue-bar" style="width: {{ weekly_percent }}%"></div>
+              <div class="h-0.5 bg-[#454545]/15"></div>
+            </div>
+
           </div>
 
           {# 右侧：据点卡片 - 可换行，同行等高 #}

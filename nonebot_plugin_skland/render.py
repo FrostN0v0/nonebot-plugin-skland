@@ -245,6 +245,7 @@ async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = Fa
             "dungeon": props.dungeon,
             "bpSystem": props.bpSystem,
             "dailyMission": props.dailyMission,
+            "weeklyMission": props.weeklyMission,
             "achieve": props.achieve,
             "domain": props.domain,
             "control_center_level": control_center_level,

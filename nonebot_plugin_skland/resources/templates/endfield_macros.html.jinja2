@@ -85,34 +85,32 @@
 {% set domain_info = domain.domainId | get_domain_info %}
 <div class="relative w-55 bg-[#E6E6E6]/60 rounded-sm card-shadow flex flex-col pb-4 self-stretch">
   <div class="absolute inset-0 rounded-sm {{ domain_info.gradient }}"></div>
-  <div class="relative flex items-center justify-between px-2 pt-2">
-    <span class="text-[#080808]/80 font-[Bender] font-bold">{{ domain_info.name }}</span>
+  <div class="relative flex items-start justify-between px-4 pt-4">
+    <span class="text-[#080808]/80 font-[Bender] font-bold text-lg leading-none">{{ domain_info.name }}</span>
     <div class="flex flex-col items-end">
-      {% if domain.moneyMgr %}
-      <span class="text-[#080808]/60 font-[Bender] font-bold text-[10px]">{{ domain.moneyMgr.count | format_money_wan }}
-        / {{ domain.moneyMgr.total | format_money_wan }}</span>
-      {% endif %}
-      <span class="text-[#080808]/60 font-[Bender] font-bold text-[10px]">Lv.{{ domain.level }}</span>
+      {% if domain.moneyMgr %}<span class="text-[#080808]/60 font-[Bender] font-bold text-[10px] leading-none">{{
+        domain.moneyMgr.count | format_money_wan }} / {{ domain.moneyMgr.total | format_money_wan }}</span>{% endif %}
+      <span class="text-[#080808]/60 font-[Bender] font-bold text-[10px] leading-none">Lv.{{ domain.level }}</span>
     </div>
   </div>
   {# 进度条容器 - 聚落列表 #}
   <div class="relative flex flex-col gap-2.5 mt-4 px-4">
     {% for settlement in domain.settlements %}
     <div class="flex flex-col">
-      <div class="flex items-center justify-between">
+      <div class="flex items-start justify-between">
         <div class="flex items-center gap-2">
           {% if settlement.officerCharAvatar %}
           <img src="{{ settlement.officerCharAvatar }}" class="w-6 h-6 rounded-sm" alt="officer" />
           {% else %}
           <div class="w-6 h-6 bg-[#F0F0F0]/60 rounded-sm"></div>
           {% endif %}
-          <div class="flex items-center gap-2">
-            <span class="text-[#3D3D3D] font-bold font-[Bender] text-[10px]">{{ settlement.name }}</span>
+          <div class="flex flex-col leading-none">
             <span class="text-[#080808]/60 font-[Bender] text-[10px]">Lv.{{ settlement.level }}</span>
+            <span class="text-[#3D3D3D] font-bold font-[Bender] text-[10px]">{{ settlement.name }}</span>
           </div>
         </div>
-        <div class="text-[#3D3D3D] font-bold font-[Bender] text-[10px]">{{ settlement.remainMoney }} / {{
-          settlement.moneyMax | format_money_wan}}</div>
+        <div class="self-end text-[#3D3D3D] font-bold font-[Bender] text-[10px]">{{ settlement.remainMoney |
+          format_money_wan }} / {{ settlement.moneyMax | format_money_wan}}</div>
       </div>
       {% set money_percent = ((settlement.remainMoney | int) / (settlement.moneyMax | int) * 100) | int if
       (settlement.moneyMax | int) > 0 else 0 %}

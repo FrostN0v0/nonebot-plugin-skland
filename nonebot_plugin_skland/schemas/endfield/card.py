@@ -282,6 +282,13 @@ class DailyMission(BaseModel):
     maxDailyActivation: int = 0
 
 
+class WeeklyMission(BaseModel):
+    """每周任务"""
+
+    score: int = 0
+    total: int = 0
+
+
 class UserConfig(BaseModel):
     """用户配置"""
 
@@ -308,6 +315,7 @@ class EndfieldCard(BaseModel):
     dungeon: Dungeon = Field(default_factory=Dungeon)
     bpSystem: BpSystem = Field(default_factory=BpSystem)
     dailyMission: DailyMission = Field(default_factory=DailyMission)
+    weeklyMission: WeeklyMission = Field(default_factory=WeeklyMission)
     config: UserConfig = Field(default_factory=UserConfig)
     currentTs: str = ""
     quickaccess: list[QuickAccess] = Field(default_factory=list)

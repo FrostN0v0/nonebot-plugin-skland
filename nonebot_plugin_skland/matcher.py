@@ -169,6 +169,6 @@ skland.shortcut("终末地签到", {"command": "skland efsign sign --all", "fuzz
 skland.shortcut("终末地全体签到", {"command": "skland efsign all", "fuzzy": False, "prefix": True})
 skland.shortcut("终末地签到详情", {"command": "skland efsign status", "fuzzy": False, "prefix": True})
 skland.shortcut("终末地全体签到详情", {"command": "skland efsign status --all", "fuzzy": False, "prefix": True})
-skland.shortcut("ef", {"command": "skland efcard", "fuzzy": True, "prefix": True})
+skland.shortcut(r"(ef|zmd)", {"command": "skland efcard", "fuzzy": True, "prefix": True})
 skland.shortcut("终末地抽卡记录", {"command": "skland efgacha", "fuzzy": True, "prefix": True})
 skland.shortcut("终末地抽卡更新", {"command": "skland efgacha -u", "fuzzy": True, "prefix": True})

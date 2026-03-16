@@ -1,8 +1,5 @@
 """命令定义和匹配器"""
 
-from nonebot import require
-
-require("nonebot_plugin_alconna")
 from arclet.alconna import config as alc_config
 from nonebot_plugin_argot import ArgotExtension
 from nonebot_plugin_alconna.builtins.extensions import ReplyRecordExtension

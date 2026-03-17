@@ -150,7 +150,7 @@ skland = on_alconna(
     extensions=[ArgotExtension, ReplyRecordExtension],
 )
 
-skland.shortcut("森空岛帮助", {"command": "menu", "fuzzy": True, "prefix": True})
+skland.shortcut("森空岛帮助", {"command": "skland menu", "fuzzy": True, "prefix": True})
 skland.shortcut("森空岛绑定", {"command": "skland bind", "fuzzy": True, "prefix": True})
 skland.shortcut("扫码绑定", {"command": "skland qrcode", "fuzzy": False, "prefix": True})
 skland.shortcut("森空岛解绑", {"command": "skland unbind", "fuzzy": False, "prefix": True})

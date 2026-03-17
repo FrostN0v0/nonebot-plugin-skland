@@ -129,6 +129,10 @@ skland_command = Alconna(
         Option("-u|--update|update", help_text="从接口拉取最新数据并更新"),
         help_text="终末地抽卡记录查询",
     ),
+    Subcommand(
+        "menu",
+        help_text="查询帮助菜单",
+    ),
     namespace=alc_config.namespaces["skland"],
     meta=CommandMeta(
         description="通过森空岛查询游戏数据",
@@ -146,6 +150,7 @@ skland = on_alconna(
     extensions=[ArgotExtension, ReplyRecordExtension],
 )
 
+skland.shortcut("森空岛帮助", {"command": "menu", "fuzzy": True, "prefix": True})
 skland.shortcut("森空岛绑定", {"command": "skland bind", "fuzzy": True, "prefix": True})
 skland.shortcut("扫码绑定", {"command": "skland qrcode", "fuzzy": False, "prefix": True})
 skland.shortcut("森空岛解绑", {"command": "skland unbind", "fuzzy": False, "prefix": True})

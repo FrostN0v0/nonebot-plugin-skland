@@ -270,3 +270,56 @@ async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = Fa
             "base_url": f"file://{TEMPLATES_DIR}",
         },
     )
+
+
+async def render_help_menu(extra_data: dict, bg: str | Url) -> bytes:
+    menu = [
+        {"name": "扫码绑定", "desc": "森空岛扫码绑定"},
+        {"name": "森空岛解绑", "desc": "解绑森空岛账号"},
+        {"name": "skland", "desc": "查询明日方舟角色信息卡片"},
+        {"name": "明日方舟签到", "desc": "签到绑定的明日方舟账号。"},
+        {"name": "签到详情", "desc": "查看绑定角色的自动签到状态。"},
+        {"name": "全体签到", "desc": "签到所有绑定到bot的明日方舟账号。"},
+        {"name": "全体签到详情", "desc": "查看所有绑定角色的签到状态。"},
+        {"name": "终末地签到", "desc": "签到绑定的终末地账号。"},
+        {"name": "终末地签到详情", "desc": "查看绑定角色的终末地自动签到状态。"},
+        {"name": "终末地全体签到", "desc": "签到所有绑定到bot的终末地账号。"},
+        {"name": "终末地全体签到详情", "desc": "查看所有绑定角色的终末地签到状态。"},
+        {"name": "终末地角色卡片", "desc": "查询终末地角色信息卡片。"},
+        {"name": "<傀影|水月|萨米|萨卡兹|界园>肉鸽", "desc": "查询指定主题的肉鸽战绩。"},
+        {"name": "战绩详情", "desc": "查询单局肉鸽战绩详情。"},
+        {"name": "方舟抽卡记录", "desc": "查询绑定到bot的明日方舟账号的抽卡记录。"},
+        {"name": "终末地抽卡记录", "desc": "查询绑定到bot的终末地账号的抽卡记录。"},
+        {"name": "终末地抽卡更新", "desc": "从接口拉取最新终末地抽卡记录并更新数据库。"},
+        {"name": "导入抽卡记录", "desc": "导入小黑盒明日方舟抽卡记录。"},
+        {"name": "角色更新", "desc": "同步森空岛绑定的游戏角色信息。"},
+        {"name": "全体角色更新", "desc": "更新所有绑定用户的角色信息。"},
+        {"name": "资源更新", "desc": "更新游戏资源（图片和数据）。"},
+    ]
+
+    import math
+    total = len(menu)
+    per_col = math.ceil(total / 3)
+
+    column1 = menu[0:per_col]
+    column2 = menu[per_col:per_col*2]
+    column3 = menu[per_col*2:]
+
+    # 然后将 column1, column2, column3 传给渲染函数
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="help.html.jinja2",
+        templates={
+            "now_ts": datetime.now().timestamp(),
+            "background_image": bg,
+            "column1": column1,
+            "column2": column2,
+            "column3": column3
+        },
+        filters={
+        },
+        pages={
+            "viewport": {"width": 706, "height": 1},
+            "base_url": f"file://{TEMPLATES_DIR}",
+        },
+    )

@@ -270,3 +270,11 @@ async def _(
 
     update = result.find("efgacha.update")
     await ef_gacha_history_handler(user_session, session, begin, limit, target, bot, update)
+
+
+@skland.assign("menu")
+async def _():
+    """查询帮助菜单"""
+    from .commands.menu import menu_handler
+
+    await menu_handler()

@@ -1,9 +1,9 @@
 """命令模块"""
 
-from .menu import menu_handler as menu_handler
 from .bind import bind_handler as bind_handler
 from .card import card_handler as card_handler
 from .card import clue_handler as clue_handler
+from .menu import menu_handler as menu_handler
 from .sync import sync_handler as sync_handler
 from .gacha import gacha_handler as gacha_handler
 from .rogue import rogue_handler as rogue_handler

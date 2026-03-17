@@ -3,9 +3,11 @@
 import random
 
 from nonebot_plugin_alconna import UniMessage
+
 from ..extras import extra_data
 from ..render import render_help_menu
 from ..utils import get_background_image
+
 
 async def menu_handler():
     """查询帮助菜单"""

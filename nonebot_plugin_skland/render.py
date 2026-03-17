@@ -298,12 +298,13 @@ async def render_help_menu(extra_data: dict, bg: str | Url) -> bytes:
     ]
 
     import math
+
     total = len(menu)
     per_col = math.ceil(total / 3)
 
     column1 = menu[0:per_col]
-    column2 = menu[per_col:per_col*2]
-    column3 = menu[per_col*2:]
+    column2 = menu[per_col : per_col * 2]
+    column3 = menu[per_col * 2 :]
 
     # 然后将 column1, column2, column3 传给渲染函数
     return await template_to_pic(
@@ -314,10 +315,9 @@ async def render_help_menu(extra_data: dict, bg: str | Url) -> bytes:
             "background_image": bg,
             "column1": column1,
             "column2": column2,
-            "column3": column3
+            "column3": column3,
         },
-        filters={
-        },
+        filters={},
         pages={
             "viewport": {"width": 706, "height": 1},
             "base_url": f"file://{TEMPLATES_DIR}",

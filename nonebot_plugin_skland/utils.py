@@ -1,16 +1,15 @@
+import asyncio
 import contextlib
 from collections import defaultdict
+from collections.abc import Callable, Sequence, Coroutine
 from typing import Literal, TypeVar, ParamSpec, Concatenate, overload
-from collections.abc import Callable, Sequence, Coroutine, AsyncIterable
 
-import anyio
 import httpx
 from pydantic import AnyUrl as Url
 from nonebot import logger, get_driver
 from nonebot_plugin_user import UserSession
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_alconna import UniMessage, message_reaction
-from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStream
 
 from .data_source import gacha_table_data
 from .api import SklandAPI, SklandLoginAPI
@@ -363,19 +362,19 @@ async def get_all_gacha_records(char: Character, cate: GachaCate, access_token: 
 
 
 @overload
-def get_all_ef_gacha_records(
+async def get_all_ef_gacha_records(
     char: Character,
     pool_type: EndfieldCharPoolType,
     role_token: str,
     concurrency: int = 8,
-) -> AsyncIterable[EfCharGachaInfo]: ...
+) -> Sequence[EfCharGachaInfo]: ...
 @overload
-def get_all_ef_gacha_records(
+async def get_all_ef_gacha_records(
     char: Character,
     pool_type: EndfieldWeaponPoolType,
     role_token: str,
     concurrency: int = 8,
-) -> AsyncIterable[EfWeaponGachaInfo]: ...
+) -> Sequence[EfWeaponGachaInfo]: ...
 
 
 async def get_all_ef_gacha_records(
@@ -383,8 +382,8 @@ async def get_all_ef_gacha_records(
     pool_type: EndfieldPoolType,
     role_token: str,
     concurrency: int = 8,
-) -> AsyncIterable[EfGachaInfo]:
-    """异步生成器，获取指定卡池类型下的所有终末地抽卡记录。
+) -> Sequence[EfGachaInfo]:
+    """获取指定卡池类型下的所有终末地抽卡记录。
 
     自动处理分页，并发请求数据直到获取全部记录。
 
@@ -394,64 +393,46 @@ async def get_all_ef_gacha_records(
         role_token: 角色令牌。
         concurrency: 并发请求数量，默认为 8。
 
-    Yields:
-        EfGachaInfo: 单条抽卡记录。
+    Returns:
+        Sequence[EfGachaInfo]: 抽卡记录列表。
     """
-    assert concurrency > 0, "Concurrency must be greater than 0"
+    if concurrency <= 0:
+        raise ValueError("concurrency must be greater than 0")
 
     server_id = char.channel_master_id
     first_page = await SklandAPI.get_ef_gacha_history(pool_type, server_id, role_token)
     if not first_page.gacha_list:
-        return
+        return []
     if not first_page.hasMore:
-        for gacha_infos in first_page.gacha_list:
-            yield gacha_infos
-        return
+        return first_page.gacha_list
 
     page_size = len(first_page.gacha_list)  # normally 5
-    first_seq = first_page.gacha_list[0].seq_id_int + 1
     last_seq = first_page.gacha_list[-1].seq_id_int  # shared between workers
-    update_last_seq = anyio.Lock()
+    last_seq_lock = asyncio.Lock()
+    records: list[EfGachaInfo] = [*first_page.gacha_list]
+    records_lock = asyncio.Lock()
 
     # the worker fn
-    async def fetch_page(send: MemoryObjectSendStream[tuple[int, Sequence[EfGachaInfo]]]) -> None:
+    async def fetch_page() -> None:
         nonlocal last_seq
-        async with send:
-            while True:
-                async with update_last_seq:
-                    seq_id, last_seq = last_seq, last_seq - page_size
-                seq_end = seq_id - page_size
-                page = await SklandAPI.get_ef_gacha_history(pool_type, server_id, role_token, str(seq_id), client)
-                gacha_infos = [i for i in page.gacha_list if seq_end <= i.seq_id_int < seq_id]
-                await send.send((seq_id, gacha_infos))
-                if not page.hasMore:
-                    break
+        while True:
+            async with last_seq_lock:
+                seq_id, last_seq = last_seq, last_seq - page_size
+            if seq_id < 0:
+                break
+            seq_end = seq_id - page_size
+            page = await SklandAPI.get_ef_gacha_history(pool_type, server_id, role_token, str(seq_id), client)
+            gacha_infos = [i for i in page.gacha_list if seq_end <= i.seq_id_int < seq_id]
+            async with records_lock:
+                records.extend(gacha_infos)
+            if not page.hasMore:
+                break
 
-    async def sort_gacha_infos(
-        recv: MemoryObjectReceiveStream[tuple[int, Sequence[EfGachaInfo]]],
-    ) -> AsyncIterable[Sequence[EfGachaInfo]]:
-        buffer: list[tuple[int, Sequence[EfGachaInfo]]] = []
-        expected_seq = first_seq
-        async for seq_id, infos in recv:
-            buffer.append((seq_id, infos))
-            buffer.sort(key=lambda x: x[0])
-            while buffer and buffer[-1][0] == expected_seq:
-                _, infos = buffer.pop()
-                yield infos
-                expected_seq -= page_size
-        buffer.sort(key=lambda x: x[0])
-        for _, infos in buffer:
-            yield infos
+    async with httpx.AsyncClient() as client:
+        await asyncio.gather(*(fetch_page() for _ in range(concurrency)))
 
-    send, recv = anyio.create_memory_object_stream[tuple[int, Sequence[EfGachaInfo]]](concurrency * 2)
-    async with httpx.AsyncClient() as client, anyio.create_task_group() as tg:
-        for _ in range(concurrency):
-            tg.start_soon(fetch_page, send.clone())
-        send.send_nowait((first_seq, first_page.gacha_list))
-        send.close()
-        async for gacha_infos in sort_gacha_infos(recv):
-            for info in gacha_infos:
-                yield info
+    # sort by seq_id descending
+    return sorted(records, key=lambda x: x.seq_id_int, reverse=True)
 
 
 def _get_up_chars(pool_id):

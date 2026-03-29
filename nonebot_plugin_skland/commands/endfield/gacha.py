@@ -69,7 +69,7 @@ async def ef_gacha_history_handler(
         # 获取所有角色池记录
         all_gacha_records_flat: list[EfGachaInfo] = []
         for pool_type in EF_CHAR_POOL_TYPES:
-            records = [record async for record in get_all_ef_gacha_records(character, pool_type, role_token)]
+            records = await get_all_ef_gacha_records(character, pool_type, role_token)
             all_gacha_records_flat.extend(records)
             logger.debug(
                 f"正在获取角色：{character.nickname} 的终末地抽卡记录，"
@@ -77,7 +77,7 @@ async def ef_gacha_history_handler(
             )
 
         # 获取武器池记录
-        records = [record async for record in get_all_ef_gacha_records(character, EndfieldPoolType.WEAPON, role_token)]
+        records = await get_all_ef_gacha_records(character, EndfieldPoolType.WEAPON, role_token)
         all_gacha_records_flat.extend(records)
         logger.debug(f"正在获取角色：{character.nickname} 的终末地武器池抽卡记录，本次获取记录条数: {len(records)}")
 

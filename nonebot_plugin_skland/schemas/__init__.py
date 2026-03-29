@@ -36,6 +36,8 @@ from .endfield import EfWeaponGachaInfo as EfWeaponGachaInfo
 from .arknights import GroupedGachaRecord as GroupedGachaRecord
 from .endfield import EfCharGachaResponse as EfCharGachaResponse
 from .endfield import EfGroupedGachaRecord as EfGroupedGachaRecord
+from .endfield import EndfieldCharPoolType as EndfieldCharPoolType
 from .endfield import EndfieldSignResponse as EndfieldSignResponse
 from .endfield import EfWeaponGachaResponse as EfWeaponGachaResponse
 from .endfield import EfGachaContentResponse as EfGachaContentResponse
+from .endfield import EndfieldWeaponPoolType as EndfieldWeaponPoolType

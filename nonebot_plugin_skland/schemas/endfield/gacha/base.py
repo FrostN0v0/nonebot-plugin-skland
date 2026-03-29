@@ -1,7 +1,7 @@
 """终末地抽卡记录基础模型"""
 
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import Field, BaseModel
 from nonebot.compat import model_validator
@@ -14,6 +14,14 @@ class EndfieldPoolType(Enum):
     SPECIAL = "E_CharacterGachaPoolType_Special"
     BEGINNER = "E_CharacterGachaPoolType_Beginner"
     WEAPON = ""
+
+
+EndfieldCharPoolType = Literal[
+    EndfieldPoolType.STANDARD,
+    EndfieldPoolType.SPECIAL,
+    EndfieldPoolType.BEGINNER,
+]
+EndfieldWeaponPoolType = Literal[EndfieldPoolType.WEAPON]
 
 
 class EfCharGachaInfo(BaseModel):

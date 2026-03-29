@@ -1,6 +1,7 @@
 import hmac
 import json
 import hashlib
+import contextlib
 from typing import Literal
 from datetime import datetime
 from urllib.parse import urlparse
@@ -226,6 +227,7 @@ class SklandAPI:
         size: int = 100,
         gachaTs: str | None = None,
         pos: int | None = None,
+        client: httpx.AsyncClient | None = None,
     ) -> GachaResponse:
         """获取明日方舟抽卡记录"""
         gacha_history_url = "https://ak.hypergryph.com/user/api/inquiry/gacha/history"
@@ -237,7 +239,7 @@ class SklandAPI:
         if gachaTs is not None and pos is not None:
             query_params["gachaTs"] = gachaTs
             query_params["pos"] = pos
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient() if client is None else contextlib.nullcontext(client) as client:
             try:
                 response = await client.get(
                     gacha_history_url,
@@ -263,6 +265,7 @@ class SklandAPI:
         server_id: str,
         role_token: str,
         seq_id: str | None = None,
+        client: httpx.AsyncClient | None = None,
     ) -> EfCharGachaResponse | EfWeaponGachaResponse:
         """获取终末地抽卡记录"""
         is_weapon = pool_type == EndfieldPoolType.WEAPON
@@ -277,7 +280,7 @@ class SklandAPI:
             query_params["pool_type"] = pool_type.value
         if seq_id is not None:
             query_params["seq_id"] = seq_id
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient() if client is None else contextlib.nullcontext(client) as client:
             try:
                 response = await client.get(
                     ef_gacha_url,

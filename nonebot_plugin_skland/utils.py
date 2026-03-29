@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 import contextlib
 from collections import defaultdict
 from collections.abc import Callable, Sequence, Coroutine
@@ -409,12 +410,11 @@ async def get_all_ef_gacha_records(
     page_size = len(first_page.gacha_list)  # normally 5
     last_seq = first_page.gacha_list[-1].seq_id_int  # shared between workers
     last_seq_lock = asyncio.Lock()
-    records: list[EfGachaInfo] = [*first_page.gacha_list]
-    records_lock = asyncio.Lock()
 
     # the worker fn
-    async def fetch_page() -> None:
+    async def fetch_page() -> list[EfGachaInfo]:
         nonlocal last_seq
+        records: list[EfGachaInfo] = []
         while True:
             async with last_seq_lock:
                 seq_id, last_seq = last_seq, last_seq - page_size
@@ -423,16 +423,16 @@ async def get_all_ef_gacha_records(
             seq_end = seq_id - page_size
             page = await SklandAPI.get_ef_gacha_history(pool_type, server_id, role_token, str(seq_id), client)
             gacha_infos = [i for i in page.gacha_list if seq_end <= i.seq_id_int < seq_id]
-            async with records_lock:
-                records.extend(gacha_infos)
+            records.extend(gacha_infos)
             if not page.hasMore:
                 break
+        return records
 
     async with httpx.AsyncClient() as client:
-        await asyncio.gather(*(fetch_page() for _ in range(concurrency)))
+        results = await asyncio.gather(*(fetch_page() for _ in range(concurrency)))
 
     # sort by seq_id descending
-    return sorted(records, key=lambda x: x.seq_id_int, reverse=True)
+    return sorted(itertools.chain(first_page.gacha_list, *results), key=lambda x: x.seq_id_int, reverse=True)
 
 
 def _get_up_chars(pool_id):

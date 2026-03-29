@@ -418,7 +418,7 @@ async def get_all_ef_gacha_records(
         while True:
             async with last_seq_lock:
                 seq_id, last_seq = last_seq, last_seq - page_size
-            if seq_id < 0:
+            if seq_id <= 0:
                 break
             seq_end = seq_id - page_size
             page = await SklandAPI.get_ef_gacha_history(pool_type, server_id, role_token, str(seq_id), client)

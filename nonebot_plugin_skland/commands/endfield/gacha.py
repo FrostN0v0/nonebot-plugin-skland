@@ -13,7 +13,7 @@ from ...data_source import ef_gacha_pool_data
 from ...render import render_ef_gacha_history
 from ...model import SkUser, Character, GachaRecord
 from ...db_handler import select_all_ef_gacha_records
-from ...schemas import CRED, EfGachaInfo, EndfieldPoolType
+from ...schemas import CRED, EfGachaInfo, EndfieldPoolType, EndfieldCharPoolType
 from ...utils import (
     send_reaction,
     group_ef_gacha_records,
@@ -23,7 +23,7 @@ from ...utils import (
 )
 
 # 需要遍历的角色池类型
-EF_CHAR_POOL_TYPES = [
+EF_CHAR_POOL_TYPES: list[EndfieldCharPoolType] = [
     EndfieldPoolType.STANDARD,
     EndfieldPoolType.SPECIAL,
     EndfieldPoolType.BEGINNER,
@@ -69,21 +69,17 @@ async def ef_gacha_history_handler(
         # 获取所有角色池记录
         all_gacha_records_flat: list[EfGachaInfo] = []
         for pool_type in EF_CHAR_POOL_TYPES:
-            count_before = len(all_gacha_records_flat)
-            async for record in get_all_ef_gacha_records(character, pool_type, role_token):
-                all_gacha_records_flat.append(record)
-            new_pool_count = len(all_gacha_records_flat) - count_before
+            records = await get_all_ef_gacha_records(character, pool_type, role_token)
+            all_gacha_records_flat.extend(records)
             logger.debug(
                 f"正在获取角色：{character.nickname} 的终末地抽卡记录，"
-                f"卡池类型：{pool_type.name}, 本次获取记录条数: {new_pool_count}"
+                f"卡池类型：{pool_type.name}, 本次获取记录条数: {len(records)}"
             )
 
         # 获取武器池记录
-        count_before = len(all_gacha_records_flat)
-        async for record in get_all_ef_gacha_records(character, EndfieldPoolType.WEAPON, role_token):
-            all_gacha_records_flat.append(record)
-        weapon_count = len(all_gacha_records_flat) - count_before
-        logger.debug(f"正在获取角色：{character.nickname} 的终末地武器池抽卡记录，本次获取记录条数: {weapon_count}")
+        records = await get_all_ef_gacha_records(character, EndfieldPoolType.WEAPON, role_token)
+        all_gacha_records_flat.extend(records)
+        logger.debug(f"正在获取角色：{character.nickname} 的终末地武器池抽卡记录，本次获取记录条数: {len(records)}")
 
         # 去重 + 构建 GachaRecord
         db_records = await select_all_ef_gacha_records(user, character.uid, session)

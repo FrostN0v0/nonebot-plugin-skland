@@ -11,5 +11,7 @@ from .gacha import EfWeaponGachaInfo as EfWeaponGachaInfo
 from .gacha import EfCharGachaResponse as EfCharGachaResponse
 from .sign import EndfieldSignResponse as EndfieldSignResponse
 from .gacha import EfGroupedGachaRecord as EfGroupedGachaRecord
+from .gacha import EndfieldCharPoolType as EndfieldCharPoolType
 from .gacha import EfWeaponGachaResponse as EfWeaponGachaResponse
 from .gacha import EfGachaContentResponse as EfGachaContentResponse
+from .gacha import EndfieldWeaponPoolType as EndfieldWeaponPoolType

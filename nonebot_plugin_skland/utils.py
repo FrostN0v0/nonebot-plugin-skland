@@ -1,7 +1,9 @@
+import asyncio
+import itertools
 import contextlib
 from collections import defaultdict
-from collections.abc import Callable, Coroutine
-from typing import Literal, TypeVar, ParamSpec, Concatenate
+from collections.abc import Callable, Sequence, Coroutine
+from typing import Literal, TypeVar, ParamSpec, Concatenate, overload
 
 import httpx
 from pydantic import AnyUrl as Url
@@ -23,13 +25,18 @@ from .schemas import (
     GachaPool,
     GachaPull,
     GachaGroup,
+    EfGachaInfo,
     EfGachaPull,
     EfGachaGroup,
     ArkSignResult,
+    EfCharGachaInfo,
     EfGachaPoolInfo,
     EndfieldPoolType,
+    EfWeaponGachaInfo,
     GroupedGachaRecord,
     EfGroupedGachaRecord,
+    EndfieldCharPoolType,
+    EndfieldWeaponPoolType,
 )
 
 P = ParamSpec("P")
@@ -331,56 +338,101 @@ async def get_all_gacha_records(char: Character, cate: GachaCate, access_token: 
                      其具体类型取决于 `SklandAPI.get_gacha_history` 返回结果中
                      `gacha_list` 内元素的结构。
     """
-    page = await SklandAPI.get_gacha_history(char.uid, role_token, access_token, ak_cookie, cate.id)
-    prev_ts, prev_pos = None, None
+    async with httpx.AsyncClient() as client:
+        page = await SklandAPI.get_gacha_history(char.uid, role_token, access_token, ak_cookie, cate.id, client=client)
+        prev_ts, prev_pos = None, None
 
-    while page and page.gacha_list:
-        for record in page.gacha_list:
-            yield record
-        if not page.hasMore:
-            break
-        if (page.next_ts, page.next_pos) == (prev_ts, prev_pos):
-            break
-        prev_ts, prev_pos = page.next_ts, page.next_pos
-        page = await SklandAPI.get_gacha_history(
-            char.uid, role_token, access_token, ak_cookie, cate.id, gachaTs=page.next_ts, pos=page.next_pos
-        )
+        while page and page.gacha_list:
+            for record in page.gacha_list:
+                yield record
+            if not page.hasMore:
+                break
+            if (page.next_ts, page.next_pos) == (prev_ts, prev_pos):
+                break
+            prev_ts, prev_pos = page.next_ts, page.next_pos
+            page = await SklandAPI.get_gacha_history(
+                char.uid,
+                role_token,
+                access_token,
+                ak_cookie,
+                cate.id,
+                gachaTs=page.next_ts,
+                pos=page.next_pos,
+                client=client,
+            )
+
+
+@overload
+async def get_all_ef_gacha_records(
+    char: Character,
+    pool_type: EndfieldCharPoolType,
+    role_token: str,
+    concurrency: int = 8,
+) -> Sequence[EfCharGachaInfo]: ...
+@overload
+async def get_all_ef_gacha_records(
+    char: Character,
+    pool_type: EndfieldWeaponPoolType,
+    role_token: str,
+    concurrency: int = 8,
+) -> Sequence[EfWeaponGachaInfo]: ...
 
 
 async def get_all_ef_gacha_records(
     char: Character,
     pool_type: EndfieldPoolType,
     role_token: str,
-):
-    """异步生成器，获取指定卡池类型下的所有终末地抽卡记录。
+    concurrency: int = 8,
+) -> Sequence[EfGachaInfo]:
+    """获取指定卡池类型下的所有终末地抽卡记录。
 
-    自动处理分页，持续请求数据直到获取全部记录。
+    自动处理分页，并发请求数据直到获取全部记录。
 
     Args:
         char: 角色信息（包含 channel_master_id 作为 server_id）。
         pool_type: 卡池类型（STANDARD / SPECIAL / BEGINNER / WEAPON）。
         role_token: 角色令牌。
+        concurrency: 并发请求数量，默认为 8。
 
-    Yields:
-        EfCharGachaInfo | EfWeaponGachaInfo: 单条抽卡记录。
+    Returns:
+        Sequence[EfGachaInfo]: 抽卡记录列表。
     """
-    page = await SklandAPI.get_ef_gacha_history(pool_type, char.channel_master_id, role_token)
-    prev_seq = None
+    if concurrency <= 0:
+        raise ValueError("concurrency must be greater than 0")
 
-    while page and page.gacha_list:
-        for record in page.gacha_list:
-            yield record
-        if not page.hasMore:
-            break
-        if page.next_seq == prev_seq:
-            break
-        prev_seq = page.next_seq
-        page = await SklandAPI.get_ef_gacha_history(
-            pool_type,
-            char.channel_master_id,
-            role_token,
-            seq_id=page.next_seq,
-        )
+    server_id = char.channel_master_id
+    first_page = await SklandAPI.get_ef_gacha_history(pool_type, server_id, role_token)
+    if not first_page.gacha_list:
+        return []
+    if not first_page.hasMore:
+        return first_page.gacha_list
+
+    page_size = len(first_page.gacha_list)  # normally 5
+    last_seq = first_page.gacha_list[-1].seq_id_int  # shared between workers
+    last_seq_lock = asyncio.Lock()
+
+    # the worker fn
+    async def fetch_page() -> list[EfGachaInfo]:
+        nonlocal last_seq
+        records: list[EfGachaInfo] = []
+        while True:
+            async with last_seq_lock:
+                seq_id, last_seq = last_seq, last_seq - page_size
+            if seq_id <= 0:
+                break
+            seq_end = seq_id - page_size
+            page = await SklandAPI.get_ef_gacha_history(pool_type, server_id, role_token, str(seq_id), client)
+            gacha_infos = [i for i in page.gacha_list if seq_end <= i.seq_id_int < seq_id]
+            records.extend(gacha_infos)
+            if not page.hasMore:
+                break
+        return records
+
+    async with httpx.AsyncClient() as client:
+        results = await asyncio.gather(*(fetch_page() for _ in range(concurrency)))
+
+    # sort by seq_id descending
+    return sorted(itertools.chain(first_page.gacha_list, *results), key=lambda x: x.seq_id_int, reverse=True)
 
 
 def _get_up_chars(pool_id):

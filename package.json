@@ -1,6 +1,9 @@
 {
   "dependencies": {
-    "@tailwindcss/cli": "^4.1.18",
-    "tailwindcss": "^4.1.18"
+    "@tailwindcss/cli": "^4.2.2",
+    "tailwindcss": "^4.2.2"
+  },
+  "scripts": {
+    "build": "npx tailwindcss -i ./tailwind.css -o ./nonebot_plugin_skland/resources/templates/index.css -w"
   }
 }

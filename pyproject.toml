@@ -76,9 +76,6 @@ typeCheckingMode = "standard"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 
-[tool.pdm.scripts]
-build_css = "npx tailwindcss -i ./tailwind.css -o ./nonebot_plugin_skland/resources/templates/index.css -w"
-
 [tool.bumpversion]
 current_version = "0.6.7"
 commit = true

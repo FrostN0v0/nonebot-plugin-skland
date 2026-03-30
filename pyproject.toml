@@ -19,7 +19,7 @@ dependencies = [
     "nonebot2>=2.4.2",
     "qrcode[pil]>=7.4.2",
     "rich>=13.9.4",
-    "arclet-alconna>=1.8.38",
+    "arclet-alconna>=1.8.44",
 ]
 
 [project.urls]

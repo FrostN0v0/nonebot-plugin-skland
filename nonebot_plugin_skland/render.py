@@ -202,7 +202,7 @@ async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = Fa
         filtered_chars = props.chars
     else:
         # 按 config.charIds 过滤并保持顺序
-        char_map = {char.id: char for char in props.chars}
+        char_map = {char.charData.id: char for char in props.chars}
         filtered_chars = [char_map[cid] for cid in props.config.charIds if cid in char_map]
 
     # 提取总控中枢等级

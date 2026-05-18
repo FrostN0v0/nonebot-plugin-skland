@@ -13,6 +13,7 @@ class EndfieldPoolType(Enum):
     STANDARD = "E_CharacterGachaPoolType_Standard"
     SPECIAL = "E_CharacterGachaPoolType_Special"
     BEGINNER = "E_CharacterGachaPoolType_Beginner"
+    JOINT = "E_CharacterGachaPoolType_Joint"
     WEAPON = ""
 
 
@@ -20,6 +21,7 @@ EndfieldCharPoolType = Literal[
     EndfieldPoolType.STANDARD,
     EndfieldPoolType.SPECIAL,
     EndfieldPoolType.BEGINNER,
+    EndfieldPoolType.JOINT,
 ]
 EndfieldWeaponPoolType = Literal[EndfieldPoolType.WEAPON]
 
@@ -223,15 +225,19 @@ class EfGachaContentPool(BaseModel):
 
     @property
     def up_six_char_ids(self) -> list[str]:
-        """获取该卡池中UP六星角色的ID列表
-
-        仅返回 up6_name 对应的角色ID（当期真正的UP角色），
-        rotate_list 中的其他轮换角色不算UP（抽到算歪）。
-        all 列表中 rarity 为 1-indexed（6=6★）。
-        """
+        """获取该卡池中UP六星角色的ID列表"""
+        if self.pool_type == "extra":
+            return [c.id for c in self.all if c.rarity == 6]
         if self.up6_name:
             return [c.id for c in self.all if c.rarity == 6 and c.name == self.up6_name]
         return []
+
+    @property
+    def up_six_display_name(self) -> str:
+        """获取渲染用UP六星名称"""
+        if self.pool_type == "extra":
+            return " / ".join(c.name for c in self.all if c.rarity == 6)
+        return self.up6_name
 
 
 class EfGachaContentResponse(BaseModel):

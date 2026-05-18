@@ -27,6 +27,8 @@ class EfGroupedGachaRecord(BaseModel):
     """常驻角色池"""
     special_pools: list[EfGachaPoolInfo] = []
     """限定UP角色池"""
+    joint_pools: list[EfGachaPoolInfo] = []
+    """联合寻访角色池"""
     weapon_pools: list[EfGachaPoolInfo] = []
     """武器池"""
 
@@ -34,7 +36,7 @@ class EfGroupedGachaRecord(BaseModel):
     @classmethod
     def sort_pools(cls, values) -> Any:
         if isinstance(values, dict):
-            for key in ("beginner_pools", "standard_pools", "special_pools", "weapon_pools"):
+            for key in ("beginner_pools", "standard_pools", "special_pools", "joint_pools", "weapon_pools"):
                 if key in values and values[key]:
                     values[key] = sorted(
                         values[key],
@@ -47,8 +49,8 @@ class EfGroupedGachaRecord(BaseModel):
 
     @property
     def char_pools(self) -> list[EfGachaPoolInfo]:
-        """所有角色池（beginner + standard + special）"""
-        return self.beginner_pools + self.standard_pools + self.special_pools
+        """所有角色池（beginner + standard + special + joint）"""
+        return self.beginner_pools + self.standard_pools + self.special_pools + self.joint_pools
 
     @property
     def all_pools(self) -> list[EfGachaPoolInfo]:
@@ -70,6 +72,7 @@ class EfGroupedGachaRecord(BaseModel):
         return max(
             len(self.special_pools),
             len(self.weapon_pools),
+            len(self.joint_pools),
             len(self.standard_pools),
             len(self.beginner_pools),
         )
@@ -88,7 +91,13 @@ class EfGroupedGachaRecord(BaseModel):
             切片范围内的 pool_id 集合，若 begin 和 limit 均为 None 则返回全部
         """
         visible: set[str] = set()
-        for pools in (self.special_pools, self.weapon_pools, self.standard_pools, self.beginner_pools):
+        for pools in (
+            self.special_pools,
+            self.weapon_pools,
+            self.joint_pools,
+            self.standard_pools,
+            self.beginner_pools,
+        ):
             for p in pools[begin:limit]:
                 visible.add(p.pool_id)
         return visible
@@ -154,9 +163,45 @@ class EfGroupedGachaRecord(BaseModel):
         return (total_paid - pity_after_last_up) / up_count
 
     @property
+    def joint_total_pulls(self) -> int:
+        """联合寻访总抽数"""
+        return sum(pool.total_pulls for pool in self.joint_pools)
+
+    @property
+    def joint_total_six(self) -> int:
+        """联合寻访总6★数"""
+        return sum(pool.total_six_stars for pool in self.joint_pools)
+
+    @property
+    def joint_pity(self) -> int:
+        """联合寻访当前已垫抽数（保底独立，取最新联合寻访池）"""
+        if not self.joint_pools:
+            return 0
+        latest_pool = max(
+            self.joint_pools,
+            key=lambda p: max((r.gacha_ts for r in p.records), default=0),
+            default=None,
+        )
+        return latest_pool.pity_count if latest_pool else 0
+
+    @property
+    def joint_pity_remaining(self) -> int:
+        """联合寻访距80抽保底还差多少抽"""
+        return max(0, 80 - self.joint_pity)
+
+    @property
+    def joint_six_avg(self) -> float:
+        """联合寻访六星平均抽数"""
+        six_count = self.joint_total_six
+        if six_count == 0:
+            return 0.0
+        total_paid = sum(pool.paid_pulls for pool in self.joint_pools)
+        return (total_paid - self.joint_pity) / six_count
+
+    @property
     def char_total_pulls(self) -> int:
         """角色池总抽数"""
-        return self.beginner_total_pulls + self.standard_total_pulls + self.special_total_pulls
+        return self.beginner_total_pulls + self.standard_total_pulls + self.special_total_pulls + self.joint_total_pulls
 
     @property
     def weapon_total_pulls(self) -> int:

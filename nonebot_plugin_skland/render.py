@@ -167,6 +167,10 @@ async def render_gacha_history(
     )
 
 
+def get_ef_gacha_viewport_width(props: EfGroupedGachaRecord) -> int:
+    return 1020 if props.joint_pools else 800
+
+
 async def render_ef_gacha_history(
     props: EfGroupedGachaRecord,
     player: PlayerBase,
@@ -189,7 +193,7 @@ async def render_ef_gacha_history(
             "ef_charId_to_avatarUrl": ef_charId_to_avatarUrl,
         },
         pages={
-            "viewport": {"width": 800, "height": 1},
+            "viewport": {"width": get_ef_gacha_viewport_width(props), "height": 1},
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         device_scale_factor=1.5,

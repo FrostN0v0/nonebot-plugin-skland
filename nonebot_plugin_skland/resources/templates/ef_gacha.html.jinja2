@@ -12,7 +12,7 @@
 </head>
 
 <body>
-    <div class="relative w-auto h-auto flex flex-col p-4 gap-4 bg-[#1a1a2e]" style="min-width: 680px;">
+    <div class="relative w-auto h-auto flex flex-col p-4 gap-4 bg-[#1a1a2e]" style="min-width: {{ 900 if record.joint_pools else 680 }}px;">
 
         {# ═══════════════════ 上半部分：账号信息 + 统计数据 ═══════════════════ #}
 
@@ -117,6 +117,30 @@
                     </div>
                 </div>
 
+                {# 联合寻访统计 #}
+                {% if record.joint_pools %}
+                <div class="flex-1 bg-[#2a2a3e] rounded-xl p-3 gacha-info-shadow flex flex-col justify-between">
+                    <div class="flex items-center gap-1.5 mb-1">
+                        <div class="w-1 h-4 rounded-full bg-[#c084fc]"></div>
+                        <span class="text-white font-[Akrobat] font-bold text-sm">联合寻访</span>
+                    </div>
+                    <div class="text-center mb-1">
+                        <span class="text-white font-[Akrobat] font-bold text-2xl">{{ record.joint_total_pulls }}</span>
+                        <span class="text-white/60 text-sm font-[Akrobat]">抽</span>
+                    </div>
+                    <div class="flex justify-around text-center gap-1">
+                        <div class="flex flex-col">
+                            <span class="text-[#FFCC00] font-[Akrobat] font-bold text-base">{{ record.joint_total_six }}</span>
+                            <span class="text-white/40 text-[10px]">6★</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-white font-[Akrobat] font-bold text-base">{{ "%.1f"|format(record.joint_six_avg) if record.joint_total_six > 0 else "-" }}</span>
+                            <span class="text-white/40 text-[10px]">6★平均</span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
                 {# 常驻池统计 #}
                 <div class="flex-1 bg-[#2a2a3e] rounded-xl p-3 gacha-info-shadow flex flex-col justify-between">
                     <div class="flex items-center gap-1.5 mb-1">
@@ -214,6 +238,7 @@
         <div class="flex flex-row gap-3 items-start">
             {{ ef_pool_column(record.special_pools, "限定池", "#e17055", gacha_data=record, visible_pool_ids=visible_ids) }}
             {{ ef_pool_column(record.weapon_pools, "武器池", "#fdcb6e", gacha_data=record, visible_pool_ids=visible_ids) }}
+            {{ ef_pool_column(record.joint_pools, "联合寻访", "#c084fc", gacha_data=record, visible_pool_ids=visible_ids) }}
 
             {# 新手池 + 常驻池合并列 #}
             {% if visible_ids is not none %}

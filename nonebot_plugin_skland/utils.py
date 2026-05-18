@@ -509,6 +509,8 @@ def group_gacha_records(records: list[GachaRecord]) -> GroupedGachaRecord:
 def _infer_pool_category(pool_id: str) -> str:
     """根据 pool_id 推导卡池类别"""
     pid = pool_id.lower()
+    if pid.startswith("joint"):
+        return "joint"
     if pid.startswith("special"):
         return "special"
     if pid.startswith("wepon") or pid.startswith("weapon"):
@@ -527,6 +529,7 @@ def group_ef_gacha_records(records: list[GachaRecord]) -> EfGroupedGachaRecord:
     beginner_pools: list[EfGachaPoolInfo] = []
     standard_pools: list[EfGachaPoolInfo] = []
     special_pools: list[EfGachaPoolInfo] = []
+    joint_pools: list[EfGachaPoolInfo] = []
     weapon_pools: list[EfGachaPoolInfo] = []
 
     for pool_id, ts_dict in temp_grouped_records.items():
@@ -562,6 +565,8 @@ def group_ef_gacha_records(records: list[GachaRecord]) -> EfGroupedGachaRecord:
             beginner_pools.append(pool_info)
         elif category == "special":
             special_pools.append(pool_info)
+        elif category == "joint":
+            joint_pools.append(pool_info)
         elif category == "weapon":
             weapon_pools.append(pool_info)
         else:
@@ -571,6 +576,7 @@ def group_ef_gacha_records(records: list[GachaRecord]) -> EfGroupedGachaRecord:
         beginner_pools=beginner_pools,
         standard_pools=standard_pools,
         special_pools=special_pools,
+        joint_pools=joint_pools,
         weapon_pools=weapon_pools,
     )
 

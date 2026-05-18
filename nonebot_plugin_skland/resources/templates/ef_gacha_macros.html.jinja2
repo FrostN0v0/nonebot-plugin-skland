@@ -1,6 +1,7 @@
 {# 终末地单卡池渲染宏 #}
 {% macro ef_pool_card(pool, pool_label, pool_color, gacha_data=none) %}
 {% set stats = namespace(pity_count=0, five_stars=[]) %}
+{% set show_spook = pool.show_spook_stats %}
 
 <div class="flex flex-col gap-1.5 w-full rounded-xl p-2 border border-white/10"
      style="background-color: #24243e; box-shadow: 0 4px 20px rgba(0,0,0,0.35);">
@@ -20,8 +21,13 @@
             <div class="flex items-center justify-between">
                 <div class="flex flex-col">
                     <span class="text-white font-[Akrobat] font-bold text-xs truncate max-w-28">{{ pool.pool_name }}</span>
-                    {% if pool.up6_name %}
-                    <span class="text-[#FFCC00] text-[9px] font-[Akrobat] truncate max-w-28">UP: {{ pool.up6_name }}</span>
+                    {% if pool.up_six_chars %}
+                    <div class="flex items-center gap-0.5 mt-0.5 max-w-28 overflow-hidden">
+                        <span class="text-[#FFCC00] text-[8px] font-[Akrobat] font-bold flex-shrink-0">UP</span>
+                        {% for up_char_id in pool.up_six_chars %}
+                        <img src="{{ up_char_id | ef_charId_to_avatarUrl }}" class="w-4 h-4 rounded-sm bg-[#3a3a4e] object-cover flex-shrink-0" />
+                        {% endfor %}
+                    </div>
                     {% endif %}
                 </div>
                 <div class="flex items-center gap-0.5 bg-[{{ pool_color }}]/90 rounded-md px-1.5 py-0.5">
@@ -36,9 +42,9 @@
             <div class="flex justify-between text-center gap-1">
                 <div class="flex flex-col items-center flex-1">
                     <span class="font-[Akrobat] font-bold text-sm">
-                        <span class="text-[#FFCC00]">{{ pool.total_six_stars }}</span>{% if pool.up_six_chars %}<span class="text-white/30">/</span><span class="text-[#C04855]">{{ pool.total_six_spook }}</span>{% endif %}
+                        <span class="text-[#FFCC00]">{{ pool.total_six_stars }}</span>{% if show_spook %}<span class="text-white/30">/</span><span class="text-[#C04855]">{{ pool.total_six_spook }}</span>{% endif %}
                     </span>
-                    <span class="text-white/50 text-[9px]">{% if pool.up_six_chars %}6★/歪{% else %}6★{% endif %}</span>
+                    <span class="text-white/50 text-[9px]">{% if show_spook %}6★/歪{% else %}6★{% endif %}</span>
                 </div>
                 <div class="flex flex-col items-center flex-1">
                     <span class="text-white font-[Akrobat] font-bold text-sm">{{ pool.pity_count }}</span>
@@ -87,7 +93,7 @@
                 <div class="flex flex-col flex-1 gap-0.5 min-w-0">
                     <div class="flex items-center gap-1">
                         <span class="text-white font-[Akrobat] font-bold text-xs truncate">{{ pull.item_name }}</span>
-                        {% if pool.up_six_chars and pull.item_id not in pool.up_six_chars %}
+                        {% if show_spook and pull.item_id not in pool.up_six_chars %}
                         <span class="text-[7px] text-white bg-[#C04855] rounded-xs px-0.5">歪</span>
                         {% endif %}
                         {% if pool.up_six_chars and pull.item_id in pool.up_six_chars %}
@@ -193,7 +199,7 @@
                     {# 角色名 + 标记，压在进度条上方 #}
                     <div class="flex items-center gap-1">
                         <span class="text-white font-[Akrobat] font-bold text-xs truncate">{{ pull.item_name }}</span>
-                        {% if pool.up_six_chars and pull.item_id not in pool.up_six_chars %}
+                        {% if show_spook and pull.item_id not in pool.up_six_chars %}
                         <span class="text-[7px] text-white bg-[#C04855] rounded-xs px-0.5">歪</span>
                         {% endif %}
                         {% if pool.up_six_chars and pull.item_id in pool.up_six_chars %}

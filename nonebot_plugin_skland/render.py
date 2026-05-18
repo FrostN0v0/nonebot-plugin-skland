@@ -167,6 +167,19 @@ async def render_gacha_history(
     )
 
 
+EF_GACHA_BASE_MIN_WIDTH = 680
+EF_GACHA_JOINT_MIN_WIDTH = 900
+EF_GACHA_VIEWPORT_PADDING = 120
+
+
+def get_ef_gacha_min_width(props: EfGroupedGachaRecord) -> int:
+    return EF_GACHA_JOINT_MIN_WIDTH if props.joint_pools else EF_GACHA_BASE_MIN_WIDTH
+
+
+def get_ef_gacha_viewport_width(props: EfGroupedGachaRecord) -> int:
+    return get_ef_gacha_min_width(props) + EF_GACHA_VIEWPORT_PADDING
+
+
 async def render_ef_gacha_history(
     props: EfGroupedGachaRecord,
     player: PlayerBase,
@@ -181,6 +194,7 @@ async def render_ef_gacha_history(
             "avatar_url": player.avatarUrl,
             "record": props,
             "character": char,
+            "ef_gacha_min_width": get_ef_gacha_min_width(props),
             "start_index": begin,
             "end_index": limit,
         },
@@ -189,7 +203,7 @@ async def render_ef_gacha_history(
             "ef_charId_to_avatarUrl": ef_charId_to_avatarUrl,
         },
         pages={
-            "viewport": {"width": 800, "height": 1},
+            "viewport": {"width": get_ef_gacha_viewport_width(props), "height": 1},
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         device_scale_factor=1.5,

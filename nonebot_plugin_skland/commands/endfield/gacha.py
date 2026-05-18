@@ -27,6 +27,7 @@ EF_CHAR_POOL_TYPES: list[EndfieldCharPoolType] = [
     EndfieldPoolType.STANDARD,
     EndfieldPoolType.SPECIAL,
     EndfieldPoolType.BEGINNER,
+    EndfieldPoolType.JOINT,
 ]
 
 
@@ -120,22 +121,20 @@ async def ef_gacha_history_handler(
     # ── 分组 ──
     gacha_data = group_ef_gacha_records(all_gacha_records)
 
-    # 获取每个 SPECIAL 卡池的 UP 角色信息
-    for pool in gacha_data.special_pools + gacha_data.weapon_pools:
-        # 优先从本地卡池数据查询 UP 信息
+    # 获取每个有UP信息卡池的 UP 角色/武器信息
+    for pool in gacha_data.special_pools + gacha_data.joint_pools + gacha_data.weapon_pools:
         local_pool = ef_gacha_pool_data.get_pool(pool.pool_id)
         if local_pool:
             pool.up_six_chars = local_pool.up_six_char_ids
             pool.up6_img = local_pool.up6_image or local_pool.rotate_image
-            pool.up6_name = local_pool.up6_name
+            pool.up6_name = local_pool.up_six_display_name
             logger.debug(f"卡池 {pool.pool_name}({pool.pool_id}) UP六星(本地): {pool.up_six_chars}")
         else:
-            # 本地无数据时 fallback 到实时 API
             try:
                 content = await SklandAPI.get_ef_gacha_content(pool.pool_id, character.channel_master_id)
                 pool.up_six_chars = content.pool.up_six_char_ids
                 pool.up6_img = content.pool.up6_image or content.pool.rotate_image
-                pool.up6_name = content.pool.up6_name
+                pool.up6_name = content.pool.up_six_display_name
                 logger.debug(f"卡池 {pool.pool_name}({pool.pool_id}) UP六星(API): {pool.up_six_chars}")
             except Exception as e:
                 logger.warning(f"获取卡池 {pool.pool_name} UP信息失败: {e}")

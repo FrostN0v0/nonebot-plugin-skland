@@ -44,6 +44,8 @@ class EfGachaPoolInfo(BaseModel):
         - pool_id == 'beginner' → 'beginner'
         """
         pid = self.pool_id.lower()
+        if pid.startswith("joint"):
+            return "joint"
         if pid.startswith("special"):
             return "special"
         if pid.startswith("weapon") or pid.startswith("wepon"):
@@ -51,6 +53,11 @@ class EfGachaPoolInfo(BaseModel):
         if pid == "beginner":
             return "beginner"
         return "standard"
+
+    @property
+    def show_spook_stats(self) -> bool:
+        """是否展示六星歪卡统计"""
+        return self.pool_category in {"special", "weapon"} and bool(self.up_six_chars)
 
     @model_validator(mode="before")
     @classmethod

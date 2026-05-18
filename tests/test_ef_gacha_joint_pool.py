@@ -104,6 +104,38 @@ def test_group_ef_gacha_records_routes_joint_pool_separately(app):
     )
 
 
+def test_visible_pool_ids_include_joint_pools_and_respect_slicing(app):
+    from nonebot_plugin_skland.utils import group_ef_gacha_records
+
+    grouped = group_ef_gacha_records(
+        [
+            make_record(pool_id="joint_1_2_2", gacha_ts=100),
+            make_record(pool_id="joint_3_4_5", gacha_ts=300),
+            make_record(pool_id="special_1_2_1", gacha_ts=250),
+            make_record(pool_id="weapon_1_2_1", gacha_ts=240),
+            make_record(pool_id="standard", gacha_ts=230),
+            make_record(pool_id="beginner", gacha_ts=220),
+        ]
+    )
+
+    assert grouped.get_visible_pool_ids() == {
+        "joint_1_2_2",
+        "joint_3_4_5",
+        "special_1_2_1",
+        "weapon_1_2_1",
+        "standard",
+        "beginner",
+    }
+    assert grouped.get_visible_pool_ids(0, 1) == {
+        "joint_3_4_5",
+        "special_1_2_1",
+        "weapon_1_2_1",
+        "standard",
+        "beginner",
+    }
+    assert grouped.get_visible_pool_ids(1, 2) == {"joint_1_2_2"}
+
+
 def test_joint_statistics_use_only_six_star_count_and_six_average(app):
     from nonebot_plugin_skland.utils import group_ef_gacha_records
 
@@ -121,6 +153,65 @@ def test_joint_statistics_use_only_six_star_count_and_six_average(app):
     assert grouped.joint_pity_remaining == 78
     assert grouped.joint_six_avg == 1.0
     assert grouped.char_total_pulls == 3
+
+
+def test_joint_six_avg_is_zero_without_six_star_pulls(app):
+    from nonebot_plugin_skland.utils import group_ef_gacha_records
+
+    grouped = group_ef_gacha_records(
+        [
+            make_record(char_id="chr_0019_karin", char_name="秋栗", rarity=4, gacha_ts=200, pos=1),
+            make_record(char_id="chr_0004_pelica", char_name="佩丽卡", rarity=5, gacha_ts=201, pos=2),
+            make_record(char_id="chr_0020_meurs", char_name="卡契尔", rarity=4, gacha_ts=202, pos=3),
+        ]
+    )
+
+    assert grouped.joint_total_six == 0
+    assert grouped.joint_pity == 3
+    assert grouped.joint_pity_remaining == 77
+    assert grouped.joint_six_avg == 0.0
+
+
+def test_joint_current_pity_uses_latest_joint_pool(app):
+    from nonebot_plugin_skland.utils import group_ef_gacha_records
+
+    grouped = group_ef_gacha_records(
+        [
+            make_record(pool_id="joint_1_2_2", rarity=6, gacha_ts=100, pos=1),
+            make_record(
+                pool_id="joint_1_2_2",
+                char_id="chr_0019_karin",
+                char_name="秋栗",
+                rarity=4,
+                gacha_ts=101,
+                pos=2,
+            ),
+            make_record(pool_id="joint_3_4_5", rarity=6, gacha_ts=200, pos=1),
+            make_record(
+                pool_id="joint_3_4_5",
+                char_id="chr_0019_karin",
+                char_name="秋栗",
+                rarity=4,
+                gacha_ts=201,
+                pos=2,
+            ),
+            make_record(
+                pool_id="joint_3_4_5",
+                char_id="chr_0004_pelica",
+                char_name="佩丽卡",
+                rarity=5,
+                gacha_ts=202,
+                pos=3,
+            ),
+        ]
+    )
+
+    assert {pool.pool_id for pool in grouped.joint_pools} == {"joint_1_2_2", "joint_3_4_5"}
+    assert grouped.joint_total_pulls == 5
+    assert grouped.joint_total_six == 2
+    assert grouped.joint_pity == 2
+    assert grouped.joint_pity_remaining == 78
+    assert grouped.joint_six_avg == 1.5
 
 
 def test_joint_pool_type_is_fetched_during_update(app):
@@ -170,13 +261,15 @@ def test_joint_pool_does_not_show_spook_stats(app):
 
 def test_ef_gacha_viewport_expands_when_joint_pools_exist(app):
     from nonebot_plugin_skland.utils import group_ef_gacha_records
-    from nonebot_plugin_skland.render import get_ef_gacha_viewport_width
+    from nonebot_plugin_skland.render import get_ef_gacha_min_width, get_ef_gacha_viewport_width
 
     standard_grouped = group_ef_gacha_records([make_record(pool_id="standard", rarity=4)])
     joint_grouped = group_ef_gacha_records([make_record()])
 
-    assert get_ef_gacha_viewport_width(standard_grouped) == 800
-    assert get_ef_gacha_viewport_width(joint_grouped) == 1020
+    assert get_ef_gacha_min_width(standard_grouped) == 680
+    assert get_ef_gacha_min_width(joint_grouped) == 900
+    assert get_ef_gacha_viewport_width(standard_grouped) == get_ef_gacha_min_width(standard_grouped) + 120
+    assert get_ef_gacha_viewport_width(joint_grouped) == get_ef_gacha_min_width(joint_grouped) + 120
 
 
 def test_joint_pool_keeps_separate_column_with_dynamic_width(app):
@@ -192,7 +285,7 @@ def test_joint_pool_keeps_separate_column_with_dynamic_width(app):
     template = template_path.read_text(encoding="utf-8")
 
     assert 'ef_pool_column(record.joint_pools, "联合寻访", "#c084fc"' in template
-    assert "{{ 900 if record.joint_pools else 680 }}px" in template
+    assert "{{ ef_gacha_min_width }}px" in template
 
 
 def test_pool_header_renders_up_chars_as_avatars(app):

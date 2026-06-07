@@ -1,0 +1,357 @@
+{% from 'macros.html.jinja2' import assist_char_info %}
+
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Ark Card</title>
+  <style>
+    {% include "index.css" %}
+  </style>
+</head>
+
+<body>
+  <div class="relative w-[706px] h-[1160px] bg-cover bg-center bg-no-repeat"
+    style="background-image: url({{background_image}})">
+    <div class="absolute inset-0 bg-[#080808]/45 backdrop-blur-xs"></div>
+
+    <div class="absolute top-[50px] left-[50px] flex flex-col items-start space-y-6">
+      <!-- 头像信息 -->
+      <div class="flex items-center space-x-4">
+        <div class="relative">
+          <img src="{{ status.avatar.url }}" class="avater-shadow w-18.75 h-18.75" alt="avatar" />
+          <div
+            class="absolute top-[-20px] right-[-20px] w-10 h-10 bg-[#080309]/80 rounded-full rank-shadow flex items-center justify-center">
+            <span class="text-white font-[Akrobat] text-lg">{{ status.level }}</span>
+          </div>
+        </div>
+        <div>
+          <h1 class="text-xl text-white font-bold font-[Akrobat] mb-2">Dr. {{ status.name }}</h1>
+          <div class="relative w-40 h-5.5 bg-white/30 rounded-lg reg-shadow flex items-center">
+            <div class="w-15 h-full bg-[#23BAFC]/80 rounded-lg reg-shadow-blue flex items-center justify-center">
+              <span class="text-[#080309]/80 text-sm font-[Bender]">入职日</span>
+            </div>
+            <span class="text-[#080309]/80 font-bold font-[Bender] ml-2">{{ status.register_time }}</span>
+          </div>
+        </div>
+      </div>
+      <!-- 进度信息 -->
+      <div class="w-153 h-42 bg-[#080808]/40 rounded-lg card-shadow flex items-center justify-center">
+        <div class="p-4 space-x-7 flex">
+          <div class="flex-1 flex flex-col items-center justify-center">
+            <!-- 作战进度 -->
+            <img src="../images/ark_card/career/career_1.png" class="w-24.5 h-auto opacity-60 rounded-md" />
+            <span class="text-white/60 font-bold font-[Bender]">作战进度</span>
+            <span class="text-white font-bold font-[Bender] text-lg whitespace-nowrap">
+              {{ status.mainStageProgress | default("全部完成", true) }}
+            </span>
+          </div>
+          <div class="flex-1 flex flex-col items-center justify-center">
+            <!-- 雇佣干员 -->
+            <img src="../images/ark_card/career/career_2.png" class="w-24.5 h-auto opacity-60 rounded-md" />
+            <span class="text-white/60 font-bold font-[Bender]">雇佣干员</span>
+            <span class="text-white font-bold font-[Bender] text-lg">{{ employed_chars }}</span>
+          </div>
+          <div class="flex-1 flex flex-col items-center justify-center">
+            <!-- 时装 -->
+            <img src="../images/ark_card/career/career_3.png" class="w-24.5 h-auto opacity-60 rounded-md" />
+            <span class="text-white/60 font-bold font-[Bender]">时装数量</span>
+            <span class="text-white font-bold font-[Bender] text-lg">{{ skins }}</span>
+          </div>
+          <div class="flex-1 flex flex-col items-center justify-center">
+            <!-- 家具 -->
+            <img src="../images/ark_card/career/career_4.png" class="w-24.5 h-auto opacity-60 rounded-md" />
+            <span class="text-white/60 font-bold font-[Bender]">家具保有</span>
+            <span class="text-white font-bold font-[Bender] text-lg">{{ building.furniture.total }}</span>
+          </div>
+          <div class="flex-1 flex flex-col items-center justify-center">
+            <!-- 蚀刻章 -->
+            <img src="../images/ark_card/career/career_5.png" class="w-16.25 h-auto opacity-60 rounded-md" />
+            <span class="text-white/60 font-bold font-[Bender] mt-4">蚀刻章</span>
+            <span class="text-white font-bold font-[Bender] text-lg">{{ medals }}</span>
+          </div>
+        </div>
+      </div>
+      <!-- 第三行 -->
+      <div class="w-full flex space-x-6.75">
+        <!-- 助战 -->
+        <div class="w-101.75 h-75 bg-[#080808]/40 rounded-lg card-shadow p-4 flex items-center justify-center relative">
+          <div class="absolute top-2 left-2 flex items-center space-x-2">
+            <img src="../images/ark_card/assist_title.png" class="w-5 h-auto opacity-80" />
+            <span class="text-white/80 font-bold font-[Bender] text-lg">助战干员</span>
+          </div>
+          <div class="mt-12 space-x-7.5 flex">
+            {% for char in assist_chars %}
+            {{ assist_char_info(char) }}
+            {% endfor %}
+          </div>
+        </div>
+        <!-- 基建 -->
+        <div class="w-43.75 h-75 bg-[#080808]/40 rounded-lg card-shadow p-5 flex items-center justify-center relative">
+          <div class="absolute top-2 left-2 flex items-center space-x-2">
+            <img src="../images/ark_card/icon_control.png" class="w-5 h-auto opacity-80" />
+            <span class="text-white/80 font-bold font-[Bender] text-lg">基建信息</span>
+          </div>
+          <div class="w-full h-full flex flex-col mt-14">
+            <div
+              class="w-full h-10 flex flex-col items-start justify-center bg-gradient-to-r from-[#DC92FF]/40 to-transparent border-l-3 border-[#DC92FF]">
+              <span class="text-white/80 font-bold font-[Bender] text-sm ml-2 mt-0.5">无人机</span>
+              <span class="text-[#DC92FF] font-bold font-[Bender] text-sm ml-2 -mt-1">
+                {{ building.labor.labor_now }}<span class="text-white/60 text-[10px]">/{{ building.labor.maxValue
+                  }}</span>
+              </span>
+              <img src="../images/ark_card/building/labor.png" class="absolute right-4 w-6 opacity-80" />
+            </div>
+            <div
+              class="w-full h-10 flex flex-col items-start justify-center bg-gradient-to-r from-[#98E37B]/40 to-transparent border-l-3 border-[#98E37B]">
+              <span class="text-white/80 font-bold font-[Bender] text-sm ml-2 mt-0.5">休息进度</span>
+              <span class="text-[#98E37B] font-bold font-[Bender] text-sm ml-2 -mt-1">
+                {{ building.rested_chars }}<span class="text-white/60 text-[10px]">/{{ building.dorm_chars }}</span>
+              </span>
+              <img src="../images/ark_card/building/dorm.png" class="absolute right-4 w-6 opacity-80 dorm-filter" />
+            </div>
+            <div
+              class="w-full h-10 flex flex-col items-start justify-center bg-gradient-to-r from-[#6DADDC]/40 to-transparent border-l-3 border-[#6DADDC]">
+              <span class="text-white/80 font-bold font-[Bender] text-sm ml-2 mt-0.5">订单进度</span>
+              <span class="text-[#6DADDC] font-bold font-[Bender] text-sm ml-2 -mt-1">
+                {{ building.trading_stock }}<span class="text-white/60 text-[10px]">/{{ building.trading_stock_limit
+                  }}</span>
+              </span>
+              <img src="../images/ark_card/building/trading.png" class="absolute right-4 w-6 opacity-80" />
+            </div>
+            <div
+              class="w-full h-10 flex flex-col items-start justify-center bg-gradient-to-r from-[#E9CF63]/40 to-transparent border-l-3 border-[#E9CF63]">
+              <span class="text-white/80 font-bold font-[Bender] text-sm ml-2 mt-0.5">制造进度</span>
+              <span class="text-[#E9CF63] font-bold font-[Bender] text-sm ml-2 -mt-1">
+                {{ building.manufacture_stoke.current }}<span class="text-white/60 text-[10px]">/{{
+                  building.manufacture_stoke.total }}</span>
+              </span>
+              <img src="../images/ark_card/building/manufact.png" class="absolute right-4 w-6 opacity-80" />
+            </div>
+            <div
+              class="w-full h-10 flex flex-col items-start justify-center bg-gradient-to-r from-[#D0685E]/40 to-transparent border-l-3 border-[#D0685E]">
+              <span class="text-white/80 font-bold font-[Bender] text-sm ml-2 mt-0.5">干员疲劳</span>
+              <span class="text-[#D0685E] font-bold font-[Bender] text-sm ml-2 -mt-1">{{ building.tiredChars | length
+                }}</span>
+              <img src="../images/ark_card/building/tired.png" class="absolute right-4 w-6 opacity-80 tired-filter" />
+            </div>
+            <div
+              class="w-full h-10 flex flex-col items-start justify-center bg-gradient-to-r from-[#DE9A67]/40 to-transparent border-l-3 border-[#DE9A67]">
+              <span class="text-white/80 font-bold font-[Bender] text-sm ml-2 mt-0.5">线索交流</span>
+              <span class="text-[#DE9A67] font-bold font-[Bender] text-sm ml-2 -mt-1">
+                {% if building.meeting %}
+                    {% if building.meeting.clue.sharing %}
+                    交流中
+                    {% else %}
+                    {{ building.meeting.clue.board | length }}<span class="text-white/60 text-[10px]">/7</span>
+                    {% endif %}
+                {% else %}
+                未建造
+                {% endif %}
+              </span>
+              <img src="../images/ark_card/building/meeting.png"
+                class="absolute right-4 w-6 opacity-80 meeting-filter" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="w-152.25 h-110">
+        <div class="flex flex-wrap gap-4.75 justify-between">
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/ap.png" class="absolute left-3 w-18 opacity-80" />
+              <div class="absolute left-22 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-xl">理智</span>
+                <span class="text-white font-bold font-[Bender] text-xl">
+                  {{ status.ap.ap_now }}<span class="text-white/60 text-base">/{{ status.ap.max }}</span>
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="h-full rounded-[10px] blue-bar"
+                  style="width: {{ (status.ap.ap_now / status.ap.max) * 100 }}%;"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">{{ (status.ap.completeRecoveryTime - now_ts) |
+              format_timestamp ~ '后全部恢复' if (status.ap.completeRecoveryTime - now_ts) > 0 else '已全部恢复' }}</span>
+          </div>
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/recruit.png" class="absolute left-3 w-18 opacity-80" />
+              <div class="absolute left-21 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-xl">公开招募</span>
+                <span class="text-white font-bold font-[Bender] text-xl">
+                  {{ recruit_finished }}<span class="text-white/60 text-base">/{{ recruit_max }}</span>
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="h-full rounded-[10px] blue-bar"
+                  style="width: {{ (recruit_finished /  recruit_max) * 100 }}%;"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">{{ recruit_complete_time }}</span>
+          </div>
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/hire.png" class="absolute left-4 w-15 -translate-y-1 opacity-80" />
+              <div class="absolute left-21 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-xl">公招刷新</span>
+                <span class="text-white font-bold font-[Bender] text-xl">
+                  {% if building.hire %}
+                  {{ building.hire.refreshCount }}<span class="text-white/60 text-base">/3</span>
+                  {% else %}
+                  -<span class="text-white/60 text-base">/3</span>
+                  {% endif %}
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="w-15 h-full rounded-[10px] blue-bar"
+                  style="width: {{ (building.hire.refreshCount /  3) * 100 }}%;">
+                </div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">{{ building.hire.refresh_complete_time }}</span>
+          </div>
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/jade.png" class="absolute left-3 w-18 opacity-80" />
+              <div class="absolute left-21 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-xl">剿灭奖励</span>
+                <span class="text-white font-bold font-[Bender] text-lg">
+                  {{ campaign.reward.current }}<span class="text-white/60 text-sm">/{{ campaign.reward.total }}</span>
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="w-15 h-full rounded-[10px] blue-bar"
+                  style="width: {{ (campaign.reward.current /  campaign.reward.total) * 100 }}%;"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">{{ now_ts | time_to_next_monday_4am }}后刷新</span>
+          </div>
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/daily.png" class="absolute left-4 w-16 -translate-y-1 opacity-80" />
+              <div class="absolute left-21 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-xl">每日任务</span>
+                <span class="text-white font-bold font-[Bender] text-xl">
+                  {{ routine.daily.current }}<span class="text-white/60 text-base">/{{ routine.daily.total }}</span>
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="h-full rounded-[10px] blue-bar"
+                  style="width: {{ (routine.daily.current /  routine.daily.total) * 100 }}%;"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">{{ now_ts | time_to_next_4am }}后刷新</span>
+          </div>
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/weekly.png"
+                class="absolute left-4 w-15 -translate-y-1 opacity-80" />
+              <div class="absolute left-21 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-xl">每周任务</span>
+                <span class="text-white font-bold font-[Bender] text-xl">
+                  {{ routine.weekly.current }}<span class="text-white/60 text-base">/{{ routine.weekly.total }}</span>
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="h-full rounded-[10px] blue-bar"
+                  style="width: {{ (routine.weekly.current /  routine.weekly.total) * 100 }}%;"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">{{ now_ts | time_to_next_monday_4am }}后刷新</span>
+          </div>
+
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/tower.png"
+                class="absolute left-4 w-13.5 -translate-y-1 opacity-80" />
+              <div class="absolute left-19 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-lg">数据增补仪</span>
+                <span class="text-white font-bold font-[Bender] text-xl">
+                  {{ tower.reward.higherItem.current }}<span class="text-white/60 text-base">/{{
+                    tower.reward.higherItem.total
+                    }}</span>
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="h-full rounded-[10px] blue-bar"
+                  style="width: {{ (tower.reward.higherItem.current /  tower.reward.higherItem.total) * 100 }}%;"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">{{ (tower.reward.termTs - now_ts) | format_timestamp
+              }}后刷新</span>
+          </div>
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/tower.png"
+                class="absolute left-4 w-13.5 -translate-y-1 opacity-80" />
+              <div class="absolute left-19 top-6 flex flex-col items-start space-y-1">
+                <span class="text-white/80 font-bold font-[Bender] text-lg">数据增补条</span>
+                <span class="text-white font-bold font-[Bender] text-xl">
+                  {{ tower.reward.lowerItem.current }}<span class="text-white/60 text-base">/{{
+                    tower.reward.lowerItem.total }}</span>
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
+                <div class="h-full rounded-[10px] blue-bar"
+                  style="width: {{ (tower.reward.lowerItem.current /  tower.reward.lowerItem.total) * 100 }}%;"></div>
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">{{ (tower.reward.termTs - now_ts) | format_timestamp
+              }}后刷新</span>
+          </div>
+          <div class="w-43.75 h-33.25 relative rounded-[10px] bg-[#f0f0f0]/40 info-shadow flex justify-center">
+            <div
+              class="w-full h-28.25 relative rounded-[10px] bg-[#080808]/55 info-content-shadow flex items-center justify-center">
+              <img src="../images/ark_card/card_img/train.png"
+                class="absolute left-4 w-13.5 -translate-y-1 opacity-80" />
+              <div class="absolute left-21 top-4 flex flex-col items-start space-y-0.5">
+                <span class="text-white/80 font-bold font-[Bender] text-lg">训练室</span>
+                <span class="text-white font-bold font-[Bender] text-sm">{{ training_char }}
+                </span>
+                <span class="text-white font-bold font-[Bender] text-xs">{{ building.training.training_state if building.training else '未建造' }}
+                </span>
+              </div>
+              <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-sm">
+                {% if building.training and building.training.training_state == "空闲中" %}
+                <div class="w-0 h-full rounded-[10px] green-bar"></div>
+                {% else %}
+                <div class="w-full h-full rounded-[10px] green-bar"></div>
+                {% endif %}
+              </div>
+            </div>
+            <span class="text-white/60 text-xs absolute bottom-0.5">
+              {% if not building.training %}
+              未建造
+              {% elif building.training.training_state == "空闲中" %}
+              空闲中
+              {% else %}
+              {% if building.training.remainSecs != 0%}
+              {{ building.training.remainSecs | format_timestamp }}后训练结束
+              {% else %}
+              训练完成
+              {% endif %}
+              {% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="w-full flex justify-center">
+        <span class="text-white/60 font-[Bender] tracking-wider text-center text-xs">Generated by
+          nonebot-plugin-skland</span>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

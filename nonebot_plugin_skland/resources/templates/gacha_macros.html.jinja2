@@ -1,0 +1,109 @@
+{% macro gacha_pool(pool) %}
+{% set stats = namespace(pity_count=0, five_stars=[]) %}
+
+<div class="left-6 w-168 pb-4 bg-[#3F3F3F] rounded-xl gacha-info-shadow">
+    <div class="flex flex-col justify-center gap-2 pt-4 px-4 divide-y divide-[#5A5A5A]">
+
+        <div class="flex flex-row pb-3 gap-4 items-start">
+            <div class="flex-1 min-w-0">
+                <span class="text-white font-[Akrobat] text-lg">{{pool.gachaPoolName}} <span
+                        class="text-white/60 text-xs">{{pool.openTime | format_timestamp_md}}~{{pool.endTime |
+                        format_timestamp_md}}</span></span>
+                <div class="flex flex-wrap gap-1 pt-1">
+                    {% for char in pool.up_six_chars %}
+                    <img src="{{ char | charId_to_avatarUrl }}" class="w-6 h-6 bg-[#646464] rounded-sm" />
+                    {% endfor %}
+                </div>
+            </div>
+            <div
+                class="flex-shrink-0 flex h-12 w-16 items-center justify-center -mx-4 rounded-l-[5px] bg-[#146ACF] text-white text-xl">
+                {{ pool.total_pulls }}<span class="text-xs">抽</span>
+            </div>
+        </div>
+        <div class="flex flex-col-reverse">
+            {% for record in pool.records | reverse %}
+            {% set six_count = record.pulls | selectattr('rarity', 'equalto', 5) | list | length %}
+            {% set is_multi_six = six_count >= 2 %}
+            {% set six_index = namespace(value=0) %}
+
+            {% for pull in record.pulls | reverse %}
+            {% set stats.pity_count = stats.pity_count + 1 %}
+
+            {% if pull.rarity == 4 %}
+            {% set stats.five_stars = stats.five_stars + [pull.char_id] %}
+            {% endif %}
+            {% if pull.rarity == 5 %}
+            {% set six_index.value = six_index.value + 1 %}
+
+            <div
+                class="flex flex-col items-start pr-8 pl-4 ml-[-16px] {% if is_multi_six %} multi-six-bg {% endif %} {% if is_multi_six and six_index.value == 1 %}mb-2 pb-2{% endif %} {% if six_index.value == six_count %} pt-2 {% endif %}">
+                {% if is_multi_six and six_index.value == six_count %}
+                <div class="flex items-start pb-2 ml-[-16px]">
+                    <div
+                        class="flex items-center justify-center bg-[#2C6B60] text-white font-[Bender] tracking-widest text-sm px-3 py-1 shadow-lg">
+                        <span>十连{{ six_count }}金</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="flex flex-row items-center w-full">
+                    <div class="flex flex-col">
+                        <div class="relative inline-block">
+                            <img src="{{ pull.char_id | charId_to_avatarUrl }}"
+                                class="w-12 h-12 bg-[#646464] rounded-sm" />
+                            {% if pull.char_id not in pool.up_six_chars %}
+                            <div
+                                class="absolute top-0 right-0 w-4 h-4 bg-[#C04855] rounded-sm flex items-center justify-center">
+                                <span class="text-white text-[10px] font-bold font-[Akrobat]">歪</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% set bar_class = 'green-stripe-bar' %}
+                        {% if stats.pity_count >= 55 %}
+                        {% set bar_class = 'red-stripe-bar' %}
+                        {% elif stats.pity_count >= 35 %}
+                        {% set bar_class = 'yellow-stripe-bar' %}
+                        {% endif %}
+                        <div class="w-12 text-center">
+                            <span class="text-white/60 tracking-wider text-sm font-[Bender]">{{record.gacha_ts |
+                                format_timestamp_md}}</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col -mt-1 gap-1 w-full">
+                        <div class="flex flex-row items-center">
+                            <div class="h-8 ml-4 pl-2 rounded-lg flex items-center {{ bar_class }}"
+                                style="width: {{ 10 + ((stats.pity_count if stats.pity_count < 100 else 100) / 100) * 90 }}%">
+                                <span class="text-xl font-medium font-[Bender] whitespace-nowrap">{{ stats.pity_count }}
+                                    抽</span>
+                            </div>
+                            {% if stats.pity_count <= 10 or stats.pity_count>= 60 %}
+                                {% if stats.pity_count <= 10 %} {% set luck_color='#30B63E' %} {% elif stats.pity_count>= 60 %}
+                                    {% set luck_color = '#ef6853' %}
+                                    {% endif %}
+                                    <div class="h-4 ml-2 rounded-xs flex items-center justify-center px-1"
+                                        style="background-color:{{ luck_color }};">
+                                        <span class="text-xs font-[Bender] whitespace-nowrap">
+                                            {% if stats.pity_count <= 10 %} 超欧 {% elif stats.pity_count>=65 %}超非 {%
+                                                endif %}
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                        </div>
+
+                        <div class="flex ml-4 h-6 w-full flex-row gap-1">
+                            {% for char_id in stats.five_stars %}
+                            <img src="{{ char_id | charId_to_avatarUrl }}" class="w-6 h-6 bg-[#646464] rounded-sm" />
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% set stats.pity_count = 0 %}
+            {% set stats.five_stars = [] %}
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endmacro %}

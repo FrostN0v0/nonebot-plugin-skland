@@ -1,0 +1,159 @@
+{% from 'rogue_macros.html.jinja2' import rogue_info_char, rogue_record, rogue_totem %}
+{% set theme_color %}
+{%- if topic == 'rogue_1' -%}
+theme-color-rogue-1
+{%- elif topic == 'rogue_3' -%}
+theme-color-rogue-3
+{%- elif topic == 'rogue_4' -%}
+theme-color-rogue-4
+{%- elif topic == 'rogue_5' -%}
+theme-color-rogue-5
+{%- else -%}
+theme-color-rogue-2
+{%- endif -%}
+{% endset %}
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Rogue Card</title>
+  <style>
+    {% include "index.css" %}
+  </style>
+</head>
+
+<body>
+  <div class="bg-cover bg-center bg-no-repeat p-5" style="background-image: url({{background_image}})">
+    <div class="max-w-[2200px] mx-auto flex flex-col gap-5">
+      <header class="flex items-center bg-[#EFEFEF]/25 card-shadow border border-white/20 rounded-lg p-4 space-x-6">
+        <div>
+          <img src="{{ game_user_info.avatar.url }}" alt="Avatar" class="avater-shadow w-16 h-16" />
+        </div>
+        <div class="space-y-2">
+          <span class="text-white text-xl font-bold font-[Bender]">{{'胜利' if record.success else '失败'}}<span
+              class="text-white/80 text-sm {{ 'rogue-stage-linear-victory' if record.success else 'rogue-stage-linear' }} py-1.5 px-3">
+              {%- if record.lastStage -%}
+              "{{ record.lastStage }}"
+              {%- endif -%}</span><span class="{{ theme_color | trim }}">得分：{{record.score}}</span></span>
+          <h2 class="text-xl font-bold text-white">Dr.{{ game_user_info.name }}</h2>
+          <div
+            class="flex justify-between items-center gap-6 mt-1 border-t border-white/10 text-white/80 text-[12px] font-[Bender]">
+            <span>ID: {{id}}</span>
+            <span>{{record.endTs | format_timestamp_str}}</span>
+            <span>{{record.mode}}{{record.modeGrade}}</span>
+            <div class="h-full flex items-center justify-center space-x-1">
+              <img src="../images/rogue/band/{{topic}}/{{record.band.id}}.png" class="w-4 h-4" />
+              <span class="text-white/80 text-[10px] font-[Bender]">{{record.band.name}}</span>
+            </div>
+          </div>
+        </div>
+        <div class="ml-auto">
+          <img src="{{ topic_img }}" class="h-16" />
+        </div>
+      </header>
+
+      <div class="grid md:grid-cols-[400px_1fr] gap-5">
+        <div class="flex flex-col gap-6 md:justify-between">
+
+          <div class="bg-[#EFEFEF]/25 card-shadow border border-white/20 rounded-lg p-4">
+            <h3 class=" font-bold mb-3 text-white font-[Bender]">初始干员</h3>
+            <div class="grid grid-cols-3 gap-8">
+              {% for char in record.initChars %}
+              {{ rogue_info_char(char) }}
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="bg-[#EFEFEF]/25 card-shadow border border-white/20 rounded-lg p-4 relative flex items-center justify-center h-full">
+          <h3 class="text-white font-bold absolute top-4 left-4">历程回顾</h3>
+          <div class="text-center font-[Bender]">
+            {% for text in record.endingText | loads_json %}
+            <span class="text-xl/8" style="color: {{ text.color }};">
+              {{ text.content }}
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-[#EFEFEF]/25 card-shadow border border-white/20 rounded-lg p-4">
+        <h3 class="text-lg text-white/80 font-bold mb-4">招募干员</h3>
+        <div class="grid grid-cols-8 gap-4">
+          {% for char in record.troopChars %}
+          {{ rogue_info_char(char) }}
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-[400px_1fr] gap-5">
+        <div class="flex flex-col gap-6 md:justify-between">
+          <div class="bg-[#EFEFEF]/25 card-shadow border border-white/20 rounded-lg p-4">
+            <h3 class="text-lg text-white/80 font-bold mb-4">收藏品</h3>
+            <div class="grid grid-cols-8 items-start gap-1">
+              {% for relic in record.gainRelicList %}
+              <img src="https://web.hycdn.cn/arknights/game/assets/roguelike_item/{{relic}}.png" class="w-12 h-12" />
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-[#EFEFEF]/25 card-shadow border border-white/20 rounded-lg p-4">
+          {% if topic == "rogue_1"%}
+          <h3 class="text-white font-bold mb-3">剧目</h3>
+          {% elif topic == "rogue_2"%}
+          <h3 class="text-white font-bold mb-3">符号认知</h3>
+          {% elif topic == "rogue_3"%}
+          <h3 class="text-white font-bold mb-3">密文板</h3>
+          {% elif topic == "rogue_4"%}
+          <h3 class="text-white font-bold mb-3">思绪</h3>
+          {% elif topic == "rogue_5"%}
+          <h3 class="text-white font-bold mb-3">通宝</h3>
+          {% endif %}
+
+
+          <div class="grid grid-cols-10 gap-1">
+            {% for totem in record.totemList %}
+            {{ rogue_totem(totem, topic) }}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+
+      <div class="bg-[#EFEFEF]/25 card-shadow border border-white/20 rounded-lg p-2">
+        <h3 class="text-lg text-white/80 font-bold mb-4">数据统计</h3>
+        <div class="grid grid-cols-7 gap-2">
+          <div
+            class="text-white/80 text-sm {{ 'rogue-stage-linear-victory' if record.success else 'rogue-stage-linear' }} py-1.5 px-3 text-center">
+            通过层数：{{record.cntCrossedZone}}</div>
+          <div
+            class="text-white/80 text-sm {{ 'rogue-stage-linear-victory' if record.success else 'rogue-stage-linear' }} py-1.5 px-3 text-center">
+            通过步数：{{record.cntArrivedNode}}</div>
+          <div
+            class="text-white/80 text-sm {{ 'rogue-stage-linear-victory' if record.success else 'rogue-stage-linear' }} py-1.5 px-3 text-center">
+            普通战斗次数：{{record.cntBattleNormal}}</div>
+          <div
+            class="text-white/80 text-sm {{ 'rogue-stage-linear-victory' if record.success else 'rogue-stage-linear' }} py-1.5 px-3 text-center">
+            精英战斗次数：{{record.cntBattleElite}}</div>
+          <div
+            class="text-white/80 text-sm {{ 'rogue-stage-linear-victory' if record.success else 'rogue-stage-linear' }} py-1.5 px-3 text-center">
+            领袖战斗次数：{{record.cntBattleBoss}}</div>
+          <div
+            class="text-white/80 text-sm {{ 'rogue-stage-linear-victory' if record.success else 'rogue-stage-linear' }} py-1.5 px-3 text-center">
+            获得物品数：{{record.cntGainRelicItem}}</div>
+          <div
+            class="text-white/80 text-sm {{ 'rogue-stage-linear-victory' if record.success else 'rogue-stage-linear' }} py-1.5 px-3 text-center">
+            招募干员次数：{{record.cntRecruitUpgrade}}</div>
+        </div>
+      </div>
+
+      <footer class="text-center text-white/80 py-4">Generated by nonebot-plugin-skland</footer>
+    </div>
+  </div>
+</body>
+
+</html>

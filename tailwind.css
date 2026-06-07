@@ -1,0 +1,190 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .avater-shadow {
+    box-shadow: 0px 0px 0px 3px #fbfbf3, 0px 4px 6px -1px rgba(6, 24, 44, 0.65),
+      inset 0px 1px 0px 0px rgba(255, 255, 255, 0.08);
+  }
+  .rank-shadow {
+    box-shadow: 0px 0px 0px 3px rgba(98, 93, 98, 0.6);
+  }
+  .reg-shadow {
+    box-shadow: 0px 4px 10px 0px rgba(0, 0, 0, 0.3), 0px 14px 28px 0px rgba(0, 0, 0, 0.25),
+      0px 10px 10px 0px rgba(0, 0, 0, 0.22), inset 0px 0px 10px 0px rgba(128, 128, 128, 0.5);
+  }
+  .reg-shadow-blue {
+    box-shadow: 0px 4px 10px 0px rgba(0, 0, 0, 0.3), 6px 2px 16px 0px rgba(136, 165, 191, 0.48),
+      inset -6px -2px 16px 0px rgba(240, 240, 240, 0.15);
+  }
+  .card-shadow {
+    box-shadow: 0px 54px 55px 0px rgba(0, 0, 0, 0.25), 0px -12px 30px 0px rgba(0, 0, 0, 0.12),
+      0px 4px 6px 0px rgba(0, 0, 0, 0.12), 0px 12px 13px 0px rgba(0, 0, 0, 0.17), 0px -3px 5px 0px rgba(0, 0, 0, 0.09);
+  }
+  .info-shadow {
+    box-shadow: 0px 0px 10px 0px rgba(240, 240, 240, 0.3);
+  }
+  .info-content-shadow {
+    box-shadow: 0px 2px 1px 0px rgba(0, 0, 0, 0.09), 0px 4px 2px 0px rgba(0, 0, 0, 0.09),
+      0px 8px 4px 0px rgba(0, 0, 0, 0.09), 0px 16px 8px 0px rgba(0, 0, 0, 0.09), 0px 32px 16px 0px rgba(0, 0, 0, 0.09);
+  }
+  .gacha-info-shadow {
+    box-shadow: 0px 1px 1px 0px rgba(0, 0, 0, 0.25), 0px 2px 8px 0px rgba(0, 0, 0, 0.25),
+      inset 0px 0px 0px 1px rgba(255, 255, 255, 0.1);
+  }
+  .bar-shadow {
+    box-shadow: 0px 1px 4px 0px rgba(0, 0, 0, 0.16);
+  }
+  .gradient-assist {
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 64%, rgba(0, 0, 0, 0.55) 75%, rgba(0, 0, 0, 0.8) 100%);
+  }
+  .gradient-operator {
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 64%, rgba(0, 0, 0, 0.55) 91%, rgba(0, 0, 0, 0.8) 100%);
+  }
+  .dorm-filter {
+    filter: brightness(0) saturate(100%) invert(92%) sepia(11%) saturate(1724%) hue-rotate(45deg) brightness(94%)
+      contrast(88%);
+  }
+  .tired-filter {
+    filter: brightness(0) saturate(100%) invert(46%) sepia(16%) saturate(2179%) hue-rotate(317deg) brightness(102%)
+      contrast(70%);
+  }
+  .meeting-filter {
+    filter: brightness(0) saturate(100%) invert(69%) sepia(28%) saturate(739%) hue-rotate(341deg) brightness(93%)
+      contrast(87%);
+  }
+  .blue-bar {
+    background: linear-gradient(270deg, rgba(26, 140, 216, 0.6) 0%, rgba(35, 186, 252, 0.6) 100%);
+    box-shadow: 0px 0px 10px 0px rgba(35, 186, 252, 0.6);
+  }
+  .green-bar {
+    background: linear-gradient(270deg, rgba(47, 168, 102, 0.6) 0%, rgba(61, 220, 132, 0.6) 100%);
+    box-shadow: 0px 0px 10px 0px rgba(61, 220, 132, 0.6);
+  }
+  .green-stripe-bar {
+    background-image: repeating-linear-gradient(110deg, #01cc9d 0px, #01cc9d 16px, #01b78e 16px, #01b78e 32px);
+  }
+  .yellow-stripe-bar {
+    background-image: repeating-linear-gradient(110deg, #eec867 0px, #eec867 16px, #ecc256 16px, #ecc256 32px);
+  }
+  .red-stripe-bar {
+    background-image: repeating-linear-gradient(110deg, #ef6853 0px, #ef6853 16px, #ed573f 16px, #ed573f 32px);
+  }
+  .green-blur-bar {
+    background: linear-gradient(270deg, rgba(1, 204, 157, 0.6) 0%, rgba(95, 251, 122, 0.6) 100%);
+    box-shadow: 0px 0px 10px 0px rgba(1, 204, 157, 0.6);
+  }
+  .gray-linear {
+    background: linear-gradient(
+      90deg,
+      rgba(112, 112, 112, 0.1) 5%,
+      rgba(112, 112, 112, 0.8) 56%,
+      rgba(112, 112, 112, 0.1) 91%,
+      rgba(35, 186, 252, 0) 100%
+    );
+  }
+  .blue-linear {
+    background: linear-gradient(180deg, rgba(234, 234, 234, 0) 49%, rgba(135, 218, 222, 0.2) 79%, rgba(6, 167, 167, 0.35) 100%)
+  }
+  .green-linear {
+    background: linear-gradient(180deg, rgba(234, 234, 234, 0) 49%, rgba(202, 212, 61, 0.2) 81%, rgba(202, 212, 61, 0.35) 100%);
+  }
+  .multi-six-bg {
+    background: linear-gradient(to right, rgba(48, 182, 62, 0.2) 0%, rgba(48, 182, 62, 0) 100%);
+  }
+  .theme-color-rogue-1 {
+    color: #e56d5c;
+  }
+
+  .theme-color-rogue-2 {
+    color: #5c8be5;
+  }
+
+  .theme-color-rogue-3 {
+    color: #5ce5b5;
+  }
+
+  .theme-color-rogue-4 {
+    color: #fedfd2;
+  }
+  .theme-color-rogue-5 {
+    color: #bfeed1;
+  }
+  .rogue-stage-linear {
+    background: linear-gradient(
+      90deg,
+      rgba(70, 28, 29, 0) 0%,
+      rgba(70, 28, 29, 0.8) 20%,
+      rgba(70, 28, 29, 0.8) 80%,
+      rgba(70, 28, 29, 0) 100%
+    );
+  }
+  .rogue-stage-linear-victory {
+    background: linear-gradient(
+      90deg,
+      rgba(31, 85, 93, 0) 0%,
+      rgba(31, 85, 93, 0.8) 20%,
+      rgba(31, 85, 93, 0.8) 80%,
+      rgba(31, 85, 93, 0) 100%
+    );
+  }
+  .gradient-upgrade-char {
+    background: linear-gradient(
+      180deg,
+      rgba(127, 55, 28, 0) 64%,
+      rgba(127, 55, 28, 0.55) 75%,
+      rgba(127, 55, 28, 0.8) 100%
+    );
+  }
+  .found-clue-glow {
+    filter: drop-shadow(0 0 12px rgba(76, 175, 80, 0.7)) drop-shadow(0 0 4px rgba(102, 255, 102, 0.8));
+  }
+  .missing-clue-glow {
+    filter: drop-shadow(0 0 10px rgba(220, 20, 60, 0.6)) drop-shadow(0 0 3px rgba(139, 0, 0, 0.75));
+  }
+  .clue-1 {
+    top: 10%;
+    left: 8%;
+    rotate: -5deg;
+  }
+  .clue-2 {
+    top: 25%;
+    left: 28%;
+    rotate: 8deg;
+  }
+  .clue-3 {
+    top: 8%;
+    left: 48%;
+    rotate: -2deg;
+  }
+  .clue-4 {
+    top: 15%;
+    left: 75%;
+    rotate: 10deg;
+  }
+  .clue-5 {
+    top: 60%;
+    left: 45%;
+    rotate: 10deg;
+  }
+  .clue-6 {
+    top: 55%;
+    left: 68%;
+    rotate: 3deg;
+  }
+  .clue-7 {
+    top: 60%;
+    left: 15%;
+    rotate: -20deg;
+  }
+
+}
+
+@font-face {
+  font-family: "Akrobat";
+  src: url("../fonts/Akrobat-Bold.otf") format("opentype");
+}
+
+@font-face {
+  font-family: "Bender";
+  src: url("../fonts/Bender.otf") format("opentype");
+}

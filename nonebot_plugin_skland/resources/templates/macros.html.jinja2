@@ -1,0 +1,43 @@
+{% macro assist_char_info(char) %}
+<div class="relative">
+    <img src="{{ char.portrait }}" class="w-24 h-auto -translate-y-4" />
+    <div class="absolute inset-0 bg-gradient-to-b from-transparent gradient-assist"></div>
+    <div class="absolute bottom-2 left-2.5 right-2.5 flex justify-between">
+        <div class="w-8 h-8 relative bg-[#080808]/45 outline-2 outline-white/45">
+            {% if char.uniequip.endswith("original.png") %}
+            <img src="{{ char.uniequip }}"
+                class="absolute h-4 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 object-contain" />
+            {% else %}
+            <img src="{{ char.uniequip }}"
+                class="absolute h-8 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 object-contain" />
+            <div class="absolute bg-[#080808]/45 text-white text-[10px] w-3.5 h-3.5 flex items-center justify-center">
+                {{ char.equip.level }}
+            </div>
+            {% endif %}
+            <img src="{{ char.potential }}" class="absolute top-[-33px] h-6 left-1/2 -translate-x-1/2" />
+        </div>
+        <div class="w-8 h-8 relative bg-[#080808]/45 outline-2 outline-white/45">
+            <img src="{{ char.skill }}" class="absolute inset-0" />
+            <div class="relative w-3.75 h-3.75 bg-[#080808]/80">
+                {% set classes = ["bg-white/40", "bg-white/40", "bg-white/40"] %}
+                {% for i in range(char.specializeLevel) %}
+                {% set _ = classes.__setitem__(i, "bg-white") %}
+                {% endfor %}
+
+                <div class="absolute top-0.5 left-[50%] -translate-x-1/2 w-1.25 h-1.25 rounded-full {{ classes[0] }}">
+                </div>
+                <div class="absolute top-1.75 left-[30%] -translate-x-1/2 w-1.25 h-1.25 rounded-full {{ classes[1] }}">
+                </div>
+                <div class="absolute top-1.75 left-[70%] -translate-x-1/2 w-1.25 h-1.25 rounded-full {{ classes[2] }}">
+                </div>
+
+            </div>
+            <div
+                class="absolute top-[-33px] left-1/2 -translate-x-1/2 w-[25px] h-[25px] bg-[#080808]/45 rounded-full outline-2 outline-white/45 flex items-center justify-center">
+                <span class="text-white font-[Akrobat]">{{ char.level }}</span>
+            </div>
+        </div>
+        <img src="{{ char.evolve }}" class="absolute bottom-15.5 w-10 left-1/2 -translate-x-1/2" />
+    </div>
+</div>
+{% endmacro %}

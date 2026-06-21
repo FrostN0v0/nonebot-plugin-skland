@@ -12,6 +12,7 @@ def test_campaign_is_reward_complete(app):
 
 
 def test_build_merged_campaign_reminder_message_single(app):
+    from nonebot_plugin_alconna import At
     from nonebot_plugin_skland.commands.campaign import (
         CampaignReminderPending,
         build_merged_campaign_reminder_message,
@@ -22,6 +23,8 @@ def test_build_merged_campaign_reminder_message_single(app):
     )
 
     assert len(message) == 3
+    assert isinstance(message[0], At)
+    assert message[0].target == "10001"
 
 
 def test_build_merged_campaign_reminder_message_multiple(app):
@@ -68,3 +71,21 @@ def test_campaign_target_group_key(app):
     }
 
     assert campaign_target_group_key(json.dumps(target_a)) == campaign_target_group_key(json.dumps(target_b))
+
+
+async def test_refresh_access_token_with_error_return_no_access_token(app, mocker):
+    from nonebot_plugin_skland.utils import refresh_access_token_with_error_return
+    from nonebot_plugin_skland.model import SkUser
+    from nonebot_plugin_skland.exception import LoginException
+
+    @refresh_access_token_with_error_return
+    async def _fetch(_user: SkUser) -> str:
+        raise LoginException("cred expired")
+
+    user = SkUser(id=1, cred="cred", cred_token="token", access_token="")
+    send = mocker.patch("nonebot_plugin_skland.utils.UniMessage.send")
+
+    result = await _fetch(user)
+
+    assert result == "cred失效，用户没有绑定token，无法自动刷新cred"
+    send.assert_not_called()

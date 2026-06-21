@@ -134,6 +134,12 @@ skland_command = Alconna(
         Subcommand("on", help_text="在本群开启剿灭奖励提醒"),
         Subcommand("off", help_text="关闭剿灭奖励提醒"),
         Subcommand("status", help_text="查看剿灭奖励提醒状态"),
+        Subcommand(
+            "test",
+            Option("-s|--send|send", help_text="在当前群发送实际提醒消息"),
+            Option("--all", help_text="模拟周日定时任务，测试全部已开启提醒（仅超管）"),
+            help_text="手动测试剿灭提醒",
+        ),
         help_text="明日方舟剿灭奖励提醒",
     ),
     namespace=alc_config.namespaces["skland"],

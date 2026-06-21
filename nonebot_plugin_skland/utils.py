@@ -158,7 +158,7 @@ def refresh_access_token_with_error_return(func: Refreshable[P, R]) -> Refreshab
             return await func(user, *args, **kwargs)
         except LoginException:
             if not user.access_token:
-                await UniMessage("cred失效，用户没有绑定token，无法自动刷新cred").send(at_sender=True)
+                return "cred失效，用户没有绑定token，无法自动刷新cred"
 
             try:
                 grant_code = await SklandLoginAPI.get_grant_code(user.access_token, 0)

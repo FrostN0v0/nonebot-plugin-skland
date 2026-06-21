@@ -298,3 +298,26 @@ async def _(user_session: UserSession, session: async_scoped_session):
     from .commands.campaign import campaign_status_handler
 
     await campaign_status_handler(user_session, session)
+
+
+@skland.assign("campaign.test")
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+    msg_target: MsgTarget,
+    bot: Bot,
+    result: Arparma,
+    is_superuser: bool = Depends(SuperUser()),
+):
+    """手动测试剿灭提醒"""
+    from .commands.campaign import campaign_test_handler
+
+    await campaign_test_handler(
+        user_session,
+        session,
+        msg_target,
+        bot,
+        run_all=bool(result.find("campaign.test.all")),
+        do_send=bool(result.find("campaign.test.send")),
+        is_superuser=is_superuser,
+    )

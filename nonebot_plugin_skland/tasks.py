@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from nonebot import get_bots, logger
+from nonebot import logger
 from nonebot.compat import model_dump
 from nonebot_plugin_apscheduler import scheduler
 from nonebot_plugin_orm import get_scoped_session
@@ -17,9 +17,8 @@ from .db_handler import (
     select_all_users,
     get_endfield_characters,
     get_arknights_characters,
-    select_enabled_campaign_reminders,
 )
-from .commands.campaign import build_merged_campaign_reminder_message, gather_campaign_reminder_groups
+from .commands.campaign import dispatch_campaign_reminders
 from .utils import refresh_cred_token_with_error_return, refresh_access_token_with_error_return
 
 
@@ -51,24 +50,24 @@ async def run_campaign_reminder():
     """Check default character campaign rewards on Sunday noon and evening"""
     session = get_scoped_session()
     try:
-        bots = get_bots()
-        if not bots:
+        try:
+            sent, pending_groups, enabled = await dispatch_campaign_reminders(session)
+        except RuntimeError:
             logger.warning("Campaign reminder skipped: no connected bot")
             return
 
-        reminders = await select_enabled_campaign_reminders(session)
-        for group_result in await gather_campaign_reminder_groups(session, reminders):
-            target = group_result.target
-            bot = bots.get(target.self_id) if target.self_id else None
-            if bot is None:
-                bot = next(iter(bots.values()))
+        logger.info(f"Campaign reminder tick: {enabled} enabled reminder(s)")
+        if not enabled:
+            return
+        if not pending_groups:
+            logger.info("Campaign reminder tick: no pending notifications (all complete or evaluation failed)")
+            return
 
-            message = build_merged_campaign_reminder_message(group_result.pending)
-            try:
-                await message.send(target=target, bot=bot)
-            except Exception as e:
-                user_ids = ", ".join(item.platform_user_id for item in group_result.pending)
-                logger.warning(f"Campaign reminder send failed for group {target.id} users [{user_ids}]: {e}")
+        await session.commit()
+        logger.info(f"Campaign reminder tick done: sent {sent}/{pending_groups} group notification(s)")
+    except Exception:
+        logger.exception("Campaign reminder job failed")
+        raise
     finally:
         await session.close()
 

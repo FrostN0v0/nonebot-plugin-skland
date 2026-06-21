@@ -53,6 +53,7 @@ async def startup():
     skland.shortcut("终末地抽卡更新", {"command": "skland efgacha -u", "fuzzy": True, "prefix": True})
     skland.shortcut("剿灭提醒", {"command": "skland campaign on", "fuzzy": True, "prefix": True})
     skland.shortcut("关闭剿灭提醒", {"command": "skland campaign off", "fuzzy": False, "prefix": True})
+    skland.shortcut("剿灭提醒测试", {"command": "skland campaign test", "fuzzy": True, "prefix": True})
 
     if config.check_res_update:
         try:

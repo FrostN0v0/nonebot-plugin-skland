@@ -32,6 +32,7 @@ async def startup():
     skland.shortcut("签到详情", {"command": "skland arksign status", "fuzzy": False, "prefix": True})
     skland.shortcut("全体签到", {"command": "skland arksign all", "fuzzy": False, "prefix": True})
     skland.shortcut("全体签到详情", {"command": "skland arksign status --all", "fuzzy": False, "prefix": True})
+    skland.shortcut("树海肉鸽", {"command": "skland rogue --topic 黑流树海", "fuzzy": True, "prefix": True})
     skland.shortcut("界园肉鸽", {"command": "skland rogue --topic 界园", "fuzzy": True, "prefix": True})
     skland.shortcut("萨卡兹肉鸽", {"command": "skland rogue --topic 萨卡兹", "fuzzy": True, "prefix": True})
     skland.shortcut("萨米肉鸽", {"command": "skland rogue --topic 萨米", "fuzzy": True, "prefix": True})

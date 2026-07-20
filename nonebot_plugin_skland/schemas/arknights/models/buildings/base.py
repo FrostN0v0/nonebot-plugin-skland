@@ -36,6 +36,8 @@ class Labor(BaseModel):
     def labor_now(self) -> int:
         if self.maxValue == self.value:
             return self.maxValue
+        if self.remainSecs <= 0:
+            return self.maxValue
         elapsed_time = datetime.now().timestamp() - self.lastUpdateTime
         labor_increment = elapsed_time / (self.remainSecs / (self.maxValue - self.value))
         return min(int(labor_increment + self.value), self.maxValue)

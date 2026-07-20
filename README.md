@@ -279,9 +279,9 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `skland rginfo <战绩id>`      | 所有 | 查询最近战绩的详细信息     |
 | `skland rginfo <战绩id> -f`   | 所有 | 查询收藏战绩的详细信息     |
 
-**主题选项：** `傀影` `水月` `萨米` `萨卡兹` `界园`
+**主题选项：** `傀影` `水月` `萨米` `萨卡兹` `界园` `黑流树海`
 
-**快捷指令：** `战绩详情` `收藏战绩详情` `傀影肉鸽` `水月肉鸽` `萨米肉鸽` `萨卡兹肉鸽` `界园肉鸽`
+**快捷指令：** `战绩详情` `收藏战绩详情` `傀影肉鸽` `水月肉鸽` `萨米肉鸽` `萨卡兹肉鸽` `界园肉鸽` `树海肉鸽`
 
 </details>
 
@@ -391,6 +391,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `角色更新`           | `skland char update`          | 更新角色信息       |
 | `全体角色更新`       | `skland char update --all`    | 更新所有用户角色   |
 | `资源更新`           | `skland sync`                 | 更新资源文件       |
+| `树海肉鸽`           |`skland rogue --topic 黑流树海`| 黑流树海主题战绩   |
 | `界园肉鸽`           | `skland rogue --topic 界园`   | 界园主题战绩       |
 | `萨卡兹肉鸽`         | `skland rogue --topic 萨卡兹` | 萨卡兹主题战绩     |
 | `萨米肉鸽`           | `skland rogue --topic 萨米`   | 萨米主题战绩       |

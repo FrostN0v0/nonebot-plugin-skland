@@ -29,6 +29,10 @@ EndfieldWeaponPoolType = Literal[EndfieldPoolType.WEAPON]
 class EfCharGachaInfo(BaseModel):
     """终末地角色池 - 单条抽卡记录（API 原始响应）"""
 
+    kind: str
+    """类型"""
+    nameText: str
+    """名称"""
     poolId: str
     """卡池ID"""
     poolName: str
@@ -140,6 +144,14 @@ class EfCharGachaResponse(BaseModel):
     @property
     def next_seq(self) -> str:
         return self.gacha_list[-1].seqId if self.gacha_list else ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def draws_filter(cls, values) -> Any:
+        if "list" in values:
+            # 过滤掉非抽卡记录（如寻访情报书）
+            values["list"] = [draw for draw in values["list"] if draw.get("kind") == "draw"]
+        return values
 
 
 class EfWeaponGachaResponse(BaseModel):

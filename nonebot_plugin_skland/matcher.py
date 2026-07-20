@@ -92,7 +92,7 @@ skland_command = Alconna(
             "-t|--topic|topic",
             Args[
                 "topic_name#主题",
-                ["傀影", "水月", "萨米", "萨卡兹", "界园"],
+                ["傀影", "水月", "萨米", "萨卡兹", "界园", "黑流树海"],
                 Field(completion=lambda: "请输入指定topic_id"),
             ],
             help_text="指定主题进行肉鸽战绩查询",

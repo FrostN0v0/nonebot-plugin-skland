@@ -137,7 +137,7 @@ skland efsign status [--all]
 skland efsign all
 skland char update [--all]
 skland sync [--img] [--data] [--force] [--update]
-skland rogue [target] [--topic 傀影|水月|萨米|萨卡兹|界园]
+skland rogue [target] [--topic 傀影|水月|萨米|萨卡兹|界园|黑流树海]
 skland rginfo <id> [-f]
 skland gacha [target] [-b <begin>] [-l <limit>]
 skland import <url>

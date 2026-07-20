@@ -37,17 +37,17 @@ async def main() -> None:
     init()
     nonebot.load_from_toml("pyproject.toml")
 
+    from nonebot_plugin_skland.schemas.arknights.models.base import Equip
+    from nonebot_plugin_skland.schemas.arknights.models.chars import Skill
+    from nonebot_plugin_skland.schemas.arknights.models.assist_chars import Equipment
     from nonebot_plugin_skland.render import ROSTER_PAGE_WIDTH, render_operator_roster
+    from nonebot_plugin_skland.schemas.arknights.models.chars import Character as OwnedChar
     from nonebot_plugin_skland.roster import (
         RosterFilter,
-        build_book_cards,
-        default_skin_id,
         load_catalog,
+        default_skin_id,
+        build_book_cards,
     )
-    from nonebot_plugin_skland.schemas.arknights.models.assist_chars import Equipment
-    from nonebot_plugin_skland.schemas.arknights.models.base import Equip
-    from nonebot_plugin_skland.schemas.arknights.models.chars import Character as OwnedChar
-    from nonebot_plugin_skland.schemas.arknights.models.chars import Skill
 
     catalog = load_catalog()
     six = [c for c in catalog if c.star == 6][:24]
@@ -66,9 +66,7 @@ async def main() -> None:
     ) -> OwnedChar:
         specs = SKILL_SPECS[index % len(SKILL_SPECS)]
         skill_ids = list(entry.skill_ids)[:3]
-        skills = [
-            Skill(id=sid, specializeLevel=specs[i] if i < len(specs) else 0) for i, sid in enumerate(skill_ids)
-        ]
+        skills = [Skill(id=sid, specializeLevel=specs[i] if i < len(specs) else 0) for i, sid in enumerate(skill_ids)]
 
         mod_states = MODULE_STATES[index % len(MODULE_STATES)]
         equips: list[Equip] = []
@@ -99,9 +97,7 @@ async def main() -> None:
             defaultEquipId=default_equip,
         )
 
-    owned_list = [
-        owned_for(c, index=i, level=80 + i, elite=min(2, i), pot=i % 6) for i, c in enumerate(six[:8])
-    ]
+    owned_list = [owned_for(c, index=i, level=80 + i, elite=min(2, i), pot=i % 6) for i, c in enumerate(six[:8])]
     allow = {c.char_id for c in six}
     cards = [
         c

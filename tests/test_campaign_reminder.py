@@ -13,14 +13,13 @@ def test_campaign_is_reward_complete(app):
 
 def test_build_merged_campaign_reminder_message_single(app):
     from nonebot_plugin_alconna import At
+
     from nonebot_plugin_skland.commands.campaign import (
         CampaignReminderPending,
         build_merged_campaign_reminder_message,
     )
 
-    message = build_merged_campaign_reminder_message(
-        [CampaignReminderPending("10001", "Doctor", 0, 1)]
-    )
+    message = build_merged_campaign_reminder_message([CampaignReminderPending("10001", "Doctor", 0, 1)])
 
     # UniMessage merges adjacent str segments into one Text
     assert len(message) == 2
@@ -37,9 +36,7 @@ def test_build_merged_campaign_reminder_message_multiple(app):
         build_merged_campaign_reminder_message,
     )
 
-    single = build_merged_campaign_reminder_message(
-        [CampaignReminderPending("10001", "DoctorA", 0, 1)]
-    )
+    single = build_merged_campaign_reminder_message([CampaignReminderPending("10001", "DoctorA", 0, 1)])
     merged = build_merged_campaign_reminder_message(
         [
             CampaignReminderPending("10001", "DoctorA", 0, 1),
@@ -78,9 +75,9 @@ def test_campaign_target_group_key(app):
 
 
 async def test_refresh_access_token_with_error_return_no_access_token(app, mocker):
-    from nonebot_plugin_skland.utils import refresh_access_token_with_error_return
     from nonebot_plugin_skland.model import SkUser
     from nonebot_plugin_skland.exception import LoginException
+    from nonebot_plugin_skland.utils import refresh_access_token_with_error_return
 
     @refresh_access_token_with_error_return
     async def _fetch(_user: SkUser) -> str:

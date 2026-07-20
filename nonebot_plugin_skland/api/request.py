@@ -11,7 +11,6 @@ from nonebot import logger
 from nonebot.compat import type_validate_python
 
 from ..model import Character
-
 from ..exception import LoginException, RequestException, UnauthorizedException
 from ..schemas import (
     CRED,

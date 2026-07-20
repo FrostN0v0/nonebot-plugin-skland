@@ -4,19 +4,19 @@ from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_alconna import At, Match, UniMessage
 
-from ..api import SklandAPI
 from ..schemas import CRED
-from ..render import ROSTER_PAGE_WIDTH, render_operator_roster
+from ..api import SklandAPI
 from .card import check_user_character
+from ..render import ROSTER_PAGE_WIDTH, render_operator_roster
+from ..utils import send_reaction, refresh_cred_token_if_needed, refresh_access_token_if_needed
 from ..roster import (
     RosterFilter,
+    parse_stars,
+    filter_summary,
     build_box_cards,
     build_book_cards,
-    filter_summary,
     parse_professions,
-    parse_stars,
 )
-from ..utils import send_reaction, refresh_cred_token_if_needed, refresh_access_token_if_needed
 
 
 async def _resolve_target_id(user_session: UserSession, target: Match[At | int]) -> int:
@@ -70,8 +70,7 @@ async def box_handler(
         await UniMessage(f"没有匹配的干员（持有 {owned_n}）· {summary}").finish(at_sender=True)
 
     subtitle = (
-        f"{info.status.name} · UID {info.status.uid} · "
-        f"显示 {len(cards)} / 持有 {owned_n} · {summary} · 实装新→旧"
+        f"{info.status.name} · UID {info.status.uid} · 显示 {len(cards)} / 持有 {owned_n} · {summary} · 实装新→旧"
     )
     image = await render_operator_roster(
         title="Operator Box",
@@ -114,8 +113,7 @@ async def book_handler(
         await UniMessage(f"没有匹配的干员 · {summary}").finish(at_sender=True)
 
     subtitle = (
-        f"{info.status.name} · UID {info.status.uid} · "
-        f"显示 {len(cards)}（已拥有 {owned_shown}）· {summary} · 实装新→旧"
+        f"{info.status.name} · UID {info.status.uid} · 显示 {len(cards)}（已拥有 {owned_shown}）· {summary} · 实装新→旧"
     )
     image = await render_operator_roster(
         title="Operator Book",

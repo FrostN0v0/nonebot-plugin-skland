@@ -5,6 +5,7 @@ from pydantic import AnyUrl as Url
 from nonebot_plugin_htmlrender import get_new_page, template_to_pic
 
 from .model import Character
+from .roster import RosterCard
 from .config import RES_DIR, TEMPLATES_DIR, config
 from .schemas import (
     Clue,
@@ -16,7 +17,6 @@ from .schemas import (
     GroupedGachaRecord,
     EfGroupedGachaRecord,
 )
-from .roster import RosterCard
 from .filters import (
     loads_json,
     format_date_ymd,
@@ -36,7 +36,6 @@ from .filters import (
     get_equip_rarity_color,
     time_to_next_monday_4am,
 )
-
 
 ROSTER_PAGE_WIDTH = 1440
 ROSTER_BASE_CARD_W = 120

@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import json
 import hashlib
-from dataclasses import dataclass
-from functools import lru_cache
 from urllib.parse import quote
+from functools import lru_cache
+from dataclasses import dataclass
 
 from nonebot import logger
 
 from .config import RES_DIR, CACHE_DIR
-from .schemas.arknights.models.chars import Character as OwnedChar
 from .schemas.arknights.models.assist_chars import Equipment
+from .schemas.arknights.models.chars import Character as OwnedChar
 
 MEDIA = "https://media.prts.wiki"
 CATALOG_PATH = RES_DIR / "data" / "char_catalog.json"
@@ -341,8 +341,7 @@ def build_skills(entry: CatalogEntry, owned: OwnedChar | None) -> list[RosterSki
             if skill.id
         ]
     return [
-        RosterSkill(icon=skill_icon_url(skill_id), specialize_level=0, main_skill_lvl=0)
-        for skill_id in entry.skill_ids
+        RosterSkill(icon=skill_icon_url(skill_id), specialize_level=0, main_skill_lvl=0) for skill_id in entry.skill_ids
     ]
 
 
@@ -384,8 +383,7 @@ def build_modules(
                 RosterModule(
                     icon=uniequip_icon_url(type_icon),
                     level=eq.level,
-                    selected=(not locked)
-                    and bool(owned.defaultEquipId and eq.id == owned.defaultEquipId),
+                    selected=(not locked) and bool(owned.defaultEquipId and eq.id == owned.defaultEquipId),
                     locked=locked,
                 )
             )

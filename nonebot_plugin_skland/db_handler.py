@@ -30,9 +30,7 @@ async def get_default_arknights_character(user: SkUser, session: async_scoped_se
     return character
 
 
-async def get_default_arknights_character_or_none(
-    user: SkUser, session: async_scoped_session
-) -> Character | None:
+async def get_default_arknights_character_or_none(user: SkUser, session: async_scoped_session) -> Character | None:
     return (
         await session.execute(
             select(Character).where(
@@ -157,9 +155,7 @@ async def get_campaign_reminder(user_id: int, session: async_scoped_session) -> 
 
 
 async def select_enabled_campaign_reminders(session: async_scoped_session) -> list[CampaignReminder]:
-    reminders = (
-        await session.scalars(select(CampaignReminder).where(CampaignReminder.enabled.is_(True)))
-    ).all()
+    reminders = (await session.scalars(select(CampaignReminder).where(CampaignReminder.enabled.is_(True)))).all()
     return list(reminders)
 
 

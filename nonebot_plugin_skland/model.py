@@ -1,6 +1,6 @@
 from nonebot_plugin_orm import Model
 from sqlalchemy.orm import Mapped, relationship, mapped_column
-from sqlalchemy import VARCHAR, Text, Integer, BigInteger, ForeignKey, UniqueConstraint, ForeignKeyConstraint, Boolean
+from sqlalchemy import VARCHAR, Text, Boolean, Integer, BigInteger, ForeignKey, UniqueConstraint, ForeignKeyConstraint
 
 
 class SkUser(Model):

@@ -1,30 +1,30 @@
 """Campaign reward reminder commands"""
 
 import json
-from collections import defaultdict
 from dataclasses import dataclass
+from collections import defaultdict
 
 from nonebot import logger
 from nonebot_plugin_user import UserSession
 from nonebot_plugin_orm import async_scoped_session
-from nonebot_plugin_alconna import At, MsgTarget, Target, UniMessage
+from nonebot_plugin_alconna import At, Target, MsgTarget, UniMessage
 
 from ..api import SklandAPI
-from ..model import SkUser, CampaignReminder
 from ..schemas import CRED, ArkCard
-from ..db_handler import (
-    get_campaign_reminder,
-    upsert_campaign_reminder,
-    disable_campaign_reminder,
-    select_enabled_campaign_reminders,
-    get_default_arknights_character_or_none,
-)
+from ..model import SkUser, CampaignReminder
 from ..utils import (
     send_reaction,
     refresh_cred_token_if_needed,
     refresh_access_token_if_needed,
     refresh_cred_token_with_error_return,
     refresh_access_token_with_error_return,
+)
+from ..db_handler import (
+    get_campaign_reminder,
+    upsert_campaign_reminder,
+    disable_campaign_reminder,
+    select_enabled_campaign_reminders,
+    get_default_arknights_character_or_none,
 )
 
 
@@ -291,10 +291,7 @@ async def campaign_test_handler(
         await session.commit()
         send_reaction(user_session, "done")
         await UniMessage(
-            "剿灭提醒全量测试完成\n"
-            f"- 已开启提醒：{enabled} 人\n"
-            f"- 待通知群聊：{pending_groups} 个\n"
-            f"- 已发送：{sent} 条"
+            f"剿灭提醒全量测试完成\n- 已开启提醒：{enabled} 人\n- 待通知群聊：{pending_groups} 个\n- 已发送：{sent} 条"
         ).finish(at_sender=True)
         return
 

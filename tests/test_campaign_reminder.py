@@ -22,9 +22,13 @@ def test_build_merged_campaign_reminder_message_single(app):
         [CampaignReminderPending("10001", "Doctor", 0, 1)]
     )
 
-    assert len(message) == 3
+    # UniMessage merges adjacent str segments into one Text
+    assert len(message) == 2
     assert isinstance(message[0], At)
     assert message[0].target == "10001"
+    assert "【剿灭提醒】" in str(message[1])
+    assert "Doctor" in str(message[1])
+    assert "0/1" in str(message[1])
 
 
 def test_build_merged_campaign_reminder_message_multiple(app):

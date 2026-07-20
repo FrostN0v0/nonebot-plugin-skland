@@ -275,6 +275,34 @@ extra_data = {
             ),
         },
         {
+            "func": "干员盒",
+            "trigger_method": "**已绑定用户**",
+            "trigger_condition": "**干员盒** | `skland box`",
+            "brief_des": "查询已拥有干员半身像长图。",
+            "detail_des": (
+                "- **干员盒**\n\n"
+                "```bash\n"
+                "skland box [@某人|QQ] [-r 6|5,6|4-6|all] [-p 近卫|先锋,医疗] [-n 名称]\n"
+                "```\n\n"
+                " **快捷指令** ：`干员盒`\n\n"
+                "默认仅 6 星，按实装新→旧；支持 @ 查他人。"
+            ),
+        },
+        {
+            "func": "图鉴",
+            "trigger_method": "**已绑定用户**",
+            "trigger_condition": "**图鉴** | `skland book`",
+            "brief_des": "查询干员图鉴（未拥有灰显）。",
+            "detail_des": (
+                "- **图鉴**\n\n"
+                "```bash\n"
+                "skland book [@某人|QQ] [-r 6|5,6|4-6|all] [-p 近卫|先锋,医疗] [-n 名称]\n"
+                "```\n\n"
+                " **快捷指令** ：`图鉴`\n\n"
+                "未拥有灰显默认皮；已拥有显示玩家皮肤、精英/等级/潜能。"
+            ),
+        },
+        {
             "func": "终末地抽卡记录",
             "trigger_method": "**无限制**",
             "trigger_condition": "**终末地抽卡记录** | `skland efgacha`",

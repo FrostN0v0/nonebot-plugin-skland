@@ -8,7 +8,7 @@
 
 当前支持：
 
-- **明日方舟（Arknights）**：角色信息卡片、每日签到、肉鸽战绩与单局详情、抽卡记录查询、从小黑盒导入抽卡记录、剿灭奖励提醒。
+- **明日方舟（Arknights）**：角色信息卡片、每日签到、肉鸽战绩与单局详情、抽卡记录查询、从小黑盒导入抽卡记录、剿灭奖励提醒、干员盒与图鉴查询。
 - **明日方舟：终末地（Endfield）**：角色信息卡片、每日签到、抽卡记录查询与更新；抽卡统计支持角色池、武器池、新手池、常驻池、限定池、联合寻访池。
 
 ## 技术栈与关键依赖
@@ -45,6 +45,7 @@ nonebot_plugin_skland/
 ├── data_source.py       # 明日方舟/终末地卡池数据下载、加载与缓存
 ├── download.py          # GitHub 资源下载器与版本检查
 ├── render.py            # HTML 模板渲染为图片的函数
+├── roster.py            # 干员盒/图鉴：catalog、筛选、卡片组装
 ├── filters.py           # Jinja2 模板过滤器
 ├── utils.py             # Token 刷新装饰器、绑定同步、背景图、抽卡分组、资源下载等工具
 ├── exception.py         # LoginException / RequestException / UnauthorizedException
@@ -58,6 +59,7 @@ nonebot_plugin_skland/
 │   ├── arksign.py       # 明日方舟签到与签到状态查询
 │   ├── campaign.py      # 剿灭奖励提醒开关与状态
 │   ├── bind.py          # token/cred 绑定、二维码绑定、解绑
+│   ├── box.py           # 干员盒 / 图鉴查询
 │   ├── card.py          # 明日方舟角色卡片查询
 │   ├── char.py          # 同步森空岛绑定角色
 │   ├── gacha.py         # 明日方舟抽卡记录查询、分页、导入小黑盒记录
@@ -89,10 +91,12 @@ nonebot_plugin_skland/
 │           └── statistics.py # EfGroupedGachaRecord、分类统计、分页可见池计算
 ├── migrations/          # nonebot-plugin-orm/Alembic 迁移脚本
 └── resources/
+    ├── data/            # 内置数据快照（如 char_catalog.json）
     ├── fonts/           # 渲染字体
     ├── images/          # 内置图片资源（背景、职业、稀有度、终末地素材、抽卡装饰等）
     └── templates/       # Jinja2 HTML 模板与生成的 CSS
         ├── ark_card.html.jinja2
+        ├── operator_roster.html.jinja2
         ├── endfield_card.html.jinja2
         ├── gacha.html.jinja2
         ├── gacha_macros.html.jinja2
@@ -143,11 +147,13 @@ skland rginfo <id> [-f]
 skland gacha [target] [-b <begin>] [-l <limit>]
 skland import <url>
 skland campaign on|off|status
+skland box [target] [-r <rarity>] [-p <profession>] [-n <name>]
+skland book [target] [-r <rarity>] [-p <profession>] [-n <name>]
 skland efcard [target] [-a] [-s]
 skland efgacha [target] [-u] [-b <begin>] [-l <limit>]
 ```
 
-内置快捷指令在 `hook.py` 启动时注册，并通过 `nonebot_plugin_alconna.command_manager` 持久化到插件缓存目录的 `shortcut.db`。当前包括：森空岛绑定、扫码绑定、森空岛解绑、明日方舟签到、签到详情、全体签到、全体签到详情、各肉鸽主题、角色更新、全体角色更新、资源更新、战绩详情、收藏战绩详情、方舟抽卡记录、导入抽卡记录、剿灭提醒、关闭剿灭提醒、终末地签到、终末地签到详情、终末地全体签到、终末地全体签到详情、`ef|zmd`、终末地抽卡记录、终末地抽卡更新。
+内置快捷指令在 `hook.py` 启动时注册，并通过 `nonebot_plugin_alconna.command_manager` 持久化到插件缓存目录的 `shortcut.db`。当前包括：森空岛绑定、扫码绑定、森空岛解绑、明日方舟签到、签到详情、全体签到、全体签到详情、各肉鸽主题、角色更新、全体角色更新、资源更新、战绩详情、收藏战绩详情、方舟抽卡记录、导入抽卡记录、剿灭提醒、关闭剿灭提醒、干员盒、图鉴、终末地签到、终末地签到详情、终末地全体签到、终末地全体签到详情、`ef|zmd`、终末地抽卡记录、终末地抽卡更新。
 
 ## 核心实现说明
 
@@ -269,6 +275,15 @@ class Config(BaseModel):
 - `utils.group_gacha_records()` 按卡池与时间戳分组，并补充 UP 干员、开放时间、卡池规则类型。
 - `render.render_gacha_history()` 使用 `gacha.html.jinja2` 渲染。
 
+### 干员盒 / 图鉴
+
+- `commands/box.py`：`skland box`（仅已拥有）与 `skland book`（全图鉴，未拥有灰显）。
+- `roster.py`：PRTS Half 框资源 URL、筛选与卡片组装；渲染 DTO（`RosterCard` 等）放此处，不进入 `schemas/`。
+- 静态快照：`resources/data/char_catalog.json`（含 `sort_id` 实装序、技能 id、模组 `type_icon`）。新干员上线后需从 `character_table` / `uniequip_table` 与 PRTS 实装序重建该文件。
+- 立绘：`char_skin/portrait/{skinId}`；图鉴未拥有用默认 `#1`，已拥有用玩家 `skinId`。
+- `render.render_operator_roster()`：固定宽度长截图一页渲染全部匹配干员。因远程立绘/框体图数量大，**不走** htmlrender `template_to_pic` 默认的 `wait_until=networkidle`（弱网易 30s 超时）；改为 `get_new_page` + `domcontentloaded` + 图片 settle（失败图放行）+ 更长 timeout。
+- 模板 `operator_roster.html.jinja2` 为 PRTS Half 半身像样式，使用内联自定义 CSS（不复用 Tailwind `index.css`），以对齐图鉴框体而非通用卡片面板。
+
 终末地：
 
 - `commands/endfield/gacha.py` 中 `EF_CHAR_POOL_TYPES` 包含 `STANDARD`、`SPECIAL`、`BEGINNER`、`JOINT`；武器池单独使用 `WEAPON`。
@@ -285,6 +300,7 @@ class Config(BaseModel):
 主要函数：
 
 - `render_ark_card()`：明日方舟角色卡片。
+- `render_operator_roster()`：干员盒 / 图鉴 Half 网格长图。
 - `render_ef_card()`：终末地角色卡片，支持 `show_all` 和 `simple` 背景。
 - `render_gacha_history()`：明日方舟抽卡记录。
 - `render_ef_gacha_history()`：终末地抽卡记录，支持分页切片与联合寻访宽度扩展。
@@ -351,6 +367,7 @@ uv run pytest -s tests/test_skland_api.py
 - 数据库测试使用内存 SQLite：`sqlite+aiosqlite://`。
 - `tests/test_ef_gacha_joint_pool.py` 覆盖终末地联合寻访分类、统计与模板渲染相关行为。
 - `tests/test_campaign_reminder.py` 覆盖剿灭奖励完成判定、群聊合并消息与 Target 分组逻辑。
+- `tests/test_operator_roster.py` 覆盖干员盒/图鉴筛选解析、box/book 组卡、技能专精与模组展示逻辑。
 - `tests/test_skland_api.py` 会调用真实接口；单独运行时使用 `uv run pytest -s tests/test_skland_api.py`，其中 `-s` 用于显示终端二维码输出；凭证优先级为：
   1. `tests/cred_cache.json`
   2. 环境变量 `SKLAND_TOKEN` 或 `SKLAND_CRED`
@@ -435,6 +452,7 @@ nb orm upgrade
 - 字体、圆角、阴影、进度条、分割线等视觉元素可以直接复用现有模板和预设 CSS。
 - 背景图上应使用遮罩或模糊层保证文字可读。
 - 避免与现有模板明显割裂的视觉风格。
+- 例外：干员盒/图鉴 Half 半身像模板为对齐 PRTS 图鉴框体，使用独立内联 CSS，不强制套用 Tailwind 卡片面板。
 
 ## 注意事项
 

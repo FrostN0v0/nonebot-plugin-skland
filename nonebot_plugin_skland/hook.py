@@ -55,6 +55,8 @@ async def startup():
     skland.shortcut("剿灭提醒", {"command": "skland campaign on", "fuzzy": True, "prefix": True})
     skland.shortcut("关闭剿灭提醒", {"command": "skland campaign off", "fuzzy": False, "prefix": True})
     skland.shortcut("剿灭提醒测试", {"command": "skland campaign test", "fuzzy": True, "prefix": True})
+    skland.shortcut("干员盒", {"command": "skland box", "fuzzy": True, "prefix": True})
+    skland.shortcut("图鉴", {"command": "skland book", "fuzzy": True, "prefix": True})
 
     if config.check_res_update:
         try:

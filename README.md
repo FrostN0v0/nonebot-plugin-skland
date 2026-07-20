@@ -269,6 +269,28 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 </details>
 
 <details open>
+<summary><b>📦 干员盒 / 图鉴</b></summary>
+
+| 指令 | 权限 | 说明 |
+| --- | --- | --- |
+| `skland box [@某人\|QQ]` | 已绑定 | 查询已拥有干员（Half 半身像长图） |
+| `skland book [@某人\|QQ]` | 已绑定 | 查询干员图鉴（未拥有灰显；已拥有用玩家皮肤） |
+
+**筛选（默认仅 6 星，按实装新→旧）：**
+
+| 选项 | 说明 |
+| --- | --- |
+| `-r/--rarity` | 稀有度：`6`（默认）/ `5,6` / `4-6` / `all` |
+| `-p/--profession` | 职业：`近卫` / `先锋,医疗` 等 |
+| `-n/--name` | 名称模糊筛选 |
+
+**快捷指令：** `干员盒` `图鉴`
+
+卡片额外显示：精英图标 + 等级（名字上方）；潜能图标（原阵营 Logo 位）。
+
+</details>
+
+<details open>
 <summary><b>🎲 肉鸽战绩</b></summary>
 
 | 指令                          | 权限 | 说明                       |
@@ -405,6 +427,8 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `终末地抽卡更新`     | `skland efgacha -u`           | 拉取最新抽卡数据   |
 | `剿灭提醒`           | `skland campaign on`          | 开启剿灭奖励提醒   |
 | `关闭剿灭提醒`       | `skland campaign off`         | 关闭剿灭奖励提醒   |
+| `干员盒`             | `skland box`                  | 已拥有干员查询     |
+| `图鉴`               | `skland book`                 | 干员图鉴查询       |
 
 </details>
 
@@ -539,8 +563,8 @@ Bot: skland::skland 的快捷指令: "查战绩" 添加成功
 - [x] 抽卡记录分页
 - [x] 支持终末地角色信息查询及签到
 - [x] 支持终末地抽卡记录查询及分页
-- [ ] 实现 box 查询
-- [ ] 实现图鉴查询
+- [x] 实现 box 查询
+- [x] 实现图鉴查询
 - [ ] 完善多服账号管理
 - [ ] ~~扬了不必要的 💩~~
 - [ ] 待补充，欢迎 pr

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title }}</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Avenir, Helvetica, Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #f8f9fa;
+      color: #202122;
+    }
+    .page {
+      width: {{ page_width }}px;
+      padding: 16px {{ side_pad }}px 24px;
+      box-sizing: border-box;
+    }
+    .header {
+      margin-bottom: 12px;
+      padding: 0;
+    }
+    .header h1 {
+      margin: 0 0 4px;
+      font-size: 20px;
+      line-height: 1.2;
+    }
+    .header .sub {
+      margin: 0;
+      font-size: 12px;
+      color: #54595d;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat({{ cols }}, {{ unit_w }}px);
+      column-gap: {{ col_gap }}px;
+      row-gap: {{ row_gap }}px;
+      justify-content: start;
+      align-content: start;
+    }
+    .unit {
+      width: {{ unit_w }}px;
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: {{ card_skill_gap }}px;
+    }
+    .slot {
+      width: {{ card_w }}px;
+      height: {{ card_h }}px;
+      flex-shrink: 0;
+    }
+    .rail {
+      width: {{ skill_rail_w }}px;
+      height: {{ card_h }}px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      box-sizing: border-box;
+      padding: 4px 0;
+    }
+    .modules,
+    .skills {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+    }
+    .skill,
+    .module {
+      position: relative;
+      width: 48px;
+      height: 48px;
+      border-radius: 5px;
+      overflow: hidden;
+      background: #2a2a2a;
+      outline: 1px solid rgba(255, 255, 255, 0.45);
+      box-sizing: border-box;
+      flex-shrink: 0;
+    }
+    .skill.mastered,
+    .module.selected {
+      outline: 2px solid #7fd7ff;
+      box-shadow: 0 0 6px rgba(127, 215, 255, 0.65);
+    }
+    .module.locked {
+      filter: brightness(0.42) saturate(0.35);
+      outline-color: rgba(255, 255, 255, 0.2);
+      box-shadow: none;
+    }
+    .skill > img,
+    .module > img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: #1a1a1a;
+    }
+    .skill .badge,
+    .module .badge {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 18px;
+      height: 18px;
+      background: rgba(8, 8, 8, 0.92);
+      z-index: 3;
+      pointer-events: none;
+    }
+    .skill .badge .dot {
+      position: absolute;
+      width: 4.5px;
+      height: 4.5px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.28);
+    }
+    .skill .badge .dot.on {
+      background: #fff;
+    }
+    .skill .badge .dot.d0 { top: 2.5px; left: 50%; transform: translateX(-50%); }
+    .skill .badge .dot.d1 { top: 9.5px; left: 28%; transform: translateX(-50%); }
+    .skill .badge .dot.d2 { top: 9.5px; left: 72%; transform: translateX(-50%); }
+    .skill .badge .num,
+    .module .badge .num {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .unit.unowned .rail {
+      opacity: 0.4;
+      filter: grayscale(0.85);
+    }
+    .half-container {
+      position: relative;
+      width: 120px;
+      height: 250px;
+      background-color: transparent;
+      display: block;
+      margin: 0;
+      zoom: {{ card_scale }};
+      filter: drop-shadow(0 0 7px rgba(0, 0, 0, 0.7));
+      overflow: hidden;
+      font-family: Avenir, Helvetica, Arial, sans-serif;
+      line-height: 1;
+    }
+    .half-container.unowned {
+      opacity: 0.42;
+      filter: drop-shadow(0 0 7px rgba(0, 0, 0, 0.7)) grayscale(0.9);
+    }
+    .uh, .uhs { position: absolute; top: 0; }
+    .uh > img, .uhs > img { width: 70px; }
+    .class_ { position: absolute; left: 3px; top: 5px; z-index: 1; }
+    .class_ > img { width: 25px; }
+    .rarity { position: absolute; left: 30px; top: 0; z-index: 2; }
+    .rarity > img { height: 18px; }
+    .lh { position: absolute; left: 0; bottom: 0; z-index: 2; }
+    .lh > img { width: 120px; }
+    .light { position: absolute; left: 3px; bottom: 25px; z-index: 1; }
+    .light > img { width: 110px; }
+    .bg { position: absolute; left: 3px; bottom: 7px; z-index: 0; }
+    .bg > img { width: 110px; }
+    .operator { position: absolute; bottom: 29px; z-index: 0; right: 7px; }
+    .operator > img {
+      transform: scale(0.61111);
+      transform-origin: bottom right;
+      max-width: initial;
+    }
+    .patch {
+      position: absolute;
+      left: 3px;
+      bottom: 7px;
+      z-index: 1;
+      width: 80px;
+      height: 30px;
+      background-color: #2c2c2c;
+    }
+    .logo { position: absolute; left: 2px; bottom: 13px; z-index: 3; }
+    .logo > img { width: 50px; }
+    .meta {
+      position: absolute;
+      left: 48px;
+      right: 2px;
+      bottom: 38px;
+      z-index: 3;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.1;
+      color: #fff;
+      text-shadow: 0 0 8px #000, 0 1px 2px #000;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .meta-row {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      max-width: 100%;
+    }
+    .meta-row .elite {
+      width: 28px;
+      height: auto;
+      object-fit: contain;
+      object-position: center;
+      flex-shrink: 0;
+      display: block;
+    }
+    .meta-row .lv {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .zh {
+      position: absolute;
+      left: 48px;
+      right: 2px;
+      bottom: 6px;
+      z-index: 3;
+      width: auto;
+      font-size: 14px;
+      line-height: 1.15;
+      height: auto;
+      max-height: 34px;
+      color: #fff;
+      text-shadow: 0 0 10px #000;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      word-break: break-all;
+    }
+    .empty {
+      padding: 40px 12px;
+      text-align: center;
+      color: #54595d;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <h1>{{ title }}</h1>
+      <p class="sub">{{ subtitle }}</p>
+    </div>
+    {% if cards %}
+    <div class="grid">
+      {% for card in cards %}
+      <div class="unit{% if not card.owned %} unowned{% endif %}">
+        <div class="slot">
+          <div class="half-container{% if not card.owned %} unowned{% endif %}">
+            <div class="uh"><img src="{{ card.uh }}" /></div>
+            <div class="uhs"><img src="{{ card.uhs }}" width="70px" /></div>
+            <div class="class_"><img src="{{ card.class_icon }}" /></div>
+            <div class="rarity"><img src="{{ card.rarity_icon }}" /></div>
+            <div class="lh"><img src="{{ card.lh }}" /></div>
+            <div class="light"><img src="{{ card.light }}" /></div>
+            <div class="bg"><img src="{{ card.bg }}" /></div>
+            <div class="operator"><img src="{{ card.portrait }}" /></div>
+            <div class="patch"></div>
+            {% if card.logo %}
+            <div class="logo"><img src="{{ card.logo }}" /></div>
+            {% endif %}
+            {% if card.owned and card.meta_text %}
+            <div class="meta">
+              <span class="meta-row">
+                {% if card.elite %}<img class="elite" src="{{ card.elite }}" alt="elite" />{% endif %}
+                <span class="lv">{{ card.meta_text }}</span>
+              </span>
+            </div>
+            {% endif %}
+            <div class="zh">{{ card.name }}</div>
+          </div>
+        </div>
+        <div class="rail">
+          <div class="modules">
+            {% for module in card.modules %}
+            <div class="module{% if module.selected %} selected{% endif %}{% if module.locked %} locked{% endif %}">
+              <img src="{{ module.icon }}" alt="module" />
+              {% if not module.locked %}
+              <div class="badge"><span class="num">{{ module.level }}</span></div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          <div class="skills">
+            {% for skill in card.skills %}
+            <div class="skill{% if skill.mastered %} mastered{% endif %}">
+              <img src="{{ skill.icon }}" alt="skill" />
+              <div class="badge">
+                {% if skill.specialize_level > 0 %}
+                <span class="dot d0{% if skill.specialize_level >= 1 %} on{% endif %}"></span>
+                <span class="dot d1{% if skill.specialize_level >= 2 %} on{% endif %}"></span>
+                <span class="dot d2{% if skill.specialize_level >= 3 %} on{% endif %}"></span>
+                {% elif card.owned and skill.main_skill_lvl > 0 %}
+                <span class="num">{{ skill.main_skill_lvl }}</span>
+                {% else %}
+                <span class="dot d0"></span>
+                <span class="dot d1"></span>
+                <span class="dot d2"></span>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">No operators matched current filters.</div>
+    {% endif %}
+  </div>
+</body>
+</html>

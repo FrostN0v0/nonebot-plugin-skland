@@ -82,10 +82,7 @@ class GachaTableData:
             await self.download_game_data()
             self._update_version_file()
             downloaded = True
-        elif (
-            GACHA_DATA_PATH.joinpath("gacha_table.json").exists()
-            and GACHA_DATA_PATH.joinpath("character_table.json").exists()
-        ):
+        elif all(GACHA_DATA_PATH.joinpath(route.rsplit("/", maxsplit=1)[-1]).exists() for route in DATA_ROUTES):
             if self.version != self.origin_version and self.origin_version:
                 logger.info("检测到卡池数据版本更新，正在重新下载卡池数据...")
                 await self.download_game_data()
@@ -111,6 +108,9 @@ class GachaTableData:
             self.gacha_table = [GachaTable(**item) for item in gacha_json.get("gachaPoolClient", [])]
 
             await self.get_gacha_details()
+            from .roster import load_catalog
+
+            load_catalog.cache_clear()
         except (json.JSONDecodeError, FileNotFoundError, KeyError) as e:
             logger.error(f"加载卡池数据失败: {type(e).__name__}: {e}")
             raise RequestException(f"加载卡池数据失败，请尝试删除数据目录后重新启动: {e}")

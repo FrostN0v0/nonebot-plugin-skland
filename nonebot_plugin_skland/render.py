@@ -4,6 +4,7 @@ from pydantic import AnyUrl as Url
 from nonebot_plugin_htmlrender import template_to_pic
 
 from .model import Character
+from .roster import RosterCard
 from .config import RES_DIR, TEMPLATES_DIR, config
 from .schemas import (
     Clue,
@@ -34,6 +35,62 @@ from .filters import (
     get_equip_rarity_color,
     time_to_next_monday_4am,
 )
+
+ROSTER_PAGE_WIDTH = 1440
+ROSTER_BASE_CARD_W = 120
+ROSTER_BASE_CARD_H = 250
+ROSTER_SIDE_PAD = 10
+ROSTER_COL_GAP = 10
+ROSTER_ROW_GAP = 10
+ROSTER_SKILL_RAIL_W = 54
+ROSTER_DEVICE_SCALE = 1.0
+
+
+def roster_layout(page_width: int = ROSTER_PAGE_WIDTH, cols: int = 6) -> dict[str, float | int]:
+    """Compute a scaled Half-card grid with the module rail overlaid inside each card."""
+    inner = page_width - 2 * ROSTER_SIDE_PAD - (cols - 1) * ROSTER_COL_GAP
+    unit_w = inner / cols
+    card_w = unit_w
+    scale = card_w / ROSTER_BASE_CARD_W
+    return {
+        "page_width": page_width,
+        "cols": cols,
+        "side_pad": ROSTER_SIDE_PAD,
+        "col_gap": ROSTER_COL_GAP,
+        "row_gap": ROSTER_ROW_GAP,
+        "unit_w": unit_w,
+        "card_w": card_w,
+        "card_h": ROSTER_BASE_CARD_H * scale,
+        "card_scale": scale,
+        "skill_rail_w": ROSTER_SKILL_RAIL_W,
+    }
+
+
+async def render_operator_roster(
+    *,
+    title: str,
+    subtitle: str,
+    cards: list[RosterCard],
+    page_width: int = ROSTER_PAGE_WIDTH,
+    cols: int = 6,
+) -> bytes:
+    layout = roster_layout(page_width=page_width, cols=cols)
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="operator_roster.html.jinja2",
+        templates={
+            "title": title,
+            "subtitle": subtitle,
+            "cards": cards,
+            **layout,
+        },
+        pages={
+            "viewport": {"width": page_width, "height": 1},
+            "base_url": f"file://{TEMPLATES_DIR}",
+        },
+        device_scale_factor=ROSTER_DEVICE_SCALE,
+        screenshot_timeout=config.roster_render_timeout,
+    )
 
 
 async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:

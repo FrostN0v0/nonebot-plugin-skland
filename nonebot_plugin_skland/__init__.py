@@ -270,3 +270,33 @@ async def _(
 
     update = result.find("efgacha.update")
     await ef_gacha_history_handler(user_session, session, begin, limit, target, bot, update)
+
+
+@skland.assign("box")
+async def _(
+    session: async_scoped_session,
+    user_session: UserSession,
+    target: Match[At | int],
+    rarities: Match[str],
+    professions: Match[str],
+    name: Match[str],
+):
+    """明日方舟干员盒查询"""
+    from .commands.box import box_handler
+
+    await box_handler(session, user_session, target, rarities, professions, name)
+
+
+@skland.assign("book")
+async def _(
+    session: async_scoped_session,
+    user_session: UserSession,
+    target: Match[At | int],
+    rarities: Match[str],
+    professions: Match[str],
+    name: Match[str],
+):
+    """明日方舟干员图鉴查询"""
+    from .commands.box import book_handler
+
+    await book_handler(session, user_session, target, rarities, professions, name)

@@ -1,11 +1,9 @@
 from datetime import datetime
 
-import jinja2
 from pydantic import AnyUrl as Url
-from nonebot_plugin_htmlrender import get_new_page, template_to_pic
+from nonebot_plugin_htmlrender import template_to_pic
 
 from .model import Character
-from .roster import RosterCard
 from .config import RES_DIR, TEMPLATES_DIR, config
 from .schemas import (
     Clue,
@@ -17,6 +15,7 @@ from .schemas import (
     GroupedGachaRecord,
     EfGroupedGachaRecord,
 )
+from .roster import RosterCard
 from .filters import (
     loads_json,
     format_date_ymd,
@@ -37,6 +36,7 @@ from .filters import (
     time_to_next_monday_4am,
 )
 
+
 ROSTER_PAGE_WIDTH = 1440
 ROSTER_BASE_CARD_W = 120
 ROSTER_BASE_CARD_H = 250
@@ -45,32 +45,7 @@ ROSTER_COL_GAP = 10
 ROSTER_ROW_GAP = 10
 ROSTER_SKILL_RAIL_W = 54
 ROSTER_CARD_SKILL_GAP = 4
-# htmlrender hardcodes wait_until=networkidle; roster pages load hundreds of remote
-# images and never go idle on slow hosts. Use a dedicated path with longer budgets.
-ROSTER_RENDER_TIMEOUT_MS = 120_000
-ROSTER_IMAGE_SETTLE_TIMEOUT_MS = 90_000
 ROSTER_DEVICE_SCALE = 1.5
-
-_JINJA_ENV = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(str(TEMPLATES_DIR)),
-    enable_async=True,
-)
-_OPERATOR_ROSTER_TEMPLATE = _JINJA_ENV.get_template("operator_roster.html.jinja2")
-
-_ROSTER_WAIT_IMAGES_JS = f"""
-() => Promise.race([
-  Promise.all(
-    Array.from(document.images).map((img) => {{
-      if (img.complete) return Promise.resolve();
-      return new Promise((resolve) => {{
-        img.addEventListener('load', resolve, {{ once: true }});
-        img.addEventListener('error', resolve, {{ once: true }});
-      }});
-    }})
-  ),
-  new Promise((resolve) => setTimeout(resolve, {ROSTER_IMAGE_SETTLE_TIMEOUT_MS}))
-])
-"""
 
 
 def roster_layout(page_width: int = ROSTER_PAGE_WIDTH, cols: int = 6) -> dict[str, float | int]:
@@ -94,29 +69,6 @@ def roster_layout(page_width: int = ROSTER_PAGE_WIDTH, cols: int = 6) -> dict[st
     }
 
 
-async def _roster_html_to_pic(*, html: str, page_width: int) -> bytes:
-    """Screenshot roster HTML without htmlrender's hardcoded networkidle wait."""
-    template_path = f"file://{TEMPLATES_DIR}"
-    async with get_new_page(
-        ROSTER_DEVICE_SCALE,
-        viewport={"width": page_width, "height": 1},
-        base_url=template_path,
-    ) as page:
-        # Match html_to_pic: establish file origin before injecting HTML.
-        await page.goto(template_path)
-        await page.set_content(
-            html,
-            wait_until="domcontentloaded",
-            timeout=ROSTER_RENDER_TIMEOUT_MS,
-        )
-        await page.evaluate(_ROSTER_WAIT_IMAGES_JS)
-        return await page.screenshot(
-            full_page=True,
-            type="png",
-            timeout=ROSTER_RENDER_TIMEOUT_MS,
-        )
-
-
 async def render_operator_roster(
     *,
     title: str,
@@ -126,13 +78,22 @@ async def render_operator_roster(
     cols: int = 6,
 ) -> bytes:
     layout = roster_layout(page_width=page_width, cols=cols)
-    html = await _OPERATOR_ROSTER_TEMPLATE.render_async(
-        title=title,
-        subtitle=subtitle,
-        cards=cards,
-        **layout,
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="operator_roster.html.jinja2",
+        templates={
+            "title": title,
+            "subtitle": subtitle,
+            "cards": cards,
+            **layout,
+        },
+        pages={
+            "viewport": {"width": page_width, "height": 1},
+            "base_url": f"file://{TEMPLATES_DIR}",
+        },
+        device_scale_factor=ROSTER_DEVICE_SCALE,
+        screenshot_timeout=config.roster_render_timeout,
     )
-    return await _roster_html_to_pic(html=html, page_width=page_width)
 
 
 async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:

@@ -2,6 +2,148 @@
 
 from urllib.parse import unquote
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def roster_catalog(app, monkeypatch):
+    from nonebot_plugin_skland.roster import CatalogEntry, CatalogModule
+
+    catalog = (
+        CatalogEntry(
+            char_id="char_002_amiya",
+            name="阿米娅",
+            appellation="Amiya",
+            profession="术师",
+            rarity=4,
+            sort_id=10,
+            logo="罗德岛",
+            skill_ids=("skchr_amiya_1",),
+        ),
+        CatalogEntry(
+            char_id="char_350_surtr",
+            name="史尔特尔",
+            appellation="Surtr",
+            profession="近卫",
+            rarity=5,
+            sort_id=20,
+            logo="罗德岛",
+            skill_ids=("skchr_surtr_1", "skchr_surtr_2", "skchr_surtr_3"),
+            modules=(
+                CatalogModule("uniequip_001_surtr", "original"),
+                CatalogModule("uniequip_002_surtr", "aft-x"),
+                CatalogModule("uniequip_003_surtr", "aft-y"),
+            ),
+        ),
+        CatalogEntry(
+            char_id="char_4230_mcnist",
+            name="机械师",
+            appellation="Mechanist",
+            profession="重装",
+            rarity=5,
+            sort_id=30,
+            logo="罗德岛-精英干员",
+            modules=(
+                CatalogModule("uniequip_001_mcnist", "original"),
+                CatalogModule("uniequip_002_mcnist", "so-a"),
+            ),
+        ),
+        CatalogEntry(
+            char_id="char_100_saria",
+            name="塞雷娅",
+            appellation="Saria",
+            profession="重装",
+            rarity=5,
+            sort_id=40,
+            logo="莱茵生命",
+        ),
+        CatalogEntry(
+            char_id="char_003_kalts",
+            name="凯尔希",
+            appellation="Kal'tsit",
+            profession="医疗",
+            rarity=5,
+            sort_id=50,
+            logo="罗德岛",
+        ),
+        CatalogEntry(
+            char_id="char_150_snakek",
+            name="蛇屠箱",
+            appellation="Cuora",
+            profession="重装",
+            rarity=3,
+            sort_id=60,
+            logo="",
+        ),
+    )
+    monkeypatch.setattr("nonebot_plugin_skland.roster.load_catalog", lambda: catalog)
+    catalog = tuple(sorted(catalog, key=lambda entry: (-entry.sort_id, entry.char_id)))
+    return catalog
+
+
+def test_build_catalog_from_downloaded_game_tables(app):
+    from nonebot_plugin_skland.roster import build_catalog
+
+    common = {
+        "appellation": "Surtr",
+        "profession": "WARRIOR",
+        "rarity": 5,
+        "sortIndex": 20,
+        "potentialItemId": "p_char_surtr",
+        "displayNumber": "R111",
+        "mainPower": {"nationId": "rhodes", "groupId": None, "teamId": None},
+        "skills": [{"skillId": "skchr_surtr_1"}],
+    }
+    character_table = {
+        "char_350_surtr": {"name": "史尔特尔", "isNotObtainable": False, **common},
+        "char_100_old": {
+            "name": "Old Operator",
+            "isNotObtainable": False,
+            **common,
+            "sortIndex": 999,
+            "potentialItemId": "p_char_old",
+            "displayNumber": "R001",
+        },
+        "char_999_npc": {
+            "name": "NPC",
+            "isNotObtainable": True,
+            **common,
+            "potentialItemId": "p_char_npc",
+            "displayNumber": None,
+        },
+    }
+    patch_table = {
+        "patchChars": {
+            "char_1001_surtr2": {
+                "name": "史尔特尔",
+                "isNotObtainable": False,
+                **common,
+                "sortIndex": 0,
+            }
+        }
+    }
+    uniequip_table = {
+        "charEquip": {"char_350_surtr": ["uniequip_001_surtr", "uniequip_002_surtr"]},
+        "equipDict": {
+            "uniequip_001_surtr": {"typeIcon": "original"},
+            "uniequip_002_surtr": {"typeIcon": "aft-x"},
+        },
+    }
+    catalog = build_catalog(
+        character_table,
+        patch_table,
+        uniequip_table,
+        {"handbookDict": {"char_100_old": {}, "char_350_surtr": {}}},
+        {"rhodes": {"powerName": "罗德岛"}},
+    )
+
+    assert [entry.char_id for entry in catalog] == ["char_1001_surtr2", "char_350_surtr", "char_100_old"]
+    assert [entry.sort_id for entry in catalog] == [1, 1, 0]
+    assert catalog[1].logo == "罗德岛"
+    assert catalog[1].skill_ids == ("skchr_surtr_1",)
+    assert [module.type_icon for module in catalog[1].modules] == ["original", "aft-x"]
+    assert all(entry.char_id != "char_999_npc" for entry in catalog)
+
 
 def test_parse_stars_default_and_all(app):
     from nonebot_plugin_skland.roster import parse_stars
@@ -106,14 +248,12 @@ def test_skin_portrait_url_encodes_hash_and_skin(app):
     assert "@summer" in unquote(url) or "%40summer" in url
 
 
-def test_catalog_loaded_and_sorted_newest_first(app):
+def test_catalog_sorted_by_release_order(app):
     from nonebot_plugin_skland.roster import load_catalog
 
     catalog = load_catalog()
-    assert len(catalog) >= 400
-    assert catalog[0].sort_id >= catalog[-1].sort_id
-    six_star = [c for c in catalog if c.star == 6]
-    assert len(six_star) >= 100
+    assert [entry.sort_id for entry in catalog] == sorted((entry.sort_id for entry in catalog), reverse=True)
+    assert sum(1 for entry in catalog if entry.star == 6) >= 4
 
 
 def test_box_only_owned_and_default_six_star(app):
@@ -154,6 +294,7 @@ def test_box_only_owned_and_default_six_star(app):
     assert cards[0].owned
     assert "@summer" in unquote(cards[0].portrait)
     assert "Lv90" in cards[0].meta_text
+    assert cards[0].level_text == "90"
 
 
 def test_book_greys_unowned_and_uses_player_skin(app):
@@ -182,7 +323,7 @@ def test_book_greys_unowned_and_uses_player_skin(app):
         defaultEquipId="",
     )
     cards = build_book_cards([owned], RosterFilter(stars=frozenset({6}), professions=frozenset()))
-    assert len(cards) >= 100
+    assert len(cards) == sum(1 for entry in catalog if entry.star == 6)
     owned_card = next(c for c in cards if c.char_id == sample.char_id)
     unowned_card = next(c for c in cards if not c.owned)
     assert owned_card.owned
@@ -274,6 +415,23 @@ def test_modules_match_operator_catalog(app):
     assert len(mcnist.modules) == 2
     assert "so-a" in book[0].modules[0].icon
     assert all(m.locked for m in book[0].modules)
+
+
+async def test_roster_render_uses_configured_timeout(app, mocker, monkeypatch):
+    from nonebot_plugin_skland.config import config
+    from nonebot_plugin_skland.render import render_operator_roster
+
+    monkeypatch.setattr(config, "roster_render_timeout", 321_000)
+    render = mocker.patch(
+        "nonebot_plugin_skland.render.template_to_pic",
+        new=mocker.AsyncMock(return_value=b"image"),
+    )
+
+    result = await render_operator_roster(title="Roster", subtitle="Test", cards=[])
+
+    assert result == b"image"
+    assert render.await_args.kwargs["screenshot_timeout"] == 321_000
+    assert render.await_args.kwargs["template_name"] == "operator_roster.html.jinja2"
 
 
 def test_name_filter(app):

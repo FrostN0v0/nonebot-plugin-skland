@@ -91,7 +91,6 @@ nonebot_plugin_skland/
 │           └── statistics.py # EfGroupedGachaRecord、分类统计、分页可见池计算
 ├── migrations/          # nonebot-plugin-orm/Alembic 迁移脚本
 └── resources/
-    ├── data/            # 内置数据快照（如 char_catalog.json）
     ├── fonts/           # 渲染字体
     ├── images/          # 内置图片资源（背景、职业、稀有度、终末地素材、抽卡装饰等）
     └── templates/       # Jinja2 HTML 模板与生成的 CSS
@@ -177,6 +176,7 @@ class Config(BaseModel):
 - `argot_expire`: 暗语缓存过期时间（秒）。
 - `gacha_render_max`: 明日方舟抽卡记录单图渲染卡池上限。
 - `ef_gacha_render_max`: 终末地抽卡记录单图渲染各类别卡池上限。
+- `roster_render_timeout`: 干员盒/图鉴传给 htmlrender 的截图超时时间（毫秒）。
 
 资源路径：
 
@@ -257,9 +257,9 @@ class Config(BaseModel):
 `data_source.py`：
 
 - `GachaTableData`
-  - 管理明日方舟 `gacha_table.json`、`character_table.json` 与 PRTS 卡池详情。
+  - 管理明日方舟 `gacha_table.json`、`character_table.json`、`char_patch_table.json`、`uniequip_table.json`、`handbook_info_table.json`、`handbook_team_table.json` 与 PRTS 卡池详情。
   - 使用 `GameResourceDownloader.check_update()` 比较版本。
-  - `load(force=False)` 会按需下载、更新版本文件并解析数据。
+  - `load(force=False)` 会按需下载、更新版本文件、解析抽卡数据并清除干员目录缓存。
 - `EfGachaPoolTableData`
   - 从 `FrostN0v0/EndfieldGachaPoolTable` 拉取 `GachaPoolTable.json`。
   - 启动或同步数据时尝试覆盖下载；下载失败且本地有旧文件时使用本地缓存。
@@ -279,10 +279,11 @@ class Config(BaseModel):
 
 - `commands/box.py`：`skland box`（仅已拥有）与 `skland book`（全图鉴，未拥有灰显）。
 - `roster.py`：PRTS Half 框资源 URL、筛选与卡片组装；渲染 DTO（`RosterCard` 等）放此处，不进入 `schemas/`。
-- 静态快照：`resources/data/char_catalog.json`（含 `sort_id` 实装序、技能 id、模组 `type_icon`）。新干员上线后需从 `character_table` / `uniequip_table` 与 PRTS 实装序重建该文件。
+- 干员目录不随包保存 JSON 快照；`roster.load_catalog()` 从 `DATA_DIR/gamedata/excel` 下的 `character_table.json`、`char_patch_table.json`、`uniequip_table.json`、`handbook_info_table.json`、`handbook_team_table.json` 动态构建。
+- `character_table.json` 提供名称、英文代号、职业、稀有度、技能与阵营；`char_patch_table.json` 补充阿米娅职业形态；`uniequip_table.json` 提供模组槽位与 `typeIcon`；`handbook_info_table.json` 的 `handbookDict` 顺序提供干员实装顺序；`handbook_team_table.json` 提供阵营显示名。
 - 立绘：`char_skin/portrait/{skinId}`；图鉴未拥有用默认 `#1`，已拥有用玩家 `skinId`。
-- `render.render_operator_roster()`：固定宽度长截图一页渲染全部匹配干员。因远程立绘/框体图数量大，**不走** htmlrender `template_to_pic` 默认的 `wait_until=networkidle`（弱网易 30s 超时）；改为 `get_new_page` + `domcontentloaded` + 图片 settle（失败图放行）+ 更长 timeout。
-- 模板 `operator_roster.html.jinja2` 为 PRTS Half 半身像样式，使用内联自定义 CSS（不复用 Tailwind `index.css`），以对齐图鉴框体而非通用卡片面板。
+- `render.render_operator_roster()` 使用 htmlrender 原生 `template_to_pic()`，截图超时由 `roster_render_timeout` 配置。
+- 模板 `operator_roster.html.jinja2` 使用 Tailwind CSS，样式统一编译到 `resources/templates/index.css`。
 
 终末地：
 
@@ -452,7 +453,6 @@ nb orm upgrade
 - 字体、圆角、阴影、进度条、分割线等视觉元素可以直接复用现有模板和预设 CSS。
 - 背景图上应使用遮罩或模糊层保证文字可读。
 - 避免与现有模板明显割裂的视觉风格。
-- 例外：干员盒/图鉴 Half 半身像模板为对齐 PRTS 图鉴框体，使用独立内联 CSS，不强制套用 Tailwind 卡片面板。
 
 ## 注意事项
 

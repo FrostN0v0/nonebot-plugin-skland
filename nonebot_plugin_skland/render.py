@@ -51,6 +51,12 @@ ROSTER_RENDER_TIMEOUT_MS = 120_000
 ROSTER_IMAGE_SETTLE_TIMEOUT_MS = 90_000
 ROSTER_DEVICE_SCALE = 1.5
 
+_JINJA_ENV = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(str(TEMPLATES_DIR)),
+    enable_async=True,
+)
+_OPERATOR_ROSTER_TEMPLATE = _JINJA_ENV.get_template("operator_roster.html.jinja2")
+
 _ROSTER_WAIT_IMAGES_JS = f"""
 () => Promise.race([
   Promise.all(
@@ -120,12 +126,7 @@ async def render_operator_roster(
     cols: int = 6,
 ) -> bytes:
     layout = roster_layout(page_width=page_width, cols=cols)
-    env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(str(TEMPLATES_DIR)),
-        enable_async=True,
-    )
-    template = env.get_template("operator_roster.html.jinja2")
-    html = await template.render_async(
+    html = await _OPERATOR_ROSTER_TEMPLATE.render_async(
         title=title,
         subtitle=subtitle,
         cards=cards,

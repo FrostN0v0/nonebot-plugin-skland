@@ -93,6 +93,30 @@ extra_data = {
             ),
         },
         {
+            "func": "剿灭提醒",
+            "trigger_method": "**已绑定用户**（群聊）",
+            "trigger_condition": "**剿灭提醒** | `skland campaign on`",
+            "brief_des": "在本群开启默认角色剿灭奖励提醒。",
+            "detail_des": (
+                "- **开启剿灭提醒**\n\n"
+                "```bash\n"
+                "skland campaign on\n"
+                "```\n\n"
+                " **快捷指令** ：`剿灭提醒`\n\n"
+                "需在群聊中使用。开启后，插件会在每周日 12:00 和 18:00（上海时间）"
+                "检测默认角色的剿灭奖励是否领满，未完成时在本群提醒。\n\n"
+                "- **关闭剿灭提醒**\n\n"
+                "```bash\n"
+                "skland campaign off\n"
+                "```\n\n"
+                " **快捷指令** ：`关闭剿灭提醒`\n\n"
+                "- **查看状态**\n\n"
+                "```bash\n"
+                "skland campaign status\n"
+                "```\n"
+            ),
+        },
+        {
             "func": "全体签到",
             "trigger_method": "**超级用户**",
             "trigger_condition": "**全体签到** | `skland arksign all`",

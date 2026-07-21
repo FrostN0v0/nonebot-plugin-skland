@@ -270,3 +270,54 @@ async def _(
 
     update = result.find("efgacha.update")
     await ef_gacha_history_handler(user_session, session, begin, limit, target, bot, update)
+
+
+@skland.assign("campaign.on")
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+    msg_target: MsgTarget,
+):
+    """开启剿灭奖励提醒"""
+    from .commands.campaign import campaign_on_handler
+
+    await campaign_on_handler(user_session, session, msg_target)
+
+
+@skland.assign("campaign.off")
+async def _(user_session: UserSession, session: async_scoped_session):
+    """关闭剿灭奖励提醒"""
+    from .commands.campaign import campaign_off_handler
+
+    await campaign_off_handler(user_session, session)
+
+
+@skland.assign("campaign.status")
+async def _(user_session: UserSession, session: async_scoped_session):
+    """查看剿灭奖励提醒状态"""
+    from .commands.campaign import campaign_status_handler
+
+    await campaign_status_handler(user_session, session)
+
+
+@skland.assign("campaign.test")
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+    msg_target: MsgTarget,
+    bot: Bot,
+    result: Arparma,
+    is_superuser: bool = Depends(SuperUser()),
+):
+    """手动测试剿灭提醒"""
+    from .commands.campaign import campaign_test_handler
+
+    await campaign_test_handler(
+        user_session,
+        session,
+        msg_target,
+        bot,
+        run_all=bool(result.find("campaign.test.all")),
+        do_send=bool(result.find("campaign.test.send")),
+        is_superuser=is_superuser,
+    )

@@ -254,6 +254,21 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 > 插件会在每天 00:15 自动为所有明日方舟绑定角色签到，00:20 自动为所有终末地绑定角色签到，一般无需手动签到
 
 <details open>
+<summary><b>⚔️ 剿灭提醒</b></summary>
+
+| 指令                      | 权限 | 说明                                       |
+| ------------------------- | ---- | ------------------------------------------ |
+| `skland campaign on`      | 所有 | 在本群开启默认角色剿灭奖励提醒（需在群聊） |
+| `skland campaign off`     | 所有 | 关闭剿灭奖励提醒                           |
+| `skland campaign status`  | 所有 | 查看提醒状态与当前剿灭奖励进度             |
+
+**快捷指令：** `剿灭提醒` `关闭剿灭提醒`
+
+> 开启后，插件会在每周日 12:00 和 18:00（上海时间）检测默认角色的剿灭奖励是否领满（`current/total = 1`），未完成时在本群 @ 提醒。
+
+</details>
+
+<details open>
 <summary><b>🎲 肉鸽战绩</b></summary>
 
 | 指令                          | 权限 | 说明                       |
@@ -388,6 +403,8 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `导入抽卡记录`       | `skland import`               | 导入抽卡数据       |
 | `终末地抽卡记录`     | `skland efgacha`              | 终末地抽卡记录     |
 | `终末地抽卡更新`     | `skland efgacha -u`           | 拉取最新抽卡数据   |
+| `剿灭提醒`           | `skland campaign on`          | 开启剿灭奖励提醒   |
+| `关闭剿灭提醒`       | `skland campaign off`         | 关闭剿灭奖励提醒   |
 
 </details>
 

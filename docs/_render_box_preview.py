@@ -109,15 +109,6 @@ async def main() -> None:
         if c.char_id in allow
     ][:24]
 
-    for card in cards[:8]:
-        print(
-            card.name,
-            "skills",
-            [s.specialize_level for s in card.skills],
-            "modules",
-            [(m.level, m.locked, m.selected) for m in card.modules],
-        )
-
     img = await render_operator_roster(
         title="Operator Book (preview)",
         subtitle="varied skill mastery + module levels",
@@ -126,7 +117,6 @@ async def main() -> None:
     )
     out = Path("docs/box_book_preview.png")
     out.write_bytes(img)
-    print(f"wrote {out.resolve()} bytes={len(img)}")
 
 
 if __name__ == "__main__":

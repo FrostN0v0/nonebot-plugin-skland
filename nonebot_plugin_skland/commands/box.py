@@ -70,8 +70,7 @@ async def box_handler(
         await UniMessage(f"没有匹配的干员（持有 {owned_n}）· {summary}").finish(at_sender=True)
 
     subtitle = (
-        f"{info.status.name} · UID {info.status.uid} · "
-        f"显示 {len(cards)} / 持有 {owned_n} · {summary} · 实装新→旧"
+        f"{info.status.name} · UID {info.status.uid} · 显示 {len(cards)} / 持有 {owned_n} · {summary} · 游戏内顺序"
     )
     image = await render_operator_roster(
         title="Operator Box",
@@ -115,7 +114,7 @@ async def book_handler(
 
     subtitle = (
         f"{info.status.name} · UID {info.status.uid} · "
-        f"显示 {len(cards)}（已拥有 {owned_shown}）· {summary} · 实装新→旧"
+        f"显示 {len(cards)}（已拥有 {owned_shown}）· {summary} · 游戏内顺序"
     )
     image = await render_operator_roster(
         title="Operator Book",

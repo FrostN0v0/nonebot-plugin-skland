@@ -10,12 +10,22 @@ from urllib.parse import quote
 
 from nonebot import logger
 
-from .config import RES_DIR, CACHE_DIR
+from .config import RES_DIR, CACHE_DIR, GACHA_DATA_PATH
 from .schemas.arknights.models.chars import Character as OwnedChar
 from .schemas.arknights.models.assist_chars import Equipment
 
 MEDIA = "https://media.prts.wiki"
-CATALOG_PATH = RES_DIR / "data" / "char_catalog.json"
+
+PROFESSION_NAMES = {
+    "PIONEER": "先锋",
+    "WARRIOR": "近卫",
+    "TANK": "重装",
+    "SNIPER": "狙击",
+    "CASTER": "术师",
+    "MEDIC": "医疗",
+    "SUPPORT": "辅助",
+    "SPECIAL": "特种",
+}
 
 PROFESSION_ALIASES: dict[str, str] = {
     "先锋": "先锋",
@@ -286,31 +296,95 @@ def parse_professions(raw: str | None) -> frozenset[str]:
     return frozenset(result)
 
 
+def _load_json(filename: str) -> dict:
+    path = GACHA_DATA_PATH / filename
+    if not path.exists():
+        logger.error(f"game data missing: {path}")
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as e:
+        logger.error(f"failed to load game data {path}: {e}")
+        return {}
+
+
+def _resolve_logo(character: dict, teams: dict) -> str:
+    power = character.get("mainPower") or character
+    for key in ("teamId", "groupId", "nationId"):
+        power_id = power.get(key)
+        if power_id and power_id in teams:
+            return teams[power_id].get("powerName") or ""
+    return ""
+
+
+def build_catalog(
+    character_table: dict,
+    char_patch_table: dict,
+    uniequip_table: dict,
+    handbook_team_table: dict,
+) -> tuple[CatalogEntry, ...]:
+    characters = {
+        char_id: data
+        for char_id, data in character_table.items()
+        if char_id.startswith("char_") and not data.get("isNotObtainable", False)
+    }
+    patch_characters = char_patch_table.get("patchChars") or {}
+    characters.update(patch_characters)
+
+    base_sort_index: dict[tuple[str, str], int] = {}
+    for data in character_table.values():
+        sort_index = int(data.get("sortIndex") or 0)
+        for key in ("potentialItemId", "displayNumber"):
+            value = data.get(key)
+            if value:
+                base_sort_index[(key, value)] = sort_index
+
+    char_equip = uniequip_table.get("charEquip") or {}
+    equip_dict = uniequip_table.get("equipDict") or {}
+    entries: list[CatalogEntry] = []
+    for char_id, data in characters.items():
+        profession = PROFESSION_NAMES.get(data.get("profession"))
+        rarity = data.get("rarity")
+        if profession is None or not isinstance(rarity, int) or rarity not in range(6):
+            continue
+
+        sort_index = int(data.get("sortIndex") or 0)
+        if char_id in patch_characters and sort_index == 0:
+            for key in ("potentialItemId", "displayNumber"):
+                value = data.get(key)
+                if value and (key, value) in base_sort_index:
+                    sort_index = base_sort_index[(key, value)]
+                    break
+
+        modules = tuple(
+            CatalogModule(id=module_id, type_icon=module.get("typeIcon") or "original")
+            for module_id in char_equip.get(char_id, [])
+            if (module := equip_dict.get(module_id)) is not None
+        )
+        entries.append(
+            CatalogEntry(
+                char_id=char_id,
+                name=data.get("name") or char_id,
+                appellation=data.get("appellation") or "",
+                profession=profession,
+                rarity=rarity,
+                sort_id=sort_index,
+                logo=_resolve_logo(data, handbook_team_table),
+                skill_ids=tuple(skill["skillId"] for skill in data.get("skills") or [] if skill.get("skillId")),
+                modules=modules,
+            )
+        )
+    return tuple(sorted(entries, key=lambda entry: (entry.sort_id, entry.char_id)))
+
+
 @lru_cache(maxsize=1)
 def load_catalog() -> tuple[CatalogEntry, ...]:
-    if not CATALOG_PATH.exists():
-        logger.error(f"char catalog missing: {CATALOG_PATH}")
-        return ()
-    data = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
-    entries = [
-        CatalogEntry(
-            char_id=item["char_id"],
-            name=item["name"],
-            appellation=item.get("appellation") or "",
-            profession=item["profession"],
-            rarity=int(item["rarity"]),
-            sort_id=int(item["sort_id"]),
-            logo=item.get("logo") or "",
-            skill_ids=tuple(sid for sid in (item.get("skills") or []) if sid),
-            modules=tuple(
-                CatalogModule(id=m["id"], type_icon=m.get("type_icon") or "original")
-                for m in (item.get("modules") or [])
-                if m.get("id")
-            ),
-        )
-        for item in data
-    ]
-    return tuple(sorted(entries, key=lambda e: (-e.sort_id, e.char_id)))
+    return build_catalog(
+        _load_json("character_table.json"),
+        _load_json("char_patch_table.json"),
+        _load_json("uniequip_table.json"),
+        _load_json("handbook_team_table.json"),
+    )
 
 
 def catalog_by_id() -> dict[str, CatalogEntry]:
@@ -341,8 +415,7 @@ def build_skills(entry: CatalogEntry, owned: OwnedChar | None) -> list[RosterSki
             if skill.id
         ]
     return [
-        RosterSkill(icon=skill_icon_url(skill_id), specialize_level=0, main_skill_lvl=0)
-        for skill_id in entry.skill_ids
+        RosterSkill(icon=skill_icon_url(skill_id), specialize_level=0, main_skill_lvl=0) for skill_id in entry.skill_ids
     ]
 
 
@@ -384,8 +457,7 @@ def build_modules(
                 RosterModule(
                     icon=uniequip_icon_url(type_icon),
                     level=eq.level,
-                    selected=(not locked)
-                    and bool(owned.defaultEquipId and eq.id == owned.defaultEquipId),
+                    selected=(not locked) and bool(owned.defaultEquipId and eq.id == owned.defaultEquipId),
                     locked=locked,
                 )
             )
@@ -471,14 +543,14 @@ def build_box_cards(
     for ch in owned_chars:
         entry = index.get(ch.charId)
         if entry is None:
-            # Fallback for chars missing from catalog snapshot.
+            # Keep owned operators visible while downloaded game data catches up.
             entry = CatalogEntry(
                 char_id=ch.charId,
                 name=ch.charId,
                 appellation="",
                 profession="",
                 rarity=5,
-                sort_id=0,
+                sort_id=1_000_000,
                 logo="",
             )
             if filt.stars and entry.star not in filt.stars:
@@ -490,7 +562,7 @@ def build_box_cards(
         elif not filt.match(entry):
             continue
         cards.append(build_card(entry, ch, equipment_map=equipment_map))
-    cards.sort(key=lambda c: (-c.sort_id, c.char_id))
+    cards.sort(key=lambda card: (card.sort_id, card.char_id))
     return cards
 
 

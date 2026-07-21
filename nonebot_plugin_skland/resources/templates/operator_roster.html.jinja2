@@ -5,325 +5,107 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{{ title }}</title>
   <style>
-    body {
-      margin: 0;
-      font-family: Avenir, Helvetica, Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: #f8f9fa;
-      color: #202122;
-    }
-    .page {
-      width: {{ page_width }}px;
-      padding: 16px {{ side_pad }}px 24px;
-      box-sizing: border-box;
-    }
-    .header {
-      margin-bottom: 12px;
-      padding: 0;
-    }
-    .header h1 {
-      margin: 0 0 4px;
-      font-size: 20px;
-      line-height: 1.2;
-    }
-    .header .sub {
-      margin: 0;
-      font-size: 12px;
-      color: #54595d;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat({{ cols }}, {{ unit_w }}px);
-      column-gap: {{ col_gap }}px;
-      row-gap: {{ row_gap }}px;
-      justify-content: start;
-      align-content: start;
-    }
-    .unit {
-      width: {{ unit_w }}px;
-      display: flex;
-      flex-direction: row;
-      align-items: flex-start;
-      gap: {{ card_skill_gap }}px;
-    }
-    .slot {
-      width: {{ card_w }}px;
-      height: {{ card_h }}px;
-      flex-shrink: 0;
-    }
-    .rail {
-      width: {{ skill_rail_w }}px;
-      height: {{ card_h }}px;
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      align-items: center;
-      box-sizing: border-box;
-      padding: 4px 0;
-    }
-    .modules,
-    .skills {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      width: 100%;
-    }
-    .skill,
-    .module {
-      position: relative;
-      width: 48px;
-      height: 48px;
-      border-radius: 5px;
-      overflow: hidden;
-      background: #2a2a2a;
-      outline: 1px solid rgba(255, 255, 255, 0.45);
-      box-sizing: border-box;
-      flex-shrink: 0;
-    }
-    .skill.mastered,
-    .module.selected {
-      outline: 2px solid #7fd7ff;
-      box-shadow: 0 0 6px rgba(127, 215, 255, 0.65);
-    }
-    .module.locked {
-      filter: brightness(0.42) saturate(0.35);
-      outline-color: rgba(255, 255, 255, 0.2);
-      box-shadow: none;
-    }
-    .skill > img,
-    .module > img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      display: block;
-      background: #1a1a1a;
-    }
-    .skill .badge,
-    .module .badge {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 18px;
-      height: 18px;
-      background: rgba(8, 8, 8, 0.92);
-      z-index: 3;
-      pointer-events: none;
-    }
-    .skill .badge .dot {
-      position: absolute;
-      width: 4.5px;
-      height: 4.5px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.28);
-    }
-    .skill .badge .dot.on {
-      background: #fff;
-    }
-    .skill .badge .dot.d0 { top: 2.5px; left: 50%; transform: translateX(-50%); }
-    .skill .badge .dot.d1 { top: 9.5px; left: 28%; transform: translateX(-50%); }
-    .skill .badge .dot.d2 { top: 9.5px; left: 72%; transform: translateX(-50%); }
-    .skill .badge .num,
-    .module .badge .num {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 700;
-      line-height: 1;
-    }
-    .unit.unowned .rail {
-      opacity: 0.4;
-      filter: grayscale(0.85);
-    }
-    .half-container {
-      position: relative;
-      width: 120px;
-      height: 250px;
-      background-color: transparent;
-      display: block;
-      margin: 0;
-      zoom: {{ card_scale }};
-      filter: drop-shadow(0 0 7px rgba(0, 0, 0, 0.7));
-      overflow: hidden;
-      font-family: Avenir, Helvetica, Arial, sans-serif;
-      line-height: 1;
-    }
-    .half-container.unowned {
-      opacity: 0.42;
-      filter: drop-shadow(0 0 7px rgba(0, 0, 0, 0.7)) grayscale(0.9);
-    }
-    .uh, .uhs { position: absolute; top: 0; }
-    .uh > img, .uhs > img { width: 70px; }
-    .class_ { position: absolute; left: 3px; top: 5px; z-index: 1; }
-    .class_ > img { width: 25px; }
-    .rarity { position: absolute; left: 30px; top: 0; z-index: 2; }
-    .rarity > img { height: 18px; }
-    .lh { position: absolute; left: 0; bottom: 0; z-index: 2; }
-    .lh > img { width: 120px; }
-    .light { position: absolute; left: 3px; bottom: 25px; z-index: 1; }
-    .light > img { width: 110px; }
-    .bg { position: absolute; left: 3px; bottom: 7px; z-index: 0; }
-    .bg > img { width: 110px; }
-    .operator { position: absolute; bottom: 29px; z-index: 0; right: 7px; }
-    .operator > img {
-      transform: scale(0.61111);
-      transform-origin: bottom right;
-      max-width: initial;
-    }
-    .patch {
-      position: absolute;
-      left: 3px;
-      bottom: 7px;
-      z-index: 1;
-      width: 80px;
-      height: 30px;
-      background-color: #2c2c2c;
-    }
-    .logo { position: absolute; left: 2px; bottom: 13px; z-index: 3; }
-    .logo > img { width: 50px; }
-    .meta {
-      position: absolute;
-      left: 48px;
-      right: 2px;
-      bottom: 38px;
-      z-index: 3;
-      font-size: 16px;
-      font-weight: 700;
-      line-height: 1.1;
-      color: #fff;
-      text-shadow: 0 0 8px #000, 0 1px 2px #000;
-      text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .meta-row {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 3px;
-      max-width: 100%;
-    }
-    .meta-row .elite {
-      width: 28px;
-      height: auto;
-      object-fit: contain;
-      object-position: center;
-      flex-shrink: 0;
-      display: block;
-    }
-    .meta-row .lv {
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .zh {
-      position: absolute;
-      left: 48px;
-      right: 2px;
-      bottom: 6px;
-      z-index: 3;
-      width: auto;
-      font-size: 14px;
-      line-height: 1.15;
-      height: auto;
-      max-height: 34px;
-      color: #fff;
-      text-shadow: 0 0 10px #000;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-      word-break: break-all;
-    }
-    .empty {
-      padding: 40px 12px;
-      text-align: center;
-      color: #54595d;
-      font-size: 14px;
-    }
+    {% include "index.css" %}
   </style>
 </head>
-<body>
-  <div class="page">
-    <div class="header">
-      <h1>{{ title }}</h1>
-      <p class="sub">{{ subtitle }}</p>
-    </div>
+<body class="m-0 bg-[#f8f9fa] text-[#202122] font-sans">
+  <main
+    class="box-border w-[var(--page-width)] px-[var(--side-pad)] pt-4 pb-6"
+    style="--page-width: {{ page_width }}px; --side-pad: {{ side_pad }}px;"
+  >
+    <header class="mb-3">
+      <h1 class="m-0 mb-1 text-xl leading-tight font-bold">{{ title }}</h1>
+      <p class="m-0 text-xs text-[#54595d]">{{ subtitle }}</p>
+    </header>
+
     {% if cards %}
-    <div class="grid">
+    <section
+      class="grid content-start justify-start gap-x-[var(--col-gap)] gap-y-[var(--row-gap)] [grid-template-columns:repeat(var(--cols),var(--unit-width))]"
+      style="--cols: {{ cols }}; --unit-width: {{ unit_w }}px; --col-gap: {{ col_gap }}px; --row-gap: {{ row_gap }}px;"
+    >
       {% for card in cards %}
-      <div class="unit{% if not card.owned %} unowned{% endif %}">
-        <div class="slot">
-          <div class="half-container{% if not card.owned %} unowned{% endif %}">
-            <div class="uh"><img src="{{ card.uh }}" /></div>
-            <div class="uhs"><img src="{{ card.uhs }}" width="70px" /></div>
-            <div class="class_"><img src="{{ card.class_icon }}" /></div>
-            <div class="rarity"><img src="{{ card.rarity_icon }}" /></div>
-            <div class="lh"><img src="{{ card.lh }}" /></div>
-            <div class="light"><img src="{{ card.light }}" /></div>
-            <div class="bg"><img src="{{ card.bg }}" /></div>
-            <div class="operator"><img src="{{ card.portrait }}" /></div>
-            <div class="patch"></div>
+      <article
+        class="flex w-[var(--unit-width)] items-start gap-[var(--card-skill-gap)]"
+        style="--unit-width: {{ unit_w }}px; --card-skill-gap: {{ card_skill_gap }}px;"
+      >
+        <div
+          class="h-[var(--card-height)] w-[var(--card-width)] shrink-0"
+          style="--card-width: {{ card_w }}px; --card-height: {{ card_h }}px;"
+        >
+          <div
+            class="relative block h-[250px] w-[120px] overflow-hidden bg-transparent font-sans leading-none [filter:drop-shadow(0_0_7px_rgba(0,0,0,0.7))] [zoom:var(--card-scale)]{% if not card.owned %} opacity-[0.42] grayscale{% endif %}"
+            style="--card-scale: {{ card_scale }};"
+          >
+            <div class="absolute top-0"><img class="w-[70px]" src="{{ card.uh }}" alt="" /></div>
+            <div class="absolute top-0"><img class="w-[70px]" src="{{ card.uhs }}" alt="" /></div>
+            <div class="absolute top-[5px] left-[3px] z-[1]"><img class="w-[25px]" src="{{ card.class_icon }}" alt="" /></div>
+            <div class="absolute top-0 left-[30px] z-[2]"><img class="h-[18px]" src="{{ card.rarity_icon }}" alt="" /></div>
+            <div class="absolute bottom-0 left-0 z-[2]"><img class="w-[120px]" src="{{ card.lh }}" alt="" /></div>
+            <div class="absolute bottom-[25px] left-[3px] z-[1]"><img class="w-[110px]" src="{{ card.light }}" alt="" /></div>
+            <div class="absolute bottom-[7px] left-[3px] z-0"><img class="w-[110px]" src="{{ card.bg }}" alt="" /></div>
+            <div class="absolute right-[7px] bottom-[29px] z-0">
+              <img class="max-w-none origin-bottom-right scale-[0.61111]" src="{{ card.portrait }}" alt="{{ card.name }}" />
+            </div>
+            <div class="absolute bottom-[7px] left-[3px] z-[1] h-[30px] w-[80px] bg-[#2c2c2c]"></div>
             {% if card.logo %}
-            <div class="logo"><img src="{{ card.logo }}" /></div>
+            <div class="absolute bottom-[13px] left-[2px] z-[3]"><img class="w-[50px]" src="{{ card.logo }}" alt="" /></div>
             {% endif %}
             {% if card.owned and card.meta_text %}
-            <div class="meta">
-              <span class="meta-row">
-                {% if card.elite %}<img class="elite" src="{{ card.elite }}" alt="elite" />{% endif %}
-                <span class="lv">{{ card.meta_text }}</span>
+            <div class="absolute right-[2px] bottom-[38px] left-[48px] z-[3] overflow-hidden text-center text-base leading-[1.1] font-bold text-ellipsis whitespace-nowrap text-white [text-shadow:0_0_8px_#000,0_1px_2px_#000]">
+              <span class="inline-flex max-w-full items-center justify-center gap-[3px]">
+                {% if card.elite %}<img class="block h-auto w-7 shrink-0 object-contain object-center" src="{{ card.elite }}" alt="" />{% endif %}
+                <span class="min-w-0 overflow-hidden text-ellipsis">{{ card.meta_text }}</span>
               </span>
             </div>
             {% endif %}
-            <div class="zh">{{ card.name }}</div>
+            <div class="absolute right-[2px] bottom-[6px] left-[48px] z-[3] m-0 max-h-[34px] overflow-hidden p-0 text-center text-sm leading-[1.15] text-white [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [text-shadow:0_0_10px_#000] break-all">
+              {{ card.name }}
+            </div>
           </div>
         </div>
-        <div class="rail">
-          <div class="modules">
+
+        <aside
+          class="box-border flex h-[var(--card-height)] w-[var(--skill-rail-width)] shrink-0 flex-col items-center justify-between py-1{% if not card.owned %} opacity-40 grayscale{% endif %}"
+          style="--card-height: {{ card_h }}px; --skill-rail-width: {{ skill_rail_w }}px;"
+        >
+          <div class="flex w-full flex-col items-center gap-1.5">
             {% for module in card.modules %}
-            <div class="module{% if module.selected %} selected{% endif %}{% if module.locked %} locked{% endif %}">
-              <img src="{{ module.icon }}" alt="module" />
+            <div class="relative size-12 shrink-0 overflow-hidden rounded-[5px] bg-[#2a2a2a] outline-[1px] outline-white/45{% if module.selected %} shadow-[0_0_6px_rgba(127,215,255,0.65)] outline-2 outline-[#7fd7ff]{% endif %}{% if module.locked %} brightness-[0.42] saturate-[0.35] outline-white/20{% endif %}">
+              <img class="block size-full bg-[#1a1a1a] object-contain" src="{{ module.icon }}" alt="" />
               {% if not module.locked %}
-              <div class="badge"><span class="num">{{ module.level }}</span></div>
+              <div class="pointer-events-none absolute top-0 left-0 z-[3] flex size-[18px] items-center justify-center bg-[#080808]/90 text-[11px] leading-none font-bold text-white">{{ module.level }}</div>
               {% endif %}
             </div>
             {% endfor %}
           </div>
-          <div class="skills">
+
+          <div class="flex w-full flex-col items-center gap-1.5">
             {% for skill in card.skills %}
-            <div class="skill{% if skill.mastered %} mastered{% endif %}">
-              <img src="{{ skill.icon }}" alt="skill" />
-              <div class="badge">
+            <div class="relative size-12 shrink-0 overflow-hidden rounded-[5px] bg-[#2a2a2a] outline-[1px] outline-white/45{% if skill.mastered %} shadow-[0_0_6px_rgba(127,215,255,0.65)] outline-2 outline-[#7fd7ff]{% endif %}">
+              <img class="block size-full bg-[#1a1a1a] object-contain" src="{{ skill.icon }}" alt="" />
+              <div class="pointer-events-none absolute top-0 left-0 z-[3] size-[18px] bg-[#080808]/90">
                 {% if skill.specialize_level > 0 %}
-                <span class="dot d0{% if skill.specialize_level >= 1 %} on{% endif %}"></span>
-                <span class="dot d1{% if skill.specialize_level >= 2 %} on{% endif %}"></span>
-                <span class="dot d2{% if skill.specialize_level >= 3 %} on{% endif %}"></span>
+                <span class="absolute top-[2.5px] left-1/2 size-[4.5px] -translate-x-1/2 rounded-full{% if skill.specialize_level >= 1 %} bg-white{% else %} bg-white/30{% endif %}"></span>
+                <span class="absolute top-[9.5px] left-[28%] size-[4.5px] -translate-x-1/2 rounded-full{% if skill.specialize_level >= 2 %} bg-white{% else %} bg-white/30{% endif %}"></span>
+                <span class="absolute top-[9.5px] left-[72%] size-[4.5px] -translate-x-1/2 rounded-full{% if skill.specialize_level >= 3 %} bg-white{% else %} bg-white/30{% endif %}"></span>
                 {% elif card.owned and skill.main_skill_lvl > 0 %}
-                <span class="num">{{ skill.main_skill_lvl }}</span>
+                <span class="flex size-full items-center justify-center text-[11px] leading-none font-bold text-white">{{ skill.main_skill_lvl }}</span>
                 {% else %}
-                <span class="dot d0"></span>
-                <span class="dot d1"></span>
-                <span class="dot d2"></span>
+                <span class="absolute top-[2.5px] left-1/2 size-[4.5px] -translate-x-1/2 rounded-full bg-white/30"></span>
+                <span class="absolute top-[9.5px] left-[28%] size-[4.5px] -translate-x-1/2 rounded-full bg-white/30"></span>
+                <span class="absolute top-[9.5px] left-[72%] size-[4.5px] -translate-x-1/2 rounded-full bg-white/30"></span>
                 {% endif %}
               </div>
             </div>
             {% endfor %}
           </div>
-        </div>
-      </div>
+        </aside>
+      </article>
       {% endfor %}
-    </div>
+    </section>
     {% else %}
-    <div class="empty">No operators matched current filters.</div>
+    <div class="px-3 py-10 text-center text-sm text-[#54595d]">No operators matched current filters.</div>
     {% endif %}
-  </div>
+  </main>
 </body>
 </html>

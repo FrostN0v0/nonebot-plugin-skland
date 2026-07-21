@@ -1,6 +1,6 @@
 from nonebot_plugin_orm import Model
 from sqlalchemy.orm import Mapped, relationship, mapped_column
-from sqlalchemy import VARCHAR, Text, Integer, BigInteger, ForeignKey, UniqueConstraint, ForeignKeyConstraint
+from sqlalchemy import VARCHAR, Text, Boolean, Integer, BigInteger, ForeignKey, UniqueConstraint, ForeignKeyConstraint
 
 
 class SkUser(Model):
@@ -89,3 +89,16 @@ class GachaRecord(Model):
             name="fk_gacha_record_to_characters",
         ),
     )
+
+
+class CampaignReminder(Model):
+    __tablename__ = "skland_campaign_reminder"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("skland_user.id", ondelete="CASCADE"), primary_key=True)
+    """User ID"""
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    """Whether campaign reminder is enabled"""
+    notify_target: Mapped[str] = mapped_column(Text)
+    """Serialized Target.dump() JSON for group notification"""
+    platform_user_id: Mapped[str] = mapped_column(Text)
+    """Platform user ID for @ mention in group"""

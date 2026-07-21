@@ -21,3 +21,7 @@ class Campaign(BaseModel):
 
     records: list[CampaignRecord]
     reward: BaseCount
+
+    @property
+    def is_reward_complete(self) -> bool:
+        return self.reward.total > 0 and self.reward.current >= self.reward.total

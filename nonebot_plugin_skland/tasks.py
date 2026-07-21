@@ -2,7 +2,9 @@
 
 import json
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
+from nonebot import logger
 from nonebot.compat import model_dump
 from nonebot_plugin_apscheduler import scheduler
 from nonebot_plugin_orm import get_scoped_session
@@ -10,9 +12,14 @@ from nonebot_plugin_orm import get_scoped_session
 from .model import SkUser
 from .api import SklandAPI
 from .config import CACHE_DIR
+from .commands.campaign import dispatch_campaign_reminders
 from .schemas import CRED, ArkSignResponse, EndfieldSignResponse
-from .db_handler import select_all_users, get_endfield_characters, get_arknights_characters
 from .utils import refresh_cred_token_with_error_return, refresh_access_token_with_error_return
+from .db_handler import (
+    select_all_users,
+    get_endfield_characters,
+    get_arknights_characters,
+)
 
 
 @refresh_cred_token_with_error_return
@@ -29,6 +36,40 @@ async def _endfield_sign_in(user: SkUser, role_id: str, server_id: str) -> Endfi
     """执行终末地签到逻辑"""
     cred = CRED(cred=user.cred, token=user.cred_token)
     return await SklandAPI.endfield_sign(cred, role_id, server_id=server_id)
+
+
+@scheduler.scheduled_job(
+    "cron",
+    day_of_week="sun",
+    hour="12,18",
+    minute=0,
+    timezone=ZoneInfo("Asia/Shanghai"),
+    id="campaign_reminder",
+)
+async def run_campaign_reminder():
+    """Check default character campaign rewards on Sunday noon and evening"""
+    session = get_scoped_session()
+    try:
+        try:
+            sent, pending_groups, enabled = await dispatch_campaign_reminders(session)
+        except RuntimeError:
+            logger.warning("Campaign reminder skipped: no connected bot")
+            return
+
+        logger.info(f"Campaign reminder tick: {enabled} enabled reminder(s)")
+        if not enabled:
+            return
+        if not pending_groups:
+            logger.info("Campaign reminder tick: no pending notifications (all complete or evaluation failed)")
+            return
+
+        await session.commit()
+        logger.info(f"Campaign reminder tick done: sent {sent}/{pending_groups} group notification(s)")
+    except Exception:
+        logger.exception("Campaign reminder job failed")
+        raise
+    finally:
+        await session.close()
 
 
 @scheduler.scheduled_job("cron", hour=0, minute=15, id="daily_arksign")

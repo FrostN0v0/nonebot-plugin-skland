@@ -257,7 +257,7 @@ class Config(BaseModel):
 `data_source.py`：
 
 - `GachaTableData`
-  - 管理明日方舟 `gacha_table.json`、`character_table.json`、`char_patch_table.json`、`uniequip_table.json`、`handbook_team_table.json` 与 PRTS 卡池详情。
+  - 管理明日方舟 `gacha_table.json`、`character_table.json`、`char_patch_table.json`、`uniequip_table.json`、`handbook_info_table.json`、`handbook_team_table.json` 与 PRTS 卡池详情。
   - 使用 `GameResourceDownloader.check_update()` 比较版本。
   - `load(force=False)` 会按需下载、更新版本文件、解析抽卡数据并清除干员目录缓存。
 - `EfGachaPoolTableData`
@@ -279,8 +279,8 @@ class Config(BaseModel):
 
 - `commands/box.py`：`skland box`（仅已拥有）与 `skland book`（全图鉴，未拥有灰显）。
 - `roster.py`：PRTS Half 框资源 URL、筛选与卡片组装；渲染 DTO（`RosterCard` 等）放此处，不进入 `schemas/`。
-- 干员目录不随包保存 JSON 快照；`roster.load_catalog()` 从 `DATA_DIR/gamedata/excel` 下的 `character_table.json`、`char_patch_table.json`、`uniequip_table.json`、`handbook_team_table.json` 动态构建。
-- `character_table.json` 提供名称、英文代号、职业、稀有度、技能、阵营与游戏内排序；`char_patch_table.json` 补充阿米娅职业形态；`uniequip_table.json` 提供模组槽位与 `typeIcon`；`handbook_team_table.json` 提供阵营显示名。
+- 干员目录不随包保存 JSON 快照；`roster.load_catalog()` 从 `DATA_DIR/gamedata/excel` 下的 `character_table.json`、`char_patch_table.json`、`uniequip_table.json`、`handbook_info_table.json`、`handbook_team_table.json` 动态构建。
+- `character_table.json` 提供名称、英文代号、职业、稀有度、技能与阵营；`char_patch_table.json` 补充阿米娅职业形态；`uniequip_table.json` 提供模组槽位与 `typeIcon`；`handbook_info_table.json` 的 `handbookDict` 顺序提供干员实装顺序；`handbook_team_table.json` 提供阵营显示名。
 - 立绘：`char_skin/portrait/{skinId}`；图鉴未拥有用默认 `#1`，已拥有用玩家 `skinId`。
 - `render.render_operator_roster()` 使用 htmlrender 原生 `template_to_pic()`，截图超时由 `roster_render_timeout` 配置。
 - 模板 `operator_roster.html.jinja2` 使用 Tailwind CSS，样式统一编译到 `resources/templates/index.css`。

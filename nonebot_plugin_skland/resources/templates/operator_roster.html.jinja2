@@ -50,12 +50,10 @@
             {% if card.logo %}
             <div class="absolute bottom-[13px] left-[2px] z-[3]"><img class="w-[50px]" src="{{ card.logo }}" alt="" /></div>
             {% endif %}
-            {% if card.owned and card.meta_text %}
-            <div class="absolute right-[2px] bottom-[38px] left-[48px] z-[3] overflow-hidden text-center text-base leading-[1.1] font-bold text-ellipsis whitespace-nowrap text-white [text-shadow:0_0_8px_#000,0_1px_2px_#000]">
-              <span class="inline-flex max-w-full items-center justify-center gap-[3px]">
-                {% if card.elite %}<img class="block h-auto w-7 shrink-0 object-contain object-center" src="{{ card.elite }}" alt="" />{% endif %}
-                <span class="min-w-0 overflow-hidden text-ellipsis">{{ card.meta_text }}</span>
-              </span>
+            {% if card.owned and card.level_text %}
+            <div class="absolute right-[4px] bottom-[40px] z-[4] inline-flex items-center gap-1 rounded-sm bg-black/75 px-1 py-0.5 text-xs leading-none font-bold text-white shadow-md [text-shadow:0_1px_2px_#000]">
+              {% if card.elite %}<img class="block h-auto w-5 shrink-0 object-contain" src="{{ card.elite }}" alt="" />{% endif %}
+              <span>Lv.{{ card.level_text }}</span>
             </div>
             {% endif %}
             <div class="absolute right-[2px] bottom-[6px] left-[48px] z-[3] m-0 max-h-[34px] overflow-hidden p-0 text-center text-sm leading-[1.15] text-white [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [text-shadow:0_0_10px_#000] break-all">

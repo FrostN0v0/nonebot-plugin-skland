@@ -321,6 +321,7 @@ def build_catalog(
     character_table: dict,
     char_patch_table: dict,
     uniequip_table: dict,
+    handbook_info_table: dict,
     handbook_team_table: dict,
 ) -> tuple[CatalogEntry, ...]:
     characters = {
@@ -331,13 +332,18 @@ def build_catalog(
     patch_characters = char_patch_table.get("patchChars") or {}
     characters.update(patch_characters)
 
+    release_order = {
+        char_id: index for index, char_id in enumerate((handbook_info_table.get("handbookDict") or {}).keys())
+    }
     base_sort_index: dict[tuple[str, str], int] = {}
-    for data in character_table.values():
-        sort_index = int(data.get("sortIndex") or 0)
+    for char_id, data in character_table.items():
+        release_index = release_order.get(char_id, -1)
+        if release_index < 0:
+            continue
         for key in ("potentialItemId", "displayNumber"):
             value = data.get(key)
             if value:
-                base_sort_index[(key, value)] = sort_index
+                base_sort_index[(key, value)] = release_index
 
     char_equip = uniequip_table.get("charEquip") or {}
     equip_dict = uniequip_table.get("equipDict") or {}
@@ -348,8 +354,8 @@ def build_catalog(
         if profession is None or not isinstance(rarity, int) or rarity not in range(6):
             continue
 
-        sort_index = int(data.get("sortIndex") or 0)
-        if char_id in patch_characters and sort_index == 0:
+        sort_index = release_order.get(char_id, -1)
+        if char_id in patch_characters:
             for key in ("potentialItemId", "displayNumber"):
                 value = data.get(key)
                 if value and (key, value) in base_sort_index:
@@ -374,7 +380,7 @@ def build_catalog(
                 modules=modules,
             )
         )
-    return tuple(sorted(entries, key=lambda entry: (entry.sort_id, entry.char_id)))
+    return tuple(sorted(entries, key=lambda entry: (-entry.sort_id, entry.char_id)))
 
 
 @lru_cache(maxsize=1)
@@ -383,6 +389,7 @@ def load_catalog() -> tuple[CatalogEntry, ...]:
         _load_json("character_table.json"),
         _load_json("char_patch_table.json"),
         _load_json("uniequip_table.json"),
+        _load_json("handbook_info_table.json"),
         _load_json("handbook_team_table.json"),
     )
 
@@ -550,7 +557,7 @@ def build_box_cards(
                 appellation="",
                 profession="",
                 rarity=5,
-                sort_id=1_000_000,
+                sort_id=-1,
                 logo="",
             )
             if filt.stars and entry.star not in filt.stars:
@@ -562,7 +569,7 @@ def build_box_cards(
         elif not filt.match(entry):
             continue
         cards.append(build_card(entry, ch, equipment_map=equipment_map))
-    cards.sort(key=lambda card: (card.sort_id, card.char_id))
+    cards.sort(key=lambda card: (-card.sort_id, card.char_id))
     return cards
 
 

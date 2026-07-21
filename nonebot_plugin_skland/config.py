@@ -20,6 +20,7 @@ DATA_ROUTES = [
     "gamedata/excel/character_table.json",
     "gamedata/excel/char_patch_table.json",
     "gamedata/excel/uniequip_table.json",
+    "gamedata/excel/handbook_info_table.json",
     "gamedata/excel/handbook_team_table.json",
 ]
 GACHA_DATA_PATH = DATA_DIR / "gamedata" / "excel"

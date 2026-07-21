@@ -77,6 +77,7 @@ def roster_catalog(app, monkeypatch):
         ),
     )
     monkeypatch.setattr("nonebot_plugin_skland.roster.load_catalog", lambda: catalog)
+    catalog = tuple(sorted(catalog, key=lambda entry: (-entry.sort_id, entry.char_id)))
     return catalog
 
 
@@ -95,7 +96,21 @@ def test_build_catalog_from_downloaded_game_tables(app):
     }
     character_table = {
         "char_350_surtr": {"name": "史尔特尔", "isNotObtainable": False, **common},
-        "char_999_npc": {"name": "NPC", "isNotObtainable": True, **common},
+        "char_100_old": {
+            "name": "Old Operator",
+            "isNotObtainable": False,
+            **common,
+            "sortIndex": 999,
+            "potentialItemId": "p_char_old",
+            "displayNumber": "R001",
+        },
+        "char_999_npc": {
+            "name": "NPC",
+            "isNotObtainable": True,
+            **common,
+            "potentialItemId": "p_char_npc",
+            "displayNumber": None,
+        },
     }
     patch_table = {
         "patchChars": {
@@ -118,11 +133,12 @@ def test_build_catalog_from_downloaded_game_tables(app):
         character_table,
         patch_table,
         uniequip_table,
+        {"handbookDict": {"char_100_old": {}, "char_350_surtr": {}}},
         {"rhodes": {"powerName": "罗德岛"}},
     )
 
-    assert [entry.char_id for entry in catalog] == ["char_1001_surtr2", "char_350_surtr"]
-    assert catalog[0].sort_id == catalog[1].sort_id == 20
+    assert [entry.char_id for entry in catalog] == ["char_1001_surtr2", "char_350_surtr", "char_100_old"]
+    assert [entry.sort_id for entry in catalog] == [1, 1, 0]
     assert catalog[1].logo == "罗德岛"
     assert catalog[1].skill_ids == ("skchr_surtr_1",)
     assert [module.type_icon for module in catalog[1].modules] == ["original", "aft-x"]
@@ -232,11 +248,11 @@ def test_skin_portrait_url_encodes_hash_and_skin(app):
     assert "@summer" in unquote(url) or "%40summer" in url
 
 
-def test_catalog_sorted_by_game_index(app):
+def test_catalog_sorted_by_release_order(app):
     from nonebot_plugin_skland.roster import load_catalog
 
     catalog = load_catalog()
-    assert [entry.sort_id for entry in catalog] == sorted(entry.sort_id for entry in catalog)
+    assert [entry.sort_id for entry in catalog] == sorted((entry.sort_id for entry in catalog), reverse=True)
     assert sum(1 for entry in catalog if entry.star == 6) >= 4
 
 
@@ -278,6 +294,7 @@ def test_box_only_owned_and_default_six_star(app):
     assert cards[0].owned
     assert "@summer" in unquote(cards[0].portrait)
     assert "Lv90" in cards[0].meta_text
+    assert cards[0].level_text == "90"
 
 
 def test_book_greys_unowned_and_uses_player_skin(app):

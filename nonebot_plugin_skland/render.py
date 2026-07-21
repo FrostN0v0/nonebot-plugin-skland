@@ -44,15 +44,14 @@ ROSTER_SIDE_PAD = 10
 ROSTER_COL_GAP = 10
 ROSTER_ROW_GAP = 10
 ROSTER_SKILL_RAIL_W = 54
-ROSTER_CARD_SKILL_GAP = 4
-ROSTER_DEVICE_SCALE = 1.5
+ROSTER_DEVICE_SCALE = 1.0
 
 
 def roster_layout(page_width: int = ROSTER_PAGE_WIDTH, cols: int = 6) -> dict[str, float | int]:
-    """Compute scaled Half-card layout with a right-side skill rail per unit."""
+    """Compute a scaled Half-card grid with the module rail overlaid inside each card."""
     inner = page_width - 2 * ROSTER_SIDE_PAD - (cols - 1) * ROSTER_COL_GAP
     unit_w = inner / cols
-    card_w = unit_w - ROSTER_SKILL_RAIL_W - ROSTER_CARD_SKILL_GAP
+    card_w = unit_w
     scale = card_w / ROSTER_BASE_CARD_W
     return {
         "page_width": page_width,
@@ -65,7 +64,6 @@ def roster_layout(page_width: int = ROSTER_PAGE_WIDTH, cols: int = 6) -> dict[st
         "card_h": ROSTER_BASE_CARD_H * scale,
         "card_scale": scale,
         "skill_rail_w": ROSTER_SKILL_RAIL_W,
-        "card_skill_gap": ROSTER_CARD_SKILL_GAP,
     }
 
 

@@ -411,18 +411,15 @@ def chrome_for_rarity(rarity: int) -> dict[str, str]:
 
 
 def build_skills(entry: CatalogEntry, owned: OwnedChar | None) -> list[RosterSkill]:
-    if owned is not None and owned.skills:
-        return [
-            RosterSkill(
-                icon=skill_icon_url(skill.id),
-                specialize_level=max(0, min(3, skill.specializeLevel)),
-                main_skill_lvl=owned.mainSkillLvl,
-            )
-            for skill in owned.skills
-            if skill.id
-        ]
+    owned_skills = {skill.id: skill for skill in owned.skills if skill.id} if owned is not None else {}
+    skill_ids = entry.skill_ids or tuple(owned_skills)
     return [
-        RosterSkill(icon=skill_icon_url(skill_id), specialize_level=0, main_skill_lvl=0) for skill_id in entry.skill_ids
+        RosterSkill(
+            icon=skill_icon_url(skill_id),
+            specialize_level=max(0, min(3, owned_skills[skill_id].specializeLevel)) if skill_id in owned_skills else 0,
+            main_skill_lvl=owned.mainSkillLvl if owned is not None else 0,
+        )
+        for skill_id in skill_ids
     ]
 
 

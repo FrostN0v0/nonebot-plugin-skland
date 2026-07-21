@@ -10,8 +10,8 @@
 </head>
 <body class="m-0 bg-[#f8f9fa] text-[#202122] font-sans">
   <main
-    class="box-border w-[var(--page-width)] px-[var(--side-pad)] pt-4 pb-6"
-    style="--page-width: {{ page_width }}px; --side-pad: {{ side_pad }}px;"
+    class="box-border w-[var(--page-width)] p-[10px]"
+    style="--page-width: {{ page_width }}px;"
   >
     <header class="mb-3">
       <h1 class="m-0 mb-1 text-xl leading-tight font-bold">{{ title }}</h1>
@@ -25,8 +25,8 @@
     >
       {% for card in cards %}
       <article
-        class="flex w-[var(--unit-width)] items-start gap-[var(--card-skill-gap)]"
-        style="--unit-width: {{ unit_w }}px; --card-skill-gap: {{ card_skill_gap }}px;"
+        class="relative block w-[var(--unit-width)]"
+        style="--unit-width: {{ unit_w }}px;"
       >
         <div
           class="h-[var(--card-height)] w-[var(--card-width)] shrink-0"
@@ -39,7 +39,7 @@
             <div class="absolute top-0"><img class="w-[70px]" src="{{ card.uh }}" alt="" /></div>
             <div class="absolute top-0"><img class="w-[70px]" src="{{ card.uhs }}" alt="" /></div>
             <div class="absolute top-[5px] left-[3px] z-[1]"><img class="w-[25px]" src="{{ card.class_icon }}" alt="" /></div>
-            <div class="absolute top-0 left-[30px] z-[2]"><img class="h-[18px]" src="{{ card.rarity_icon }}" alt="" /></div>
+            <div class="absolute top-[1px] left-[28px] z-[2]"><img class="h-[17px]" src="{{ card.rarity_icon }}" alt="" /></div>
             <div class="absolute bottom-0 left-0 z-[2]"><img class="w-[120px]" src="{{ card.lh }}" alt="" /></div>
             <div class="absolute bottom-[25px] left-[3px] z-[1]"><img class="w-[110px]" src="{{ card.light }}" alt="" /></div>
             <div class="absolute bottom-[7px] left-[3px] z-0"><img class="w-[110px]" src="{{ card.bg }}" alt="" /></div>
@@ -47,53 +47,65 @@
               <img class="max-w-none origin-bottom-right scale-[0.61111]" src="{{ card.portrait }}" alt="{{ card.name }}" />
             </div>
             <div class="absolute bottom-[7px] left-[3px] z-[1] h-[30px] w-[80px] bg-[#2c2c2c]"></div>
-            {% if card.logo %}
+            {% if card.owned and (card.elite or card.level_text) %}
+            <div class="absolute bottom-[34px] left-[4px] z-[3] flex flex-col items-center gap-1">
+              {% if card.elite %}<img class="block h-auto w-8 object-contain object-center" src="{{ card.elite }}" alt="" />{% endif %}
+              {% if card.level_text %}
+              <div class="flex size-8 items-center justify-center rounded-full bg-[#080808]/65 outline-[3px] outline-[#E4DC3F] shadow-[0_0_3px_rgba(0,0,0,0.75)]">
+                <span class="translate-y-[0.5px] font-[Akrobat] text-xl leading-none font-bold text-white">{{ card.level_text }}</span>
+              </div>
+              {% endif %}
+            </div>
+            {% elif card.logo %}
             <div class="absolute bottom-[13px] left-[2px] z-[3]"><img class="w-[50px]" src="{{ card.logo }}" alt="" /></div>
             {% endif %}
-            {% if card.owned and card.level_text %}
-            <div class="absolute right-[4px] bottom-[40px] z-[4] inline-flex items-center gap-1 rounded-sm bg-black/75 px-1 py-0.5 text-xs leading-none font-bold text-white shadow-md [text-shadow:0_1px_2px_#000]">
-              {% if card.elite %}<img class="block h-auto w-5 shrink-0 object-contain" src="{{ card.elite }}" alt="" />{% endif %}
-              <span>Lv.{{ card.level_text }}</span>
+
+            {% if card.owned and card.potential %}
+            <div class="absolute right-[2px] bottom-[64px] z-[3] size-9">
+              <img class="block size-full object-contain" src="{{ card.potential }}" alt="" />
             </div>
             {% endif %}
-            <div class="absolute right-[2px] bottom-[6px] left-[48px] z-[3] m-0 max-h-[34px] overflow-hidden p-0 text-center text-sm leading-[1.15] text-white [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [text-shadow:0_0_10px_#000] break-all">
+
+            {% if card.skills %}
+            <div class="absolute right-[2px] bottom-[38px] z-[3] flex items-center gap-[2px]">
+              {% for skill in card.skills %}
+              <div class="relative size-[24px] shrink-0 overflow-hidden rounded-[3px] bg-[#2a2a2a]/85 outline-[1px] outline-white/45{% if skill.mastered %} shadow-[0_0_5px_rgba(127,215,255,0.65)] outline-2 outline-[#7fd7ff]{% endif %}">
+                <img class="block size-full bg-[#1a1a1a]/50 object-contain" src="{{ skill.icon }}" alt="技能 {{ loop.index }}" />
+                <div class="pointer-events-none absolute top-0 left-0 z-[3] size-[10px] bg-[#080808]/85">
+                  {% if skill.specialize_level > 0 %}
+                  <span class="absolute top-[1.5px] left-1/2 size-[2.5px] -translate-x-1/2 rounded-full{% if skill.specialize_level >= 1 %} bg-white{% else %} bg-white/30{% endif %}"></span>
+                  <span class="absolute top-[5.5px] left-[28%] size-[2.5px] -translate-x-1/2 rounded-full{% if skill.specialize_level >= 2 %} bg-white{% else %} bg-white/30{% endif %}"></span>
+                  <span class="absolute top-[5.5px] left-[72%] size-[2.5px] -translate-x-1/2 rounded-full{% if skill.specialize_level >= 3 %} bg-white{% else %} bg-white/30{% endif %}"></span>
+                  {% elif card.owned and skill.main_skill_lvl > 0 %}
+                  <span class="flex size-full items-center justify-center text-[7px] leading-none font-bold text-white">{{ skill.main_skill_lvl }}</span>
+                  {% else %}
+                  <span class="absolute top-[1.5px] left-1/2 size-[2.5px] -translate-x-1/2 rounded-full bg-white/30"></span>
+                  <span class="absolute top-[5.5px] left-[28%] size-[2.5px] -translate-x-1/2 rounded-full bg-white/30"></span>
+                  <span class="absolute top-[5.5px] left-[72%] size-[2.5px] -translate-x-1/2 rounded-full bg-white/30"></span>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="absolute right-[2px] bottom-[6px] left-[52px] z-[3] m-0 max-h-[34px] overflow-hidden p-0 text-center text-sm leading-[1.15] text-white [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [text-shadow:0_0_10px_#000] break-all">
               {{ card.name }}
             </div>
           </div>
         </div>
 
         <aside
-          class="box-border flex h-[var(--card-height)] w-[var(--skill-rail-width)] shrink-0 flex-col items-center justify-between py-1{% if not card.owned %} opacity-40 grayscale{% endif %}"
+          class="absolute top-0 right-0 z-[4] box-border flex h-[var(--card-height)] w-[var(--skill-rail-width)] flex-col items-center py-1{% if not card.owned %} opacity-40 grayscale{% endif %}"
           style="--card-height: {{ card_h }}px; --skill-rail-width: {{ skill_rail_w }}px;"
         >
           <div class="flex w-full flex-col items-center gap-1.5">
             {% for module in card.modules %}
-            <div class="relative size-12 shrink-0 overflow-hidden rounded-[5px] bg-[#2a2a2a] outline-[1px] outline-white/45{% if module.selected %} shadow-[0_0_6px_rgba(127,215,255,0.65)] outline-2 outline-[#7fd7ff]{% endif %}{% if module.locked %} brightness-[0.42] saturate-[0.35] outline-white/20{% endif %}">
-              <img class="block size-full bg-[#1a1a1a] object-contain" src="{{ module.icon }}" alt="" />
+            <div class="relative size-12 shrink-0 overflow-hidden rounded-[5px] bg-[#6b7280]/60 outline-[1px] outline-white/55{% if module.selected %} shadow-[0_0_6px_rgba(127,215,255,0.65)] outline-2 outline-[#7fd7ff]{% endif %}{% if module.locked %} brightness-[0.55] saturate-[0.4] outline-white/25{% endif %}">
+              <img class="block size-full bg-[#9ca3af]/35 object-contain" src="{{ module.icon }}" alt="" />
               {% if not module.locked %}
-              <div class="pointer-events-none absolute top-0 left-0 z-[3] flex size-[18px] items-center justify-center bg-[#080808]/90 text-[11px] leading-none font-bold text-white">{{ module.level }}</div>
+              <div class="pointer-events-none absolute top-0 left-0 z-[3] flex size-[18px] items-center justify-center bg-[#4b5563]/80 text-[11px] leading-none font-bold text-white">{{ module.level }}</div>
               {% endif %}
-            </div>
-            {% endfor %}
-          </div>
-
-          <div class="flex w-full flex-col items-center gap-1.5">
-            {% for skill in card.skills %}
-            <div class="relative size-12 shrink-0 overflow-hidden rounded-[5px] bg-[#2a2a2a] outline-[1px] outline-white/45{% if skill.mastered %} shadow-[0_0_6px_rgba(127,215,255,0.65)] outline-2 outline-[#7fd7ff]{% endif %}">
-              <img class="block size-full bg-[#1a1a1a] object-contain" src="{{ skill.icon }}" alt="" />
-              <div class="pointer-events-none absolute top-0 left-0 z-[3] size-[18px] bg-[#080808]/90">
-                {% if skill.specialize_level > 0 %}
-                <span class="absolute top-[2.5px] left-1/2 size-[4.5px] -translate-x-1/2 rounded-full{% if skill.specialize_level >= 1 %} bg-white{% else %} bg-white/30{% endif %}"></span>
-                <span class="absolute top-[9.5px] left-[28%] size-[4.5px] -translate-x-1/2 rounded-full{% if skill.specialize_level >= 2 %} bg-white{% else %} bg-white/30{% endif %}"></span>
-                <span class="absolute top-[9.5px] left-[72%] size-[4.5px] -translate-x-1/2 rounded-full{% if skill.specialize_level >= 3 %} bg-white{% else %} bg-white/30{% endif %}"></span>
-                {% elif card.owned and skill.main_skill_lvl > 0 %}
-                <span class="flex size-full items-center justify-center text-[11px] leading-none font-bold text-white">{{ skill.main_skill_lvl }}</span>
-                {% else %}
-                <span class="absolute top-[2.5px] left-1/2 size-[4.5px] -translate-x-1/2 rounded-full bg-white/30"></span>
-                <span class="absolute top-[9.5px] left-[28%] size-[4.5px] -translate-x-1/2 rounded-full bg-white/30"></span>
-                <span class="absolute top-[9.5px] left-[72%] size-[4.5px] -translate-x-1/2 rounded-full bg-white/30"></span>
-                {% endif %}
-              </div>
             </div>
             {% endfor %}
           </div>

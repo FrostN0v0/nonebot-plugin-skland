@@ -168,10 +168,10 @@ def test_parse_professions(app):
 def test_rarity_and_profession_filters_on_book(app):
     from nonebot_plugin_skland.roster import (
         RosterFilter,
-        parse_stars,
-        load_catalog,
         build_book_cards,
+        load_catalog,
         parse_professions,
+        parse_stars,
     )
 
     catalog = load_catalog()
@@ -201,15 +201,15 @@ def test_rarity_and_profession_filters_on_book(app):
 
 
 def test_box_respects_profession_filter(app):
-    from nonebot_plugin_skland.schemas.arknights.models.chars import Character as OwnedChar
     from nonebot_plugin_skland.roster import (
         RosterFilter,
-        parse_stars,
-        load_catalog,
         build_box_cards,
         default_skin_id,
+        load_catalog,
         parse_professions,
+        parse_stars,
     )
+    from nonebot_plugin_skland.schemas.arknights.models.chars import Character as OwnedChar
 
     catalog = load_catalog()
     guard = next(c for c in catalog if c.star == 6 and c.profession == "近卫")
@@ -257,13 +257,13 @@ def test_catalog_sorted_by_release_order(app):
 
 
 def test_box_only_owned_and_default_six_star(app):
-    from nonebot_plugin_skland.schemas.arknights.models.chars import Character as OwnedChar
     from nonebot_plugin_skland.roster import (
         RosterFilter,
-        load_catalog,
         build_box_cards,
         default_skin_id,
+        load_catalog,
     )
+    from nonebot_plugin_skland.schemas.arknights.models.chars import Character as OwnedChar
 
     catalog = load_catalog()
     sample = next(c for c in catalog if c.star == 6)
@@ -298,13 +298,13 @@ def test_box_only_owned_and_default_six_star(app):
 
 
 def test_book_greys_unowned_and_uses_player_skin(app):
-    from nonebot_plugin_skland.schemas.arknights.models.chars import Character as OwnedChar
     from nonebot_plugin_skland.roster import (
         RosterFilter,
-        load_catalog,
-        default_skin_id,
         build_book_cards,
+        default_skin_id,
+        load_catalog,
     )
+    from nonebot_plugin_skland.schemas.arknights.models.chars import Character as OwnedChar
 
     catalog = load_catalog()
     sample = next(c for c in catalog if c.star == 6)
@@ -342,9 +342,9 @@ def test_skill_level_label(app):
 
 
 def test_skills_match_operator_catalog(app):
-    from nonebot_plugin_skland.schemas.arknights.models.chars import Skill
-    from nonebot_plugin_skland.roster import RosterFilter, load_catalog, build_book_cards
+    from nonebot_plugin_skland.roster import RosterFilter, build_book_cards, load_catalog
     from nonebot_plugin_skland.schemas.arknights.models.chars import Character as OwnedChar
+    from nonebot_plugin_skland.schemas.arknights.models.chars import Skill
 
     entry = next(c for c in load_catalog() if c.char_id == "char_350_surtr")
     assert entry.skill_ids == ("skchr_surtr_1", "skchr_surtr_2", "skchr_surtr_3")
@@ -364,15 +364,17 @@ def test_skills_match_operator_catalog(app):
     )
     cards = build_book_cards([owned], RosterFilter(stars=frozenset({6}), professions=frozenset(), name="史尔特尔"))
     assert len(cards) == 1
-    assert "skchr_surtr_3" in cards[0].skills[0].icon
-    assert cards[0].skills[0].specialize_level == 3
-    assert cards[0].skills[0].mastered
+    assert ["skchr_surtr_1", "skchr_surtr_2", "skchr_surtr_3"] == [
+        next(skill_id for skill_id in entry.skill_ids if skill_id in skill.icon) for skill in cards[0].skills
+    ]
+    assert cards[0].skills[2].specialize_level == 3
+    assert cards[0].skills[2].mastered
 
 
 def test_modules_match_operator_catalog(app):
-    from nonebot_plugin_skland.schemas.arknights.models.base import Equip
+    from nonebot_plugin_skland.roster import RosterFilter, build_book_cards, load_catalog
     from nonebot_plugin_skland.schemas.arknights.models.assist_chars import Equipment
-    from nonebot_plugin_skland.roster import RosterFilter, load_catalog, build_book_cards
+    from nonebot_plugin_skland.schemas.arknights.models.base import Equip
     from nonebot_plugin_skland.schemas.arknights.models.chars import Character as OwnedChar
 
     entry = next(c for c in load_catalog() if c.char_id == "char_350_surtr")
@@ -417,6 +419,16 @@ def test_modules_match_operator_catalog(app):
     assert all(m.locked for m in book[0].modules)
 
 
+def test_roster_layout_uses_ten_pixel_spacing(app):
+    from nonebot_plugin_skland.render import roster_layout
+
+    layout = roster_layout()
+    assert layout["side_pad"] == 10
+    assert layout["col_gap"] == 10
+    assert layout["row_gap"] == 10
+    assert layout["card_w"] == pytest.approx(layout["unit_w"])
+
+
 async def test_roster_render_uses_configured_timeout(app, mocker, monkeypatch):
     from nonebot_plugin_skland.config import config
     from nonebot_plugin_skland.render import render_operator_roster
@@ -432,6 +444,7 @@ async def test_roster_render_uses_configured_timeout(app, mocker, monkeypatch):
     assert result == b"image"
     assert render.await_args.kwargs["screenshot_timeout"] == 321_000
     assert render.await_args.kwargs["template_name"] == "operator_roster.html.jinja2"
+    assert render.await_args.kwargs["device_scale_factor"] == 1.0
 
 
 def test_name_filter(app):

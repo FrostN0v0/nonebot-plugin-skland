@@ -280,11 +280,12 @@ async def _(
     rarities: Match[str],
     professions: Match[str],
     name: Match[str],
+    bot: Bot,
 ):
     """明日方舟干员盒查询"""
     from .commands.box import box_handler
 
-    await box_handler(session, user_session, target, rarities, professions, name)
+    await box_handler(session, user_session, target, rarities, professions, name, bot)
 
 
 @skland.assign("book")
@@ -295,8 +296,9 @@ async def _(
     rarities: Match[str],
     professions: Match[str],
     name: Match[str],
+    bot: Bot,
 ):
     """明日方舟干员图鉴查询"""
     from .commands.box import book_handler
 
-    await book_handler(session, user_session, target, rarities, professions, name)
+    await book_handler(session, user_session, target, rarities, professions, name, bot)

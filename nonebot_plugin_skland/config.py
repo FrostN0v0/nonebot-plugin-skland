@@ -73,6 +73,8 @@ class ScopedConfig(BaseModel):
     """抽卡记录单图渲染上限"""
     ef_gacha_render_max: int = 5
     """终末地抽卡记录单图渲染卡池上限"""
+    roster_render_max: int = Field(default=16, gt=0)
+    """Maximum operators rendered in one roster image."""
     roster_render_timeout: int = Field(default=180_000, gt=0)
     """Operator roster screenshot timeout in milliseconds."""
 

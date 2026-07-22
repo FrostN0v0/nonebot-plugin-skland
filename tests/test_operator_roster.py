@@ -125,8 +125,8 @@ def test_build_catalog_from_downloaded_game_tables(app):
     uniequip_table = {
         "charEquip": {"char_350_surtr": ["uniequip_001_surtr", "uniequip_002_surtr"]},
         "equipDict": {
-            "uniequip_001_surtr": {"typeIcon": "original"},
-            "uniequip_002_surtr": {"typeIcon": "aft-x"},
+            "uniequip_001_surtr": {"typeIcon": "original", "uniEquipIcon": "uniequip_001_surtr"},
+            "uniequip_002_surtr": {"typeIcon": "aft-x", "uniEquipIcon": "uniequip_002_surtr"},
         },
     }
     catalog = build_catalog(
@@ -248,6 +248,21 @@ def test_skin_portrait_url_encodes_hash_and_skin(app):
     assert "@summer" in unquote(url) or "%40summer" in url
 
 
+def test_roster_icons_use_packaged_and_official_resources(app):
+    from nonebot_plugin_skland.roster import RARITY_URL, uniequip_icon_url, profession_icon_url
+
+    assert profession_icon_url("近卫").endswith("/images/profession/icon_profession_warrior.png")
+    assert profession_icon_url("") == ""
+    assert RARITY_URL[5].endswith("/images/rarity/rarity_yellow_5.png")
+    assert uniequip_icon_url("aft-x") == "https://torappu.prts.wiki/assets/uniequip_direction/aft-x.png"
+
+
+def test_filter_tags_match_mastergo_labels(app):
+    from nonebot_plugin_skland.roster import RosterFilter, filter_tags
+
+    assert filter_tags(RosterFilter(stars=frozenset({6}), professions=frozenset())) == ["六星", "全部职业"]
+
+
 def test_catalog_sorted_by_release_order(app):
     from nonebot_plugin_skland.roster import load_catalog
 
@@ -293,8 +308,9 @@ def test_box_only_owned_and_default_six_star(app):
     assert cards[0].char_id == sample.char_id
     assert cards[0].owned
     assert "@summer" in unquote(cards[0].portrait)
-    assert "Lv90" in cards[0].meta_text
     assert cards[0].level_text == "90"
+    assert "干员图鉴_稀有度_亮光_5" in cards[0].light
+    assert "干员图鉴_lh_5" in cards[0].lh
 
 
 def test_book_greys_unowned_and_uses_player_skin(app):
@@ -330,7 +346,6 @@ def test_book_greys_unowned_and_uses_player_skin(app):
     assert "@summer" in unquote(owned_card.portrait)
     assert not unowned_card.owned
     assert unowned_card.skin_id == default_skin_id(unowned_card.char_id)
-    assert unowned_card.meta_text == ""
 
 
 def test_skill_level_label(app):
@@ -405,28 +420,20 @@ def test_modules_match_operator_catalog(app):
     )
     assert len(cards) == 1
     assert len(cards[0].modules) == 2
-    assert "aft-x" in cards[0].modules[0].icon
+    assert cards[0].modules[0].icon.endswith("/aft-x.png")
     assert cards[0].modules[0].selected is True
     assert cards[0].modules[0].level == 3
     assert cards[0].modules[1].locked is True
+    assert cards[0].modules[1].icon.endswith("/aft-y.png")
 
     mcnist = next(c for c in load_catalog() if c.char_id == "char_4230_mcnist")
+    mcnist_type_icon = next(module.type_icon for module in mcnist.modules if module.type_icon != "original")
     book = build_book_cards([], RosterFilter(stars=frozenset({6}), professions=frozenset(), name="机械师"))
     assert len(book) == 1
     assert len(book[0].modules) == 1
     assert len(mcnist.modules) == 2
-    assert "so-a" in book[0].modules[0].icon
+    assert book[0].modules[0].icon.endswith(f"/{mcnist_type_icon}.png")
     assert all(m.locked for m in book[0].modules)
-
-
-def test_roster_layout_uses_ten_pixel_spacing(app):
-    from nonebot_plugin_skland.render import roster_layout
-
-    layout = roster_layout()
-    assert layout["side_pad"] == 10
-    assert layout["col_gap"] == 10
-    assert layout["row_gap"] == 10
-    assert layout["card_w"] == pytest.approx(layout["unit_w"])
 
 
 async def test_roster_render_uses_configured_timeout(app, mocker, monkeypatch):
@@ -439,12 +446,119 @@ async def test_roster_render_uses_configured_timeout(app, mocker, monkeypatch):
         new=mocker.AsyncMock(return_value=b"image"),
     )
 
-    result = await render_operator_roster(title="Roster", subtitle="Test", cards=[])
+    status = mocker.Mock()
+    result = await render_operator_roster(
+        title="Roster",
+        status=status,
+        tags=["六星", "全部职业"],
+        cards=[],
+        background_image="background.jpg",
+    )
 
     assert result == b"image"
     assert render.await_args.kwargs["screenshot_timeout"] == 321_000
     assert render.await_args.kwargs["template_name"] == "operator_roster.html.jinja2"
     assert render.await_args.kwargs["device_scale_factor"] == 1.0
+    assert render.await_args.kwargs["pages"]["viewport"]["width"] == 706
+    assert render.await_args.kwargs["templates"]["status"] is status
+    assert render.await_args.kwargs["templates"]["tags"] == ["六星", "全部职业"]
+    assert render.await_args.kwargs["templates"]["background_image"] == "background.jpg"
+
+
+def test_roster_config_defaults(app):
+    from nonebot_plugin_skland.config import ScopedConfig
+
+    settings = ScopedConfig()
+    assert settings.roster_render_max == 20
+
+
+async def test_render_roster_pages_splits_cards(app, mocker):
+    from nonebot_plugin_skland.commands.box import _render_roster_pages
+
+    render = mocker.patch(
+        "nonebot_plugin_skland.commands.box.render_operator_roster",
+        new=mocker.AsyncMock(side_effect=lambda **kwargs: str(len(kwargs["cards"])).encode()),
+    )
+    cards = [mocker.Mock() for _ in range(45)]
+    status = mocker.Mock()
+
+    images = await _render_roster_pages(
+        title="Roster",
+        status=status,
+        tags=["六星", "全部职业"],
+        cards=cards,
+        background_image=None,
+        page_size=20,
+    )
+
+    assert images == [b"20", b"20", b"5"]
+    assert [len(call.kwargs["cards"]) for call in render.await_args_list] == [20, 20, 5]
+    assert all(call.kwargs["background_image"] is None for call in render.await_args_list)
+
+
+async def test_send_roster_images_uses_qq_forward(app, mocker):
+    from nonebot_plugin_skland.commands.box import _send_roster_images
+
+    message = mocker.patch("nonebot_plugin_skland.commands.box.UniMessage")
+    custom_node = mocker.patch("nonebot_plugin_skland.commands.box.CustomNode")
+    message.text.return_value.send = mocker.AsyncMock()
+    message.reference.return_value.send = mocker.AsyncMock()
+
+    await _send_roster_images(
+        images=[b"first", b"second", b"third"],
+        total_cards=45,
+        page_size=20,
+        status_name="Doctor",
+        user_session=mocker.Mock(platform="QQClient"),
+        bot=mocker.Mock(self_id="bot"),
+    )
+
+    message.text.return_value.send.assert_awaited_once_with(reply_to=True)
+    message.reference.return_value.send.assert_awaited_once_with()
+    assert [call.args[1] for call in custom_node.call_args_list] == [
+        "Doctor | 干员 1-20",
+        "Doctor | 干员 21-40",
+        "Doctor | 干员 41-45",
+    ]
+
+
+async def test_send_roster_images_uses_separate_messages_elsewhere(app, mocker):
+    from nonebot_plugin_skland.commands.box import _send_roster_images
+
+    message = mocker.patch("nonebot_plugin_skland.commands.box.UniMessage")
+    image_message = message.image.return_value
+    image_message.send = mocker.AsyncMock()
+    message.text.return_value.send = mocker.AsyncMock()
+
+    await _send_roster_images(
+        images=[b"first", b"second", b"third"],
+        total_cards=45,
+        page_size=20,
+        status_name="Doctor",
+        user_session=mocker.Mock(platform="OneBot V11"),
+        bot=mocker.Mock(self_id="bot"),
+    )
+
+    message.reference.assert_not_called()
+    assert image_message.send.await_count == 3
+
+
+async def test_roster_background_reuses_shared_source_for_non_default(app, monkeypatch, mocker):
+    from nonebot_plugin_skland.config import config
+    from nonebot_plugin_skland.commands.box import _get_roster_background_image
+
+    get_background = mocker.patch(
+        "nonebot_plugin_skland.commands.box.get_background_image",
+        new=mocker.AsyncMock(return_value="background.png"),
+    )
+
+    monkeypatch.setattr(config, "background_source", "default")
+    assert await _get_roster_background_image() is None
+    get_background.assert_not_awaited()
+
+    monkeypatch.setattr(config, "background_source", "random")
+    assert await _get_roster_background_image() == "background.png"
+    get_background.assert_awaited_once_with("ark")
 
 
 def test_name_filter(app):

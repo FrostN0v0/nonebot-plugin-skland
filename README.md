@@ -137,6 +137,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 |        `skland__argot_expire`        |  否   |    `300`    |          暗语消息过期时间（秒）           |
 |      `skland__gacha_render_max`      |  否   |    `30`     | 明日方舟抽卡记录单图渲染上限（单位:卡池） |
 |    `skland__ef_gacha_render_max`     |  否   |     `5`     |      终末地抽卡记录单图渲染卡池上限       |
+|     `skland__roster_render_max`     |  否   |    `20`     |     干员盒/图鉴单图渲染干员数量上限      |
 |  `skland__roster_render_timeout`   |  否   |  `180000`   |      干员盒/图鉴截图超时时间（毫秒）      |
 
 > [!TIP]
@@ -150,9 +151,11 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 `rogue_background_source` 为肉鸽战绩背景图来源，可选值为字面量 `default` / `Lolicon` / `rogue` 或者结构 `CustomSource` 。 `rogue`为根据肉鸽主题提供的一套默认背景图。
 
+干员盒/图鉴复用 `skland__background_source`；当值为 `default` 时不传背景图片，由模板使用纯色 `#3F3F3F`，其余选项直接沿用上述解析逻辑。
+
 以下是 `CustomSource` 用法示例
 
-在配置文件中设置 `skland__background_source` 为 `CustomSource`结构的字典
+在配置文件中将对应的背景来源字段设置为 `CustomSource` 结构的字典；以下以 `skland__background_source` 为例。
 
 <details>
   <summary>CustomSource配置示例</summary>
@@ -272,7 +275,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 
 **快捷指令：** `干员盒` `图鉴`
 
-卡片显示精英阶段、黄色圆圈等级、潜能、按 1/2/3 排列的技能与模组；图鉴中未拥有干员灰显。
+页面使用玩家信息头部和 4 列干员卡，展示精英阶段、等级、潜能、技能与模组，图鉴中未拥有干员灰显。`skland__background_source=default` 时使用纯色 `#3F3F3F`，其他背景选项直接复用普通角色卡的背景解析；结果超过 `skland__roster_render_max` 时自动分图，QQClient 使用合并转发，其余平台逐图发送。
 
 </details>
 

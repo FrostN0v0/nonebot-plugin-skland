@@ -1,0 +1,164 @@
+{% macro operator_roster_header(status) %}
+<header class="relative z-20 h-[141px]">
+  <span class="absolute top-[18px] right-[13px] font-[Bender] text-sm leading-4 text-[#f0f0f0]/80">
+    UID: {{ status.uid }}
+  </span>
+
+  <div class="absolute top-[14px] left-[36px] h-[95px] w-[255px]">
+    <img
+      class="absolute top-5 left-0 size-[75px] object-cover shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_4px_6px_-1px_rgba(6,24,44,0.65),0_0_0_3px_#FBFBF3]"
+      src="{{ status.avatar.url }}"
+      alt="avatar"
+    />
+    <div class="absolute top-0 left-[55px] flex size-10 items-center justify-center rounded-full bg-[#080309]/80 ring-[3px] ring-[#625d62]/60">
+      <span class="font-[Akrobat] text-lg leading-none font-bold text-[#FBFBF3]">{{ status.level }}</span>
+    </div>
+    <div class="absolute top-[31px] left-[95px] h-[60px] w-40">
+      <h1 class="m-0 whitespace-nowrap font-[Akrobat] text-2xl leading-[30px] font-bold text-white">
+        Dr. {{ status.name }}
+      </h1>
+      <div class="absolute top-[38px] left-0 flex h-[22px] w-40 items-center rounded-lg bg-white/30 shadow-[0_10px_10px_rgba(0,0,0,0.22),0_14px_28px_rgba(0,0,0,0.25)]">
+        <span class="flex h-full w-[60px] items-center justify-center rounded-lg bg-[#23BAFC]/80 font-[Bender] text-sm text-[#080309]/80">
+          入职日
+        </span>
+        <span class="ml-2 font-[Bender] text-base leading-[18px] font-bold text-[#080309]/80">
+          {{ status.register_time }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="absolute top-10 left-[515px] z-[30] h-[93px] w-[206px] origin-top-left rotate-[21.83deg] [filter:drop-shadow(2px_2px_3px_rgba(0,0,0,0.15))]">
+    <svg class="absolute size-0" aria-hidden="true">
+      <defs>
+        <filter id="operator-roster-stamp-alpha" color-interpolation-filters="sRGB">
+          <feComponentTransfer>
+            <feFuncA type="linear" slope="8" />
+          </feComponentTransfer>
+        </filter>
+      </defs>
+    </svg>
+    <img
+      class="absolute inset-0 size-full object-contain"
+      style="filter: url('#operator-roster-stamp-alpha') brightness(0) saturate(100%) invert(44%) sepia(72%) saturate(2118%) hue-rotate(329deg) brightness(98%) contrast(88%);"
+      src="../images/ark_card/confidential_mini.png"
+      alt=""
+    />
+  </div>
+</header>
+
+<div class="relative z-10 flex h-2 w-full">
+  <div class="w-8 bg-[#A4A4A4]"></div>
+  <div class="w-8 bg-[#B9EC3B]"></div>
+  <div class="flex-1 bg-[#18D1FF]"></div>
+</div>
+{% endmacro %}
+
+{% macro operator_roster_tag(tag) %}
+<div class="flex h-5 min-w-[100px] max-w-[220px] items-center justify-center rounded-[5px] bg-[#01CC9D]/40 px-4 shadow-[0_2px_1px_rgba(0,0,0,0.09),0_4px_2px_rgba(0,0,0,0.09),0_8px_4px_rgba(0,0,0,0.09)]">
+  <span class="truncate font-[Akrobat] text-sm leading-[17px] font-bold text-white">{{ tag }}</span>
+</div>
+{% endmacro %}
+
+{% macro operator_roster_filters(tags) %}
+<section class="relative z-10 flex h-[75px] items-start gap-3 px-[30px] pt-[18px]">
+  <img class="h-[19px] w-[114px] shrink-0 object-cover" src="../images/ark_card/raft_dec_text_01.png" alt="" />
+  <div class="flex min-w-0 flex-1 gap-3">
+    {% for tag in tags %}
+    {{ operator_roster_tag(tag) }}
+    {% endfor %}
+  </div>
+</section>
+{% endmacro %}
+
+{% macro operator_roster_module(module) %}
+<div class="relative size-6 overflow-hidden rounded-[5px] bg-[#080808]/45 outline-2 outline-white/45{% if module.locked %} grayscale brightness-50{% endif %}">
+  <img class="size-full object-contain" src="{{ module.icon }}" alt="" />
+  {% if not module.locked and module.level > 0 %}
+  <span class="absolute top-0 right-0 flex size-[9px] items-center justify-center rounded-tr-[5px] bg-[#080808]/80 font-[Bender] text-[7px] leading-none font-bold text-white">
+    {{ module.level }}
+  </span>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro operator_roster_skill(skill, owned, index) %}
+<div class="relative size-6 shrink-0 overflow-hidden rounded-[5px] bg-[#080808]/50">
+  <img class="size-full object-contain" src="{{ skill.icon }}" alt="skill {{ index }}" />
+  <div class="absolute top-0 right-0 size-[9px] rounded-tr-[5px] bg-[#080808]/80">
+    {% if skill.specialize_level > 0 %}
+    <span class="absolute top-[1px] left-1/2 size-[2.5px] -translate-x-1/2 rounded-full{% if skill.specialize_level >= 1 %} bg-white{% else %} bg-white/30{% endif %}"></span>
+    <span class="absolute top-[5px] left-[28%] size-[2.5px] -translate-x-1/2 rounded-full{% if skill.specialize_level >= 2 %} bg-white{% else %} bg-white/30{% endif %}"></span>
+    <span class="absolute top-[5px] left-[72%] size-[2.5px] -translate-x-1/2 rounded-full{% if skill.specialize_level >= 3 %} bg-white{% else %} bg-white/30{% endif %}"></span>
+    {% elif owned and skill.main_skill_lvl > 0 %}
+    <span class="flex size-full items-center justify-center font-[Bender] text-[7px] leading-none font-bold text-white">{{ skill.main_skill_lvl }}</span>
+    {% else %}
+    <span class="absolute top-[1px] left-1/2 size-[2.5px] -translate-x-1/2 rounded-full bg-white/30"></span>
+    <span class="absolute top-[5px] left-[28%] size-[2.5px] -translate-x-1/2 rounded-full bg-white/30"></span>
+    <span class="absolute top-[5px] left-[72%] size-[2.5px] -translate-x-1/2 rounded-full bg-white/30"></span>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro operator_roster_card(card) %}
+<article class="relative w-[136px] overflow-hidden shadow-[0_6px_6px_rgba(0,0,0,0.23),0_10px_20px_rgba(0,0,0,0.19)]{% if not card.owned %} opacity-50 grayscale brightness-75{% endif %}">
+  <div class="relative aspect-[1/2] w-full">
+    <img class="absolute inset-0 z-0 size-full object-cover" src="{{ card.portrait }}" alt="{{ card.name }}" />
+  </div>
+
+  <div class="relative -mt-[9px] flex min-h-[42px] items-end justify-end py-[2px] pr-1 pl-[44px]">
+    <div class="absolute inset-0 z-[3] bg-[#1B1B1B]/80"></div>
+    <div class="relative z-[8] max-h-10 overflow-hidden text-right font-[Akrobat] leading-5 font-bold text-white [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [text-shadow:0_1px_4px_#000] break-all{% if card.name|length > 6 %} text-[13px]{% else %} text-base{% endif %}">
+      {{ card.name }}
+    </div>
+  </div>
+
+  <div class="pointer-events-none absolute top-[171px] left-0 z-[4] h-[134px] w-full">
+    <img class="absolute top-0 left-0 z-0 h-[119px] w-full object-cover" src="{{ card.light }}" alt="" />
+    <img class="absolute top-[34px] left-0 z-[1] h-[100px] w-full object-cover" src="{{ card.lh }}" alt="" />
+  </div>
+
+  {% if card.class_icon %}
+  <div class="absolute top-[6px] left-[8px] z-[6] flex size-[19px] items-center justify-center bg-[#444444] outline-[0.5px] outline-white/80">
+    <img class="size-4 object-contain" src="{{ card.class_icon }}" alt="{{ card.profession }}" />
+  </div>
+  {% endif %}
+  <img class="absolute top-[5px] left-[26px] z-[6] h-[19px] w-[67px] object-contain object-left" src="{{ card.rarity_icon }}" alt="" />
+
+  {% if card.modules %}
+  <div class="absolute top-[3px] right-[2px] z-[6] flex w-6 flex-col gap-0.5">
+    {% for module in card.modules[:2] %}
+    {{ operator_roster_module(module) }}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if card.owned and (card.elite or card.level_text) %}
+  <div class="absolute bottom-[31px] left-[7px] z-[7] h-[79px] w-[38px]">
+    {% if card.elite %}
+    <img class="absolute top-0 left-0 h-[31px] w-[38px] object-contain" src="{{ card.elite }}" alt="" />
+    {% endif %}
+    {% if card.level_text %}
+    <div class="absolute bottom-0 left-0 flex size-[38px] items-center justify-center rounded-full bg-[#080808]/45 outline-[3px] outline-[#E4DC3F]">
+      <span class="translate-y-[1px] font-[Akrobat] text-[28px] leading-none font-bold text-white">{{ card.level_text }}</span>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if card.owned and card.potential %}
+  <div class="absolute right-[2px] bottom-[58px] z-[7] flex size-[19px] items-center justify-center bg-[#080808]/80 outline-[0.5px] outline-white">
+    <img class="size-full object-contain" src="{{ card.potential }}" alt="" />
+  </div>
+  {% endif %}
+
+  {% if card.skills %}
+  <div class="absolute right-0 bottom-7 z-[7] flex h-6 items-center gap-1">
+    {% for skill in card.skills[:3] %}
+    {{ operator_roster_skill(skill, card.owned, loop.index) }}
+    {% endfor %}
+  </div>
+  {% endif %}
+</article>
+{% endmacro %}

@@ -95,6 +95,7 @@ nonebot_plugin_skland/
     └── templates/       # Jinja2 HTML 模板与生成的 CSS
         ├── ark_card.html.jinja2
         ├── operator_roster.html.jinja2
+        ├── operator_roster_macros.html.jinja2
         ├── endfield_card.html.jinja2
         ├── gacha.html.jinja2
         ├── gacha_macros.html.jinja2
@@ -174,6 +175,7 @@ class Config(BaseModel):
 - `argot_expire`: 暗语缓存过期时间（秒）。
 - `gacha_render_max`: 明日方舟抽卡记录单图渲染卡池上限。
 - `ef_gacha_render_max`: 终末地抽卡记录单图渲染各类别卡池上限。
+- `roster_render_max`: 干员盒/图鉴单图渲染干员数量上限，默认 20。
 - `roster_render_timeout`: 干员盒/图鉴传给 htmlrender 的截图超时时间（毫秒）。
 
 资源路径：
@@ -272,13 +274,13 @@ class Config(BaseModel):
 
 ### 干员盒 / 图鉴
 
-- `commands/box.py`：`skland box`（仅已拥有）与 `skland book`（全图鉴，未拥有灰显）。
-- `roster.py`：PRTS Half 框资源 URL、筛选与卡片组装；渲染 DTO（`RosterCard` 等）放此处，不进入 `schemas/`。
+- `commands/box.py`：`skland box`（仅已拥有）与 `skland book`（全图鉴，未拥有灰显）；结果按 `roster_render_max` 分块并发渲染，QQClient 使用合并转发，其他平台逐图发送。
+- `roster.py`：筛选、卡片组装与渲染 DTO（`RosterCard` 等）；职业、稀有度、精英阶段、潜能图标复用包内资源，立绘与技能按游戏数据 ID 拼接官方 `web.hycdn.cn` URL，模组复用 `sk` 角色卡的 PRTS 分支图标，Half 卡片底部的 `lh` 与稀有度亮光层使用 PRTS 固定素材 URL。
 - 干员目录不随包保存 JSON 快照；`roster.load_catalog()` 从 `DATA_DIR/gamedata/excel` 下的 `character_table.json`、`char_patch_table.json`、`uniequip_table.json`、`handbook_info_table.json`、`handbook_team_table.json` 动态构建。
-- `character_table.json` 提供名称、英文代号、职业、稀有度、技能与阵营；`char_patch_table.json` 补充阿米娅职业形态；`uniequip_table.json` 提供模组槽位与 `typeIcon`；`handbook_info_table.json` 的 `handbookDict` 顺序提供干员实装顺序；`handbook_team_table.json` 提供阵营显示名。
-- 立绘：`char_skin/portrait/{skinId}`；图鉴未拥有用默认 `#1`，已拥有用玩家 `skinId`。
-- `render.render_operator_roster()` 使用 htmlrender 原生 `template_to_pic()`，设备缩放为 1.0，截图超时由 `roster_render_timeout` 配置。
-- 模板 `operator_roster.html.jinja2` 使用 Tailwind CSS，样式统一编译到 `resources/templates/index.css`。
+- `character_table.json` 提供名称、英文代号、职业、稀有度与技能；`char_patch_table.json` 补充阿米娅职业形态；`uniequip_table.json` 提供模组槽位与 `typeIcon`；`handbook_info_table.json` 的 `handbookDict` 顺序提供干员实装顺序；`handbook_team_table.json` 提供阵营显示名。
+- 立绘使用 `char_skin/portrait/{skinId}`，技能使用 `char_skill/{skillId}`，模组与 `sk` 角色卡一致使用 `uniequip_direction/{typeIcon}`；卡片按 `portrait < 稀有度亮光 < lh` 顺序堆叠，图鉴未拥有用默认 `#1` 并整体灰显，已拥有用玩家 `skinId`。
+- `render.render_operator_roster()` 仅固定 706px Playwright 视口并调用 htmlrender 原生 `template_to_pic()`；页面高度由内容自动撑开。Box/Book 在 `background_source=default` 时向模板传 `None` 使用纯色 `#3F3F3F`，其他选项直接复用 `get_background_image("ark")`，设备缩放为 1.0，截图超时由 `roster_render_timeout` 配置。
+- `operator_roster.html.jinja2` 直接维护 MasterGo 对齐的 706px、4 列固定网格；卡片宽度固定，整体高度由立绘比例与名称栏内容自然计算。仅自定义图片背景启用模糊遮罩，纯色默认背景不叠加遮罩。页面骨架留在主模板，玩家头部、筛选标签、干员卡、技能和模组槽位拆在 `operator_roster_macros.html.jinja2`；两者均使用 Tailwind CSS，样式统一编译到 `resources/templates/index.css`。
 
 终末地：
 

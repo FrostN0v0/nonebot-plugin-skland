@@ -3,18 +3,15 @@
 from __future__ import annotations
 
 import json
-import hashlib
-from urllib.parse import quote
-from functools import lru_cache
 from dataclasses import dataclass
+from functools import lru_cache
+from urllib.parse import quote
 
 from nonebot import logger
 
-from .config import RES_DIR, CACHE_DIR, GACHA_DATA_PATH
+from .config import CACHE_DIR, GACHA_DATA_PATH, RES_DIR
 from .schemas.arknights.models.assist_chars import Equipment
 from .schemas.arknights.models.chars import Character as OwnedChar
-
-MEDIA = "https://media.prts.wiki"
 
 PROFESSION_NAMES = {
     "PIONEER": "先锋",
@@ -26,6 +23,7 @@ PROFESSION_NAMES = {
     "SUPPORT": "辅助",
     "SPECIAL": "特种",
 }
+PROFESSION_SLUGS = {name: key.lower() for key, name in PROFESSION_NAMES.items()}
 
 PROFESSION_ALIASES: dict[str, str] = {
     "先锋": "先锋",
@@ -50,62 +48,31 @@ PROFESSION_ALIASES: dict[str, str] = {
     "defender": "重装",
 }
 
-UHS_URL = f"{MEDIA}/7/7f/干员图鉴_uh_阴影.png"
-UH_URL = {
-    0: f"{MEDIA}/6/68/干员图鉴_uh_0.png",
-    1: f"{MEDIA}/d/d7/干员图鉴_uh_1.png",
-    2: f"{MEDIA}/6/69/干员图鉴_uh_2.png",
-    3: f"{MEDIA}/e/e5/干员图鉴_uh_3.png",
-    4: f"{MEDIA}/9/92/干员图鉴_uh_4.png",
-    5: f"{MEDIA}/4/45/干员图鉴_uh_5.png",
-}
+RARITY_URL = {rarity: (RES_DIR / "images" / "rarity" / f"rarity_yellow_{rarity}.png").as_uri() for rarity in range(6)}
+STAR_LABELS = ("", "一星", "二星", "三星", "四星", "五星", "六星")
 LH_URL = {
-    0: f"{MEDIA}/0/0b/干员图鉴_lh_0%2C1%2C2.png",
-    1: f"{MEDIA}/0/0b/干员图鉴_lh_0%2C1%2C2.png",
-    2: f"{MEDIA}/0/0b/干员图鉴_lh_0%2C1%2C2.png",
-    3: f"{MEDIA}/a/a5/干员图鉴_lh_3.png",
-    4: f"{MEDIA}/9/9e/干员图鉴_lh_4.png",
-    5: f"{MEDIA}/a/a5/干员图鉴_lh_5.png",
+    0: "https://media.prts.wiki/0/0b/干员图鉴_lh_0%2C1%2C2.png",
+    1: "https://media.prts.wiki/0/0b/干员图鉴_lh_0%2C1%2C2.png",
+    2: "https://media.prts.wiki/0/0b/干员图鉴_lh_0%2C1%2C2.png",
+    3: "https://media.prts.wiki/a/a5/干员图鉴_lh_3.png",
+    4: "https://media.prts.wiki/9/9e/干员图鉴_lh_4.png",
+    5: "https://media.prts.wiki/a/a5/干员图鉴_lh_5.png",
 }
 LIGHT_URL = {
-    0: f"{MEDIA}/a/a7/干员图鉴_稀有度_亮光_0.png",
-    1: f"{MEDIA}/9/9c/干员图鉴_稀有度_亮光_1.png",
-    2: f"{MEDIA}/b/b0/干员图鉴_稀有度_亮光_2.png",
-    3: f"{MEDIA}/0/0d/干员图鉴_稀有度_亮光_3.png",
-    4: f"{MEDIA}/f/f7/干员图鉴_稀有度_亮光_4.png",
-    5: f"{MEDIA}/1/19/干员图鉴_稀有度_亮光_5.png",
+    0: "https://media.prts.wiki/a/a7/干员图鉴_稀有度_亮光_0.png",
+    1: "https://media.prts.wiki/9/9c/干员图鉴_稀有度_亮光_1.png",
+    2: "https://media.prts.wiki/b/b0/干员图鉴_稀有度_亮光_2.png",
+    3: "https://media.prts.wiki/0/0d/干员图鉴_稀有度_亮光_3.png",
+    4: "https://media.prts.wiki/f/f7/干员图鉴_稀有度_亮光_4.png",
+    5: "https://media.prts.wiki/1/19/干员图鉴_稀有度_亮光_5.png",
 }
-BG_URL = {
-    0: f"{MEDIA}/2/25/干员图鉴_背景_0%2C1%2C2.png",
-    1: f"{MEDIA}/2/25/干员图鉴_背景_0%2C1%2C2.png",
-    2: f"{MEDIA}/2/25/干员图鉴_背景_0%2C1%2C2.png",
-    3: f"{MEDIA}/b/b1/干员图鉴_背景_3.png",
-    4: f"{MEDIA}/a/ad/干员图鉴_背景_4.png",
-    5: f"{MEDIA}/c/c9/干员图鉴_背景_5.png",
-}
-RARITY_URL = {
-    0: f"{MEDIA}/6/62/稀有度_黄_0.png",
-    1: f"{MEDIA}/0/02/稀有度_黄_1.png",
-    2: f"{MEDIA}/4/4b/稀有度_黄_2.png",
-    3: f"{MEDIA}/4/4c/稀有度_黄_3.png",
-    4: f"{MEDIA}/8/81/稀有度_黄_4.png",
-    5: f"{MEDIA}/4/46/稀有度_黄_5.png",
-}
-
-
-def media_url(filename: str) -> str:
-    digest = hashlib.md5(filename.encode("utf-8")).hexdigest()
-    return f"{MEDIA}/{digest[0]}/{digest[:2]}/{filename}"
 
 
 def profession_icon_url(profession: str) -> str:
-    return media_url(f"图标_职业_{profession}.png")
-
-
-def logo_url(logo: str) -> str:
-    if not logo:
+    slug = PROFESSION_SLUGS.get(profession)
+    if slug is None:
         return ""
-    return media_url(f"Logo_{logo}.png")
+    return (RES_DIR / "images" / "profession" / f"icon_profession_{slug}.png").as_uri()
 
 
 def skin_portrait_url(skin_id: str) -> str:
@@ -140,8 +107,10 @@ def skill_icon_url(skill_id: str) -> str:
 
 
 def uniequip_icon_url(type_icon: str | None) -> str:
-    icon = type_icon or "original"
-    return f"https://torappu.prts.wiki/assets/uniequip_direction/{icon}.png"
+    if not type_icon:
+        return ""
+    encoded = quote(type_icon, safe="")
+    return f"https://torappu.prts.wiki/assets/uniequip_direction/{encoded}.png"
 
 
 def skill_level_label(main_skill_lvl: int, specialize_level: int) -> str:
@@ -206,18 +175,13 @@ class RosterCard:
     owned: bool
     skin_id: str
     portrait: str
-    uh: str
-    uhs: str
     class_icon: str
     rarity_icon: str
-    lh: str
     light: str
-    bg: str
-    logo: str
+    lh: str
     potential: str
     elite: str
     level_text: str
-    meta_text: str
     skills: list[RosterSkill]
     modules: list[RosterModule]
 
@@ -363,7 +327,10 @@ def build_catalog(
                     break
 
         modules = tuple(
-            CatalogModule(id=module_id, type_icon=module.get("typeIcon") or "original")
+            CatalogModule(
+                id=module_id,
+                type_icon=module.get("typeIcon") or "original",
+            )
             for module_id in char_equip.get(char_id, [])
             if (module := equip_dict.get(module_id)) is not None
         )
@@ -398,18 +365,6 @@ def catalog_by_id() -> dict[str, CatalogEntry]:
     return {e.char_id: e for e in load_catalog()}
 
 
-def chrome_for_rarity(rarity: int) -> dict[str, str]:
-    r = max(0, min(5, rarity))
-    return {
-        "uh": UH_URL[r],
-        "uhs": UHS_URL,
-        "rarity_icon": RARITY_URL[r],
-        "lh": LH_URL[r],
-        "light": LIGHT_URL[r],
-        "bg": BG_URL[r],
-    }
-
-
 def build_skills(entry: CatalogEntry, owned: OwnedChar | None) -> list[RosterSkill]:
     owned_skills = {skill.id: skill for skill in owned.skills if skill.id} if owned is not None else {}
     skill_ids = entry.skill_ids or tuple(owned_skills)
@@ -442,9 +397,9 @@ def build_modules(
     if entry.modules:
         modules: list[RosterModule] = []
         for catalog_mod in entry.modules:
-            if (catalog_mod.type_icon or "original") == "original":
-                continue
             type_icon = resolve_type_icon(catalog_mod.id, catalog_mod.type_icon)
+            if type_icon == "original":
+                continue
             eq = owned_by_id.get(catalog_mod.id)
             if owned is None or eq is None:
                 modules.append(
@@ -497,20 +452,14 @@ def build_card(
     is_owned = owned is not None
     if is_owned and owned is not None:
         skin_id = owned.skinId or default_skin_id(entry.char_id)
-        meta = f"Lv{owned.level}"
         pot = potential_url(owned.potentialRank)
         elite = elite_url(owned.evolvePhase)
         level_text = str(owned.level)
-        logo = pot or logo_url(entry.logo)
     else:
         skin_id = default_skin_id(entry.char_id)
-        meta = ""
         pot = ""
         elite = ""
         level_text = ""
-        logo = logo_url(entry.logo)
-
-    chrome = chrome_for_rarity(entry.rarity)
     return RosterCard(
         char_id=entry.char_id,
         name=entry.name,
@@ -520,18 +469,13 @@ def build_card(
         owned=is_owned or force_owned_style,
         skin_id=skin_id,
         portrait=skin_portrait_url(skin_id),
-        uh=chrome["uh"],
-        uhs=chrome["uhs"],
         class_icon=profession_icon_url(entry.profession),
-        rarity_icon=chrome["rarity_icon"],
-        lh=chrome["lh"],
-        light=chrome["light"],
-        bg=chrome["bg"],
-        logo=logo,
+        rarity_icon=RARITY_URL[entry.rarity],
+        light=LIGHT_URL[entry.rarity],
+        lh=LH_URL[entry.rarity],
         potential=pot,
         elite=elite,
         level_text=level_text,
-        meta_text=meta,
         skills=build_skills(entry, owned),
         modules=build_modules(entry, owned, equipment_map),
     )
@@ -584,11 +528,20 @@ def build_book_cards(
     return cards
 
 
-def filter_summary(filt: RosterFilter) -> str:
+def filter_tags(filt: RosterFilter) -> list[str]:
     if filt.stars == frozenset(range(1, 7)):
-        stars = "全部"
+        stars = "全部星级"
+    elif len(filt.stars) == 1:
+        stars = STAR_LABELS[next(iter(filt.stars))]
     else:
-        stars = ",".join(str(s) for s in sorted(filt.stars, reverse=True)) + "星"
-    prof = "全部职业" if not filt.professions else ",".join(sorted(filt.professions))
-    name = f" · 名称含「{filt.name}」" if filt.name else ""
-    return f"{stars} · {prof}{name}"
+        stars = "/".join(str(star) for star in sorted(filt.stars, reverse=True)) + "星"
+
+    professions = "全部职业" if not filt.professions else "/".join(sorted(filt.professions))
+    tags = [stars, professions]
+    if filt.name:
+        tags.append(f"名称：{filt.name}")
+    return tags
+
+
+def filter_summary(filt: RosterFilter) -> str:
+    return " · ".join(filter_tags(filt))

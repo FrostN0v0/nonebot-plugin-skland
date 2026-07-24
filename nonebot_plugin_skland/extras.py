@@ -251,6 +251,20 @@ extra_data = {
             ),
         },
         {
+            "func": "方舟干员",
+            "trigger_method": "**已绑定用户**",
+            "trigger_condition": "**方舟干员** | `skland box`",
+            "brief_des": "使用中文筛选词查询持有干员、未拥有干员或完整图鉴。",
+            "detail_des": (
+                "- **方舟干员**\n\n"
+                "直接在快捷指令后追加筛选词，例如：`方舟干员 6星 近卫 满潜`、"
+                "`方舟干员 未拥有 5-6星`、`方舟干员 @某人 远程 女 练度`。\n\n"
+                "支持持有状态、星级、职业、分支、部署位置、性别、势力、种族、潜能、"
+                "名称与实装/获取/练度排序；筛选词之间必须使用空格。\n\n"
+                "高级语法：`skland box [target] [filters ...] [options]`。"
+            ),
+        },
+        {
             "func": "终末地抽卡记录",
             "trigger_method": "**无限制**",
             "trigger_condition": "**终末地抽卡记录** | `skland efgacha`",

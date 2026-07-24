@@ -1,6 +1,12 @@
 from pydantic import BaseModel
 
 from .base import Equip
+from ....filters import (
+    ark_elite_icon_url,
+    ark_skill_icon_url,
+    ark_skin_portrait_url,
+    ark_potential_icon_url,
+)
 
 
 class Skill(BaseModel):
@@ -8,6 +14,10 @@ class Skill(BaseModel):
 
     id: str
     specializeLevel: int
+
+    @property
+    def icon(self) -> str:
+        return ark_skill_icon_url(self.id)
 
 
 class Character(BaseModel):
@@ -25,3 +35,35 @@ class Character(BaseModel):
     defaultSkillId: str
     gainTime: int
     defaultEquipId: str
+
+    @property
+    def effective_skin_id(self) -> str:
+        return self.skinId or f"{self.charId}#1"
+
+    @property
+    def portrait(self) -> str:
+        return ark_skin_portrait_url(self.effective_skin_id)
+
+    @property
+    def potential(self) -> str:
+        return ark_potential_icon_url(self.potentialRank)
+
+    @property
+    def potential_level(self) -> int:
+        return self.potentialRank + 1
+
+    @property
+    def mastery_total(self) -> int:
+        return sum(skill.specializeLevel for skill in self.skills)
+
+    @property
+    def mastery_three_count(self) -> int:
+        return sum(skill.specializeLevel >= 3 for skill in self.skills)
+
+    @property
+    def elite(self) -> str:
+        return ark_elite_icon_url(self.evolvePhase)
+
+    @property
+    def level_text(self) -> str:
+        return str(self.level)

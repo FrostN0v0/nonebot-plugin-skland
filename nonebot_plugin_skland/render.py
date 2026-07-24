@@ -12,6 +12,7 @@ from .schemas import (
     RogueData,
     PlayerBase,
     EndfieldCard,
+    OperatorRoster,
     GroupedGachaRecord,
     EfGroupedGachaRecord,
 )
@@ -34,6 +35,27 @@ from .filters import (
     get_equip_rarity_color,
     time_to_next_monday_4am,
 )
+
+
+async def render_operator_roster(
+    *,
+    props: OperatorRoster,
+    background_image: str | Url | None,
+) -> bytes:
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="operator_roster.html.jinja2",
+        templates={
+            "props": props,
+            "background_image": background_image,
+        },
+        pages={
+            "viewport": {"width": 706, "height": 1},
+            "base_url": f"file://{TEMPLATES_DIR}",
+        },
+        device_scale_factor=1.5,
+        screenshot_timeout=config.roster_render_timeout,
+    )
 
 
 async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:

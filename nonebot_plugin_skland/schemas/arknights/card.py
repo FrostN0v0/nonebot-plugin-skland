@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from nonebot.compat import model_validator
 
 from .models.base import BaseCount
+from ...filters import ark_uniequip_icon_url
 from .models import (
     Skin,
     Medal,
@@ -79,7 +80,7 @@ class ArkCard(BaseModel):
             else:
                 equip_id = "original"
 
-            char.uniequip = f"https://torappu.prts.wiki/assets/uniequip_direction/{equip_id}.png"
+            char.uniequip = ark_uniequip_icon_url(equip_id)
         if isinstance(values, dict):
             values["assistChars"] = assist_chars
             return values

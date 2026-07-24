@@ -15,8 +15,16 @@ TEMPLATES_DIR: Path = RES_DIR / "templates"
 CACHE_DIR = store.get_plugin_cache_dir()
 DATA_DIR = store.get_plugin_data_dir()
 RESOURCE_ROUTES = ["portrait", "skill", "avatar"]
-DATA_ROUTES = ["gamedata/excel/gacha_table.json", "gamedata/excel/character_table.json"]
+DATA_ROUTES = [
+    "gamedata/excel/gacha_table.json",
+    "gamedata/excel/character_table.json",
+    "gamedata/excel/char_patch_table.json",
+    "gamedata/excel/uniequip_table.json",
+    "gamedata/excel/handbook_info_table.json",
+    "gamedata/excel/handbook_team_table.json",
+]
 GACHA_DATA_PATH = DATA_DIR / "gamedata" / "excel"
+OPERATOR_METADATA_PATH = DATA_DIR / "operator_metadata.json"
 
 
 class CustomSource(BaseModel):
@@ -66,6 +74,10 @@ class ScopedConfig(BaseModel):
     """抽卡记录单图渲染上限"""
     ef_gacha_render_max: int = 5
     """终末地抽卡记录单图渲染卡池上限"""
+    roster_render_max: int = Field(default=16, gt=0)
+    """Maximum operators rendered in one roster image."""
+    roster_render_timeout: int = Field(default=180_000, gt=0)
+    """Operator roster screenshot timeout in milliseconds."""
 
 
 class Config(BaseModel):

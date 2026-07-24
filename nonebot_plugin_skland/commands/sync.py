@@ -57,7 +57,10 @@ async def sync_handler(
         if update_data or update_all:
             logger.info("开始更新数据资源...")
             try:
-                downloaded = await gacha_table_data.load(force=bool(force_update))
+                downloaded = await gacha_table_data.load(
+                    force=bool(force_update),
+                    refresh_metadata=True,
+                )
                 if not downloaded and not force_update:
                     messages.append("📦 明日方舟数据资源已是最新版本")
                 else:

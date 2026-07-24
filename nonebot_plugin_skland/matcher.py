@@ -9,6 +9,7 @@ from nonebot_plugin_alconna import (
     Field,
     Option,
     Alconna,
+    MultiVar,
     Namespace,
     Subcommand,
     CommandMeta,
@@ -132,11 +133,16 @@ skland_command = Alconna(
     Subcommand(
         "box",
         Args["target?#目标", At | int],
-        Option("--book", help_text="显示完整图鉴，未拥有干员灰显"),
+        Args["filters", MultiVar(str, "*")],
+        Option(
+            "-o|--ownership|ownership",
+            Args["ownership", str],
+            help_text="持有状态，默认 owned；可选 owned / unowned / all",
+        ),
         Option(
             "-r|--rarity|rarity",
             Args["rarities", str],
-            help_text="稀有度筛选，默认6；例 6 / 5,6 / 4-6 / all",
+            help_text="稀有度筛选，默认全部；例 6 / 5,6 / 4-6 / all",
         ),
         Option(
             "-p|--profession|profession",
@@ -148,8 +154,14 @@ skland_command = Alconna(
         Option("--gender|gender", Args["genders", str], help_text="性别筛选"),
         Option("-f|--faction|faction", Args["factions", str], help_text="势力筛选"),
         Option("--race|race", Args["races", str], help_text="种族筛选"),
+        Option("--potential|potential", Args["potentials", str], help_text="潜能筛选，例 6 / 5,6 / 3-6"),
+        Option(
+            "-s|--sort|sort",
+            Args["sort", str],
+            help_text="排序方式，默认 release；可选 release / acquired / training",
+        ),
         Option("-n|--name|name", Args["name", str], help_text="名称模糊筛选"),
-        help_text="明日方舟干员盒与图鉴查询",
+        help_text="明日方舟干员查询；可直接追加 6星、近卫、满潜、未拥有、练度等筛选词",
     ),
     namespace=alc_config.namespaces["skland"],
     meta=CommandMeta(

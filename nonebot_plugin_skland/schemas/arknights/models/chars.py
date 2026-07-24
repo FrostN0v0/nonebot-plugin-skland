@@ -49,6 +49,18 @@ class Character(BaseModel):
         return ark_potential_icon_url(self.potentialRank)
 
     @property
+    def potential_level(self) -> int:
+        return self.potentialRank + 1
+
+    @property
+    def mastery_total(self) -> int:
+        return sum(skill.specializeLevel for skill in self.skills)
+
+    @property
+    def mastery_three_count(self) -> int:
+        return sum(skill.specializeLevel >= 3 for skill in self.skills)
+
+    @property
     def elite(self) -> str:
         return ark_elite_icon_url(self.evolvePhase)
 

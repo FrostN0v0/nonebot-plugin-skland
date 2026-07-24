@@ -14,7 +14,7 @@ from .card import check_user_character
 from ..exception import RequestException
 from ..data_source import gacha_table_data
 from ..render import render_operator_roster
-from ..schemas import CRED, OperatorCard, OperatorFilter, OperatorRoster
+from ..schemas import CRED, OperatorCard, OperatorRoster, OperatorRosterQuery
 from ..utils import (
     send_reaction,
     get_background_image,
@@ -34,7 +34,13 @@ def _match_value(match: Match[str]) -> str | None:
     return match.result if match.available else None
 
 
-def _build_filter(
+def _match_filters(match: Match[tuple[str, ...]]) -> tuple[str, ...]:
+    return match.result if match.available else ()
+
+
+def _build_query(
+    filters: Match[tuple[str, ...]],
+    ownership: Match[str],
     rarities: Match[str],
     professions: Match[str],
     branches: Match[str],
@@ -42,10 +48,14 @@ def _build_filter(
     genders: Match[str],
     factions: Match[str],
     races: Match[str],
+    potentials: Match[str],
     name: Match[str],
-) -> OperatorFilter:
-    return OperatorFilter.from_raw(
+    sort: Match[str],
+) -> OperatorRosterQuery:
+    return OperatorRosterQuery.from_input(
         gacha_table_data.operator_catalog,
+        filters=_match_filters(filters),
+        ownership=_match_value(ownership),
         rarities=_match_value(rarities),
         professions=_match_value(professions),
         branches=_match_value(branches),
@@ -53,7 +63,9 @@ def _build_filter(
         genders=_match_value(genders),
         factions=_match_value(factions),
         races=_match_value(races),
+        potentials=_match_value(potentials),
         name=_match_value(name),
+        sort=_match_value(sort),
     )
 
 
@@ -151,6 +163,8 @@ async def box_handler(
     session: async_scoped_session,
     user_session: UserSession,
     target: Match[At | int],
+    filters: Match[tuple[str, ...]],
+    ownership: Match[str],
     rarities: Match[str],
     professions: Match[str],
     branches: Match[str],
@@ -158,12 +172,12 @@ async def box_handler(
     genders: Match[str],
     factions: Match[str],
     races: Match[str],
+    potentials: Match[str],
     name: Match[str],
+    sort: Match[str],
     bot: Bot,
-    *,
-    book: bool = False,
 ):
-    """Query an owned operator box or the complete operator book."""
+    """Query operators by ownership, progression, and catalog metadata."""
     if not gacha_table_data.operator_catalog.entries:
         try:
             gacha_table_data.load_operator_catalog()
@@ -172,7 +186,9 @@ async def box_handler(
             return
 
     try:
-        operator_filter = _build_filter(
+        query = _build_query(
+            filters,
+            ownership,
             rarities,
             professions,
             branches,
@@ -180,7 +196,9 @@ async def box_handler(
             genders,
             factions,
             races,
+            potentials,
             name,
+            sort,
         )
     except ValueError as e:
         await UniMessage.text(str(e)).finish(at_sender=True)
@@ -198,14 +216,12 @@ async def box_handler(
         status=info.status,
         catalog=gacha_table_data.operator_catalog,
         characters=info.chars,
-        operator_filter=operator_filter,
+        query=query,
         equipment_map=info.equipmentInfoMap,
-        book=book,
     )
     if not roster.cards:
         send_reaction(user_session, "done")
-        owned_summary = f"（持有 {len(info.chars)}）" if not book else ""
-        await UniMessage.text(f"没有匹配的干员{owned_summary} · {roster.summary}").finish(at_sender=True)
+        await UniMessage.text(f"没有匹配的干员（持有 {len(info.chars)}） · {roster.summary}").finish(at_sender=True)
         return
 
     background = await _get_roster_background_image()

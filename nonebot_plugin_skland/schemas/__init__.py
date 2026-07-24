@@ -23,11 +23,11 @@ from .endfield import EfGachaGroup as EfGachaGroup
 from .endfield import EndfieldCard as EndfieldCard
 from .arknights import GachaDetails as GachaDetails
 from .arknights import OperatorCard as OperatorCard
+from .arknights import OperatorSort as OperatorSort
 from .arknights import RogueHistory as RogueHistory
 from .arknights import ArkSignResult as ArkSignResult
 from .arknights import GachaResponse as GachaResponse
 from .arknights import GachaTitleInfo as GachaTitleInfo
-from .arknights import OperatorFilter as OperatorFilter
 from .arknights import OperatorModule as OperatorModule
 from .arknights import OperatorRoster as OperatorRoster
 from .endfield import EfCharGachaInfo as EfCharGachaInfo
@@ -39,8 +39,10 @@ from .binding import BindingCharacter as BindingCharacter
 from .endfield import EndfieldPoolType as EndfieldPoolType
 from .arknights import OperatorMetadata as OperatorMetadata
 from .endfield import EfWeaponGachaInfo as EfWeaponGachaInfo
+from .arknights import OperatorOwnership as OperatorOwnership
 from .arknights import GroupedGachaRecord as GroupedGachaRecord
 from .endfield import EfCharGachaResponse as EfCharGachaResponse
+from .arknights import OperatorRosterQuery as OperatorRosterQuery
 from .endfield import EfGroupedGachaRecord as EfGroupedGachaRecord
 from .endfield import EndfieldCharPoolType as EndfieldCharPoolType
 from .endfield import EndfieldSignResponse as EndfieldSignResponse

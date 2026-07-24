@@ -105,8 +105,14 @@ def _owned_character(
     char_id: str,
     *,
     skin_id: str | None = None,
+    level: int = 90,
+    evolve_phase: int = 2,
+    potential_rank: int = 5,
+    main_skill_level: int = 7,
     skills=None,
     equipment=None,
+    favor_percent: int = 100,
+    gain_time: int = 0,
     default_equipment_id: str = "",
 ):
     from nonebot_plugin_skland.schemas.arknights.models.chars import Character
@@ -114,15 +120,15 @@ def _owned_character(
     return Character(
         charId=char_id,
         skinId=skin_id or f"{char_id}#1",
-        level=90,
-        evolvePhase=2,
-        potentialRank=5,
-        mainSkillLvl=7,
+        level=level,
+        evolvePhase=evolve_phase,
+        potentialRank=potential_rank,
+        mainSkillLvl=main_skill_level,
         skills=skills or [],
         equip=equipment or [],
-        favorPercent=100,
+        favorPercent=favor_percent,
         defaultSkillId="",
-        gainTime=0,
+        gainTime=gain_time,
         defaultEquipId=default_equipment_id,
     )
 
@@ -398,10 +404,10 @@ async def test_load_uses_old_metadata_when_refresh_fails(app, tmp_path, monkeypa
     build_catalog.assert_called_once_with(mocker.ANY, old_snapshot)
 
 
-def test_filter_parsing_uses_or_within_and_across_dimensions(app, operator_catalog):
-    from nonebot_plugin_skland.schemas import OperatorFilter
+def test_query_parsing_uses_or_within_and_across_dimensions(app, operator_catalog):
+    from nonebot_plugin_skland.schemas import OperatorRosterQuery
 
-    operator_filter = OperatorFilter.from_raw(
+    query = OperatorRosterQuery.from_raw(
         operator_catalog,
         rarities="5,6",
         professions="guard,medic",
@@ -411,12 +417,17 @@ def test_filter_parsing_uses_or_within_and_across_dimensions(app, operator_catal
         factions="rhodes",
         races="萨卡兹,菲林",
     )
+    owned_by_id = {entry.char_id: _owned_character(entry.char_id) for entry in operator_catalog.entries}
 
-    matched = [entry.char_id for entry in operator_catalog.entries if operator_filter.matches(entry)]
+    matched = [
+        entry.char_id for entry in operator_catalog.entries if query.matches(entry, owned_by_id.get(entry.char_id))
+    ]
     assert matched == ["char_350_surtr", "char_003_kalts"]
-    assert operator_filter.branches == frozenset({"收割者", "医师"})
-    assert operator_filter.positions == frozenset({"近战位", "远程位"})
-    assert operator_filter.tags == [
+    assert query.branches == frozenset({"收割者", "医师"})
+    assert query.positions == frozenset({"近战位", "远程位"})
+    assert query.tags == [
+        "已拥有",
+        "实装顺序",
         "6/5★",
         "医疗/近卫",
         "医师/收割者",
@@ -427,46 +438,204 @@ def test_filter_parsing_uses_or_within_and_across_dimensions(app, operator_catal
     ]
 
 
-def test_filter_supports_multi_race_name_and_reports_unknown_values(app, operator_catalog):
-    from nonebot_plugin_skland.schemas import OperatorFilter
+def test_query_supports_unfiltered_rarity_potential_aliases_and_conflicts(app, operator_catalog):
+    from nonebot_plugin_skland.schemas import OperatorSort, OperatorOwnership, OperatorRosterQuery
 
-    race_filter = OperatorFilter.from_raw(operator_catalog, rarities="5", races="奇美拉", name="amiya")
-    assert [entry.char_id for entry in operator_catalog.entries if race_filter.matches(entry)] == ["char_002_amiya"]
-    assert OperatorFilter.from_raw(operator_catalog).stars == frozenset({6})
+    amiya = _owned_character("char_002_amiya", potential_rank=4)
+    race_query = OperatorRosterQuery.from_raw(operator_catalog, rarities="5", races="奇美拉", name="amiya")
+    assert race_query.matches(operator_catalog.by_id[amiya.charId], amiya)
+    assert OperatorRosterQuery.from_raw(operator_catalog).stars == frozenset()
+
+    query = OperatorRosterQuery.from_raw(
+        operator_catalog,
+        ownership="图鉴",
+        potentials="5-6",
+        sort="练度",
+    )
+    assert query.ownership is OperatorOwnership.ALL
+    assert query.sort is OperatorSort.TRAINING
+    assert query.potentials == frozenset({5, 6})
+    assert "潜能 6/5" in query.tags
+
     with pytest.raises(ValueError, match="未知职业分支"):
-        OperatorFilter.from_raw(operator_catalog, branches="not-a-branch")
+        OperatorRosterQuery.from_raw(operator_catalog, branches="not-a-branch")
+    with pytest.raises(ValueError, match="没有潜能数据"):
+        OperatorRosterQuery.from_raw(operator_catalog, ownership="unowned", potentials="6")
+    with pytest.raises(ValueError, match="没有获取时间"):
+        OperatorRosterQuery.from_raw(operator_catalog, ownership="unowned", sort="acquired")
+    with pytest.raises(ValueError, match="没有练度数据"):
+        OperatorRosterQuery.from_raw(operator_catalog, ownership="unowned", sort="training")
 
 
-def test_box_and_book_build_from_shared_models(app, operator_catalog):
-    from nonebot_plugin_skland.schemas import OperatorFilter, OperatorRoster
+def test_natural_filter_tokens_cover_dimensions_and_merge_advanced_options(app, operator_catalog):
+    from nonebot_plugin_skland.schemas import OperatorSort, OperatorOwnership, OperatorRosterQuery
+
+    query = OperatorRosterQuery.from_input(
+        operator_catalog,
+        filters=("全部", "6星", "近卫", "医疗", "收割者", "近战", "女", "rhodes", "萨卡兹", "满潜", "练度"),
+    )
+    assert query.ownership is OperatorOwnership.ALL
+    assert query.sort is OperatorSort.TRAINING
+    assert query.stars == frozenset({6})
+    assert query.professions == frozenset({"近卫", "医疗"})
+    assert query.branches == frozenset({"收割者"})
+    assert query.positions == frozenset({"近战位"})
+    assert query.genders == frozenset({"女"})
+    assert query.factions == frozenset({"rhodes"})
+    assert query.races == frozenset({"萨卡兹"})
+    assert query.potentials == frozenset({6})
+
+    mixed = OperatorRosterQuery.from_input(
+        operator_catalog,
+        filters=("5星", "近卫"),
+        ownership="all",
+        rarities="6",
+        professions="医疗",
+    )
+    assert mixed.ownership is OperatorOwnership.ALL
+    assert mixed.stars == frozenset({5, 6})
+    assert mixed.professions == frozenset({"近卫", "医疗"})
+
+
+def test_natural_filter_tokens_support_names_and_report_conflicts(app, operator_catalog):
+    from nonebot_plugin_skland.schemas import OperatorRosterQuery
+
+    assert OperatorRosterQuery.from_input(operator_catalog, filters=("阿米",)).name == "阿米"
+    assert OperatorRosterQuery.from_input(operator_catalog, filters=("名字:阿米娅",)).name == "阿米娅"
+
+    with pytest.raises(ValueError, match="不能同时筛选未拥有和潜能"):
+        OperatorRosterQuery.from_input(operator_catalog, filters=("未拥有", "满潜"))
+    with pytest.raises(ValueError, match="排序方式不能同时"):
+        OperatorRosterQuery.from_input(operator_catalog, filters=("练度", "最近"))
+    with pytest.raises(ValueError, match="筛选词之间请使用空格"):
+        OperatorRosterQuery.from_input(operator_catalog, filters=("6星近卫",))
+    with pytest.raises(ValueError, match="持有状态不能同时"):
+        OperatorRosterQuery.from_input(operator_catalog, filters=("未拥有",), ownership="all")
+
+
+def test_roster_builds_owned_unowned_all_and_catalog_fallback(app, operator_catalog):
+    from nonebot_plugin_skland.schemas import OperatorRoster, OperatorRosterQuery
 
     surtr = _owned_character("char_350_surtr", skin_id="char_350_surtr@summer#1")
     amiya = _owned_character("char_002_amiya")
-    operator_filter = OperatorFilter.from_raw(operator_catalog)
+    new_operator = _owned_character("char_new_operator")
+    characters = [surtr, amiya, new_operator]
 
     box = OperatorRoster.build(
         status=_status(),
         catalog=operator_catalog,
-        characters=[surtr, amiya],
-        operator_filter=operator_filter,
+        characters=characters,
+        query=OperatorRosterQuery.from_raw(operator_catalog),
     )
-    assert [card.char_id for card in box.cards] == ["char_350_surtr"]
+    assert [card.char_id for card in box.cards] == ["char_350_surtr", "char_002_amiya", "char_new_operator"]
     assert box.cards[0].owned
     assert "@summer" in unquote(box.cards[0].portrait)
     assert box.cards[0].level_text == "90"
-    assert box.tags[:2] == ["持有", "6★"]
+    assert box.tags[:3] == ["已拥有", "实装顺序", "全部星级"]
+
+    unowned = OperatorRoster.build(
+        status=_status(),
+        catalog=operator_catalog,
+        characters=characters,
+        query=OperatorRosterQuery.from_raw(operator_catalog, ownership="unowned"),
+    )
+    assert [card.char_id for card in unowned.cards] == [
+        "char_4230_mcnist",
+        "char_003_kalts",
+        "char_150_snakek",
+    ]
+    assert all(not card.owned for card in unowned.cards)
+    assert unowned.title == "Missing Operators"
 
     book = OperatorRoster.build(
         status=_status(),
         catalog=operator_catalog,
-        characters=[surtr],
-        operator_filter=operator_filter,
-        book=True,
+        characters=characters,
+        query=OperatorRosterQuery.from_raw(operator_catalog, ownership="all"),
     )
-    assert [card.char_id for card in book.cards] == ["char_4230_mcnist", "char_350_surtr", "char_003_kalts"]
-    assert next(card for card in book.cards if card.char_id == "char_350_surtr").owned
-    assert all(not card.owned for card in book.cards if card.char_id != "char_350_surtr")
-    assert book.tags[:2] == ["图鉴", "6★"]
+    assert [card.char_id for card in book.cards] == [
+        "char_4230_mcnist",
+        "char_350_surtr",
+        "char_002_amiya",
+        "char_003_kalts",
+        "char_150_snakek",
+        "char_new_operator",
+    ]
+    assert book.title == "Operator Book"
+    assert book.tags[:3] == ["全部干员", "实装顺序", "全部星级"]
+
+
+def test_roster_sorts_by_acquired_training_and_potential(app, operator_catalog):
+    from nonebot_plugin_skland.schemas.arknights.models.base import Equip
+    from nonebot_plugin_skland.schemas.arknights.models.chars import Skill
+    from nonebot_plugin_skland.schemas import OperatorRoster, OperatorRosterQuery
+
+    mechanist = _owned_character(
+        "char_4230_mcnist",
+        level=70,
+        evolve_phase=1,
+        potential_rank=0,
+        gain_time=100,
+    )
+    surtr = _owned_character(
+        "char_350_surtr",
+        potential_rank=5,
+        gain_time=50,
+        skills=[Skill(id="skchr_surtr_3", specializeLevel=3)],
+        equipment=[Equip(id="uniequip_002_surtr", level=3, locked=False)],
+    )
+    amiya = _owned_character(
+        "char_002_amiya",
+        level=80,
+        potential_rank=4,
+        gain_time=200,
+    )
+    new_operator = _owned_character(
+        "char_new_operator",
+        level=1,
+        evolve_phase=0,
+        potential_rank=0,
+        gain_time=0,
+    )
+    characters = [mechanist, surtr, amiya, new_operator]
+
+    acquired = OperatorRoster.build(
+        status=_status(),
+        catalog=operator_catalog,
+        characters=characters,
+        query=OperatorRosterQuery.from_raw(operator_catalog, ownership="all", sort="acquired"),
+    )
+    assert [card.char_id for card in acquired.cards] == [
+        "char_002_amiya",
+        "char_4230_mcnist",
+        "char_350_surtr",
+        "char_new_operator",
+        "char_003_kalts",
+        "char_150_snakek",
+    ]
+
+    training = OperatorRoster.build(
+        status=_status(),
+        catalog=operator_catalog,
+        characters=characters,
+        query=OperatorRosterQuery.from_raw(operator_catalog, ownership="all", sort="training"),
+    )
+    assert [card.char_id for card in training.cards] == [
+        "char_350_surtr",
+        "char_002_amiya",
+        "char_4230_mcnist",
+        "char_new_operator",
+        "char_003_kalts",
+        "char_150_snakek",
+    ]
+
+    full_potential = OperatorRoster.build(
+        status=_status(),
+        catalog=operator_catalog,
+        characters=characters,
+        query=OperatorRosterQuery.from_raw(operator_catalog, ownership="all", potentials="6"),
+    )
+    assert [card.char_id for card in full_potential.cards] == ["char_350_surtr"]
 
 
 def test_skills_and_modules_reuse_existing_models(app, operator_catalog):
@@ -499,6 +668,10 @@ def test_skills_and_modules_reuse_existing_models(app, operator_catalog):
     assert card.modules[0].selected
     assert card.modules[0].level == 3
     assert card.modules[1].locked
+    assert character.potential_level == 6
+    assert character.mastery_total == 3
+    assert character.mastery_three_count == 1
+    assert card.training_sort_key == (2, 90, 3, 1, 3, 3, 7, 100)
 
 
 def test_shared_resource_helpers_cover_roster_and_card_models(app):
@@ -518,24 +691,52 @@ def test_shared_resource_helpers_cover_roster_and_card_models(app):
     assert ark_uniequip_icon_url("AFT-X") == "https://torappu.prts.wiki/assets/uniequip_direction/aft-x.png"
 
 
-def test_unified_box_command_parses_all_filters_and_removes_book_command(app):
-    from nonebot_plugin_skland.matcher import skland_command
+def test_box_command_parses_natural_and_advanced_filters(app, operator_catalog):
+    from nonebot_plugin_skland.schemas import OperatorRosterQuery
+    from nonebot_plugin_skland.matcher import skland, skland_command
 
-    result = skland_command.parse(
-        "/skland box --book -r all -p 近卫,医疗 -b 收割者 --position 近战位 --gender 女 -f 炎 --race 萨卡兹 -n 阿米娅"
+    natural = skland_command.parse("/skland box 123456 6星 近卫 满潜 练度")
+    assert natural.matched
+    assert natural.all_matched_args == {
+        "target": 123456,
+        "filters": ("6星", "近卫", "满潜", "练度"),
+    }
+
+    advanced = skland_command.parse(
+        "/skland box -o all -r 4-6 -p 近卫,医疗 -b 收割者 --position 近战位 "
+        "--gender 女 -f 炎 --race 萨卡兹 --potential 5,6 -s training -n 阿米娅"
     )
-    assert result.matched
-    assert result.find("box.book")
-    assert result.all_matched_args == {
-        "rarities": "all",
+    assert advanced.matched
+    assert advanced.all_matched_args == {
+        "filters": (),
+        "ownership": "all",
+        "rarities": "4-6",
         "professions": "近卫,医疗",
         "branches": "收割者",
         "positions": "近战位",
         "genders": "女",
         "factions": "炎",
         "races": "萨卡兹",
+        "potentials": "5,6",
+        "sort": "training",
         "name": "阿米娅",
     }
+
+    skland.shortcut(
+        "方舟干员",
+        {"command": "skland box", "fuzzy": True, "prefix": True, "compact": False},
+    )
+    try:
+        shortcut = skland_command.parse("/方舟干员 未拥有 5-6星 术师")
+        assert shortcut.matched
+        assert shortcut.all_matched_args == {"filters": ("未拥有", "5-6星", "术师")}
+        assert not skland_command.parse("/方舟干员6星").matched
+    finally:
+        skland_command.shortcut("方舟干员", delete=True)
+    legacy = skland_command.parse("/skland box --book")
+    assert legacy.matched
+    with pytest.raises(ValueError, match="无法识别筛选词"):
+        OperatorRosterQuery.from_input(operator_catalog, filters=legacy.all_matched_args["filters"])
     assert not skland_command.parse("/skland book").matched
 
 
@@ -543,7 +744,7 @@ def test_unified_box_command_parses_all_filters_and_removes_book_command(app):
 async def test_roster_render_uses_props_and_configured_timeout(app, mocker, monkeypatch, operator_catalog):
     from nonebot_plugin_skland.config import config
     from nonebot_plugin_skland.render import render_operator_roster
-    from nonebot_plugin_skland.schemas import OperatorFilter, OperatorRoster
+    from nonebot_plugin_skland.schemas import OperatorRoster, OperatorRosterQuery
 
     monkeypatch.setattr(config, "roster_render_timeout", 321_000)
     render = mocker.patch(
@@ -552,9 +753,8 @@ async def test_roster_render_uses_props_and_configured_timeout(app, mocker, monk
     )
     roster = OperatorRoster(
         status=_status(),
-        filter=OperatorFilter.from_raw(operator_catalog),
+        query=OperatorRosterQuery.from_raw(operator_catalog, ownership="all"),
         cards=[],
-        book=True,
     )
 
     result = await render_operator_roster(props=roster, background_image="background.jpg")

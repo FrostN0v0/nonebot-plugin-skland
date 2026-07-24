@@ -251,33 +251,17 @@ extra_data = {
             ),
         },
         {
-            "func": "干员盒",
+            "func": "方舟干员",
             "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**干员盒** | `skland box`",
-            "brief_des": "查询已拥有干员半身像长图。",
+            "trigger_condition": "**方舟干员** | `skland box`",
+            "brief_des": "使用中文筛选词查询持有干员、未拥有干员或完整图鉴。",
             "detail_des": (
-                "- **干员盒**\n\n"
-                "```bash\n"
-                "skland box [@某人|QQ] [-r 星级] [-p 职业] [-b 分支] "
-                "[--position 部署位] [--gender 性别] [-f 势力] [--race 种族] [-n 名称]\n"
-                "```\n\n"
-                " **快捷指令** ：`干员盒`\n\n"
-                "默认仅 6 星，按实装新→旧排列；支持 @ 查他人。"
-            ),
-        },
-        {
-            "func": "图鉴",
-            "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**图鉴** | `skland box --book`",
-            "brief_des": "查询干员图鉴（未拥有灰显）。",
-            "detail_des": (
-                "- **图鉴**\n\n"
-                "```bash\n"
-                "skland box --book [@某人|QQ] [-r 星级] [-p 职业] [-b 分支] "
-                "[--position 部署位] [--gender 性别] [-f 势力] [--race 种族] [-n 名称]\n"
-                "```\n\n"
-                " **快捷指令** ：`图鉴`\n\n"
-                "未拥有灰显默认皮；已拥有显示玩家皮肤、精英/等级/潜能、技能与模组。"
+                "- **方舟干员**\n\n"
+                "直接在快捷指令后追加筛选词，例如：`方舟干员 6星 近卫 满潜`、"
+                "`方舟干员 未拥有 5-6星`、`方舟干员 @某人 远程 女 练度`。\n\n"
+                "支持持有状态、星级、职业、分支、部署位置、性别、势力、种族、潜能、"
+                "名称与实装/获取/练度排序；筛选词之间必须使用空格。\n\n"
+                "高级语法：`skland box [target] [filters ...] [options]`。"
             ),
         },
         {

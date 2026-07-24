@@ -277,6 +277,8 @@ async def _(
     session: async_scoped_session,
     user_session: UserSession,
     target: Match[At | int],
+    filters: Match[tuple[str, ...]],
+    ownership: Match[str],
     rarities: Match[str],
     professions: Match[str],
     branches: Match[str],
@@ -284,17 +286,20 @@ async def _(
     genders: Match[str],
     factions: Match[str],
     races: Match[str],
+    potentials: Match[str],
     name: Match[str],
+    sort: Match[str],
     bot: Bot,
-    result: Arparma,
 ):
-    """明日方舟干员盒与图鉴查询"""
+    """明日方舟干员查询"""
     from .commands.box import box_handler
 
     await box_handler(
         session,
         user_session,
         target,
+        filters,
+        ownership,
         rarities,
         professions,
         branches,
@@ -302,7 +307,8 @@ async def _(
         genders,
         factions,
         races,
+        potentials,
         name,
+        sort,
         bot,
-        book=result.find("box.book"),
     )

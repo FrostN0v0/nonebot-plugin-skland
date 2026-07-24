@@ -24,6 +24,8 @@ async def startup():
         logger.error(f"终末地卡池数据加载失败: {e}")
     logger.debug("Endfield gacha pool table data loaded")
     command_manager.load_cache(shortcut_cache, command=skland_command)
+    for obsolete_shortcut in ("干员盒", "图鉴"):
+        skland_command.shortcut(obsolete_shortcut, delete=True)
     logger.debug("Skland shortcuts cache loaded")
     skland.shortcut("森空岛绑定", {"command": "skland bind", "fuzzy": True, "prefix": True})
     skland.shortcut("扫码绑定", {"command": "skland qrcode", "fuzzy": False, "prefix": True})
@@ -45,8 +47,10 @@ async def startup():
     skland.shortcut("收藏战绩详情", {"command": "skland rginfo -f", "fuzzy": True, "prefix": True})
     skland.shortcut("方舟抽卡记录", {"command": "skland gacha -l 3", "fuzzy": True, "prefix": True})
     skland.shortcut("导入抽卡记录", {"command": "skland import", "fuzzy": True, "prefix": True})
-    skland.shortcut("干员盒", {"command": "skland box", "fuzzy": True, "prefix": True})
-    skland.shortcut("图鉴", {"command": "skland box --book", "fuzzy": True, "prefix": True})
+    skland.shortcut(
+        "方舟干员",
+        {"command": "skland box", "fuzzy": True, "prefix": True, "compact": False},
+    )
     skland.shortcut("终末地签到", {"command": "skland efsign sign --all", "fuzzy": False, "prefix": True})
     skland.shortcut("终末地全体签到", {"command": "skland efsign all", "fuzzy": False, "prefix": True})
     skland.shortcut("终末地签到详情", {"command": "skland efsign status", "fuzzy": False, "prefix": True})

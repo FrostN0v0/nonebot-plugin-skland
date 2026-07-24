@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 from nonebot import logger
 
-from .config import CACHE_DIR
+from .config import RES_DIR, CACHE_DIR
 
 
 def format_timestamp(timestamp: float) -> str:
@@ -75,6 +75,92 @@ def charId_to_portraitUrl(charId: str) -> str:
         logger.debug(f"Portrait not found locally, using URL: {img_url}")
         return img_url
     return img_path.as_uri()
+
+
+ARK_PROFESSION_SLUGS = {
+    "先锋": "pioneer",
+    "近卫": "warrior",
+    "重装": "tank",
+    "狙击": "sniper",
+    "术师": "caster",
+    "医疗": "medic",
+    "辅助": "support",
+    "特种": "special",
+}
+
+ARK_ROSTER_LH_URLS = {
+    0: "https://media.prts.wiki/0/0b/干员图鉴_lh_0%2C1%2C2.png",
+    1: "https://media.prts.wiki/0/0b/干员图鉴_lh_0%2C1%2C2.png",
+    2: "https://media.prts.wiki/0/0b/干员图鉴_lh_0%2C1%2C2.png",
+    3: "https://media.prts.wiki/a/a5/干员图鉴_lh_3.png",
+    4: "https://media.prts.wiki/9/9e/干员图鉴_lh_4.png",
+    5: "https://media.prts.wiki/a/a5/干员图鉴_lh_5.png",
+}
+
+ARK_ROSTER_LIGHT_URLS = {
+    0: "https://media.prts.wiki/a/a7/干员图鉴_稀有度_亮光_0.png",
+    1: "https://media.prts.wiki/9/9c/干员图鉴_稀有度_亮光_1.png",
+    2: "https://media.prts.wiki/b/b0/干员图鉴_稀有度_亮光_2.png",
+    3: "https://media.prts.wiki/0/0d/干员图鉴_稀有度_亮光_3.png",
+    4: "https://media.prts.wiki/f/f7/干员图鉴_稀有度_亮光_4.png",
+    5: "https://media.prts.wiki/1/19/干员图鉴_稀有度_亮光_5.png",
+}
+
+
+def ark_skin_portrait_url(skin_id: str) -> str:
+    portrait_id = next(
+        (skin_id.replace(symbol, "_", 1) for symbol in ("@", "#") if symbol in skin_id),
+        skin_id,
+    )
+    image_path = CACHE_DIR / "portrait" / f"{portrait_id}.png"
+    if image_path.exists():
+        return image_path.as_uri()
+    encoded_id = quote(skin_id, safe="")
+    return f"https://web.hycdn.cn/arknights/game/assets/char_skin/portrait/{encoded_id}.png"
+
+
+def ark_skill_icon_url(skill_id: str) -> str:
+    image_path = CACHE_DIR / "skill" / f"skill_icon_{skill_id}.png"
+    if image_path.exists():
+        return image_path.as_uri()
+    encoded_id = quote(skill_id, safe="")
+    return f"https://web.hycdn.cn/arknights/game/assets/char_skill/{encoded_id}.png"
+
+
+def ark_potential_icon_url(rank: int) -> str:
+    image_path = RES_DIR / "images" / "ark_card" / "potential" / f"potential_{rank}.png"
+    return image_path.as_uri() if image_path.exists() else ""
+
+
+def ark_elite_icon_url(phase: int) -> str:
+    image_path = RES_DIR / "images" / "ark_card" / "elite" / f"elite_{phase}.png"
+    return image_path.as_uri() if image_path.exists() else ""
+
+
+def ark_profession_icon_url(profession: str) -> str:
+    slug = ARK_PROFESSION_SLUGS.get(profession)
+    if slug is None:
+        return ""
+    return (RES_DIR / "images" / "profession" / f"icon_profession_{slug}.png").as_uri()
+
+
+def ark_rarity_icon_url(rarity: int) -> str:
+    return (RES_DIR / "images" / "rarity" / f"rarity_yellow_{rarity}.png").as_uri()
+
+
+def ark_uniequip_icon_url(type_icon: str | None) -> str:
+    if not type_icon:
+        return ""
+    encoded_id = quote(type_icon.lower(), safe="")
+    return f"https://torappu.prts.wiki/assets/uniequip_direction/{encoded_id}.png"
+
+
+def ark_roster_light_url(rarity: int) -> str:
+    return ARK_ROSTER_LIGHT_URLS.get(rarity, "")
+
+
+def ark_roster_lh_url(rarity: int) -> str:
+    return ARK_ROSTER_LH_URLS.get(rarity, "")
 
 
 def loads_json(json_str: str) -> dict:

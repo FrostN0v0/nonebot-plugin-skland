@@ -46,7 +46,7 @@ async def startup():
     skland.shortcut("方舟抽卡记录", {"command": "skland gacha -l 3", "fuzzy": True, "prefix": True})
     skland.shortcut("导入抽卡记录", {"command": "skland import", "fuzzy": True, "prefix": True})
     skland.shortcut("干员盒", {"command": "skland box", "fuzzy": True, "prefix": True})
-    skland.shortcut("图鉴", {"command": "skland book", "fuzzy": True, "prefix": True})
+    skland.shortcut("图鉴", {"command": "skland box --book", "fuzzy": True, "prefix": True})
     skland.shortcut("终末地签到", {"command": "skland efsign sign --all", "fuzzy": False, "prefix": True})
     skland.shortcut("终末地全体签到", {"command": "skland efsign all", "fuzzy": False, "prefix": True})
     skland.shortcut("终末地签到详情", {"command": "skland efsign status", "fuzzy": False, "prefix": True})

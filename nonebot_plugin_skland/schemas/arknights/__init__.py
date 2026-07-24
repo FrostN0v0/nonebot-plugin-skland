@@ -19,5 +19,13 @@ from .sign import ArkSignResult as ArkSignResult
 from .gacha import GachaResponse as GachaResponse
 from .gacha import GachaTitleInfo as GachaTitleInfo
 from .game_data import GachaDetails as GachaDetails
+from .operators import OperatorCard as OperatorCard
 from .sign import ArkSignResponse as ArkSignResponse
+from .operators import OperatorFilter as OperatorFilter
+from .operators import OperatorModule as OperatorModule
+from .operators import OperatorRoster as OperatorRoster
+from .game_data import OperatorCatalog as OperatorCatalog
 from .gacha import GroupedGachaRecord as GroupedGachaRecord
+from .game_data import OperatorMetadata as OperatorMetadata
+from .game_data import OperatorCatalogEntry as OperatorCatalogEntry
+from .game_data import OperatorMetadataSnapshot as OperatorMetadataSnapshot

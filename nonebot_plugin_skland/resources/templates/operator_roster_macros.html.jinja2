@@ -61,9 +61,9 @@
 {% endmacro %}
 
 {% macro operator_roster_filters(tags) %}
-<section class="relative z-10 flex h-[75px] items-start gap-3 px-[30px] pt-[18px]">
+<section class="relative z-10 flex min-h-[75px] items-start gap-3 px-[30px] py-[18px]">
   <img class="h-[19px] w-[114px] shrink-0 object-cover" src="../images/ark_card/raft_dec_text_01.png" alt="" />
-  <div class="flex min-w-0 flex-1 gap-3">
+  <div class="flex min-w-0 flex-1 flex-wrap gap-3">
     {% for tag in tags %}
     {{ operator_roster_tag(tag) }}
     {% endfor %}
@@ -82,16 +82,16 @@
 </div>
 {% endmacro %}
 
-{% macro operator_roster_skill(skill, owned, index) %}
+{% macro operator_roster_skill(skill, owned, main_skill_level, index) %}
 <div class="relative size-6 shrink-0 overflow-hidden rounded-[5px] bg-[#080808]/50">
   <img class="size-full object-contain" src="{{ skill.icon }}" alt="skill {{ index }}" />
   <div class="absolute top-0 right-0 size-[9px] rounded-tr-[5px] bg-[#080808]/80">
-    {% if skill.specialize_level > 0 %}
-    <span class="absolute top-[1px] left-1/2 size-[2.5px] -translate-x-1/2 rounded-full{% if skill.specialize_level >= 1 %} bg-white{% else %} bg-white/30{% endif %}"></span>
-    <span class="absolute top-[5px] left-[28%] size-[2.5px] -translate-x-1/2 rounded-full{% if skill.specialize_level >= 2 %} bg-white{% else %} bg-white/30{% endif %}"></span>
-    <span class="absolute top-[5px] left-[72%] size-[2.5px] -translate-x-1/2 rounded-full{% if skill.specialize_level >= 3 %} bg-white{% else %} bg-white/30{% endif %}"></span>
-    {% elif owned and skill.main_skill_lvl > 0 %}
-    <span class="flex size-full items-center justify-center font-[Bender] text-[7px] leading-none font-bold text-white">{{ skill.main_skill_lvl }}</span>
+    {% if skill.specializeLevel > 0 %}
+    <span class="absolute top-[1px] left-1/2 size-[2.5px] -translate-x-1/2 rounded-full{% if skill.specializeLevel >= 1 %} bg-white{% else %} bg-white/30{% endif %}"></span>
+    <span class="absolute top-[5px] left-[28%] size-[2.5px] -translate-x-1/2 rounded-full{% if skill.specializeLevel >= 2 %} bg-white{% else %} bg-white/30{% endif %}"></span>
+    <span class="absolute top-[5px] left-[72%] size-[2.5px] -translate-x-1/2 rounded-full{% if skill.specializeLevel >= 3 %} bg-white{% else %} bg-white/30{% endif %}"></span>
+    {% elif owned and main_skill_level > 0 %}
+    <span class="flex size-full items-center justify-center font-[Bender] text-[7px] leading-none font-bold text-white">{{ main_skill_level }}</span>
     {% else %}
     <span class="absolute top-[1px] left-1/2 size-[2.5px] -translate-x-1/2 rounded-full bg-white/30"></span>
     <span class="absolute top-[5px] left-[28%] size-[2.5px] -translate-x-1/2 rounded-full bg-white/30"></span>
@@ -156,7 +156,7 @@
   {% if card.skills %}
   <div class="absolute right-0 bottom-7 z-[7] flex h-6 items-center gap-1">
     {% for skill in card.skills[:3] %}
-    {{ operator_roster_skill(skill, card.owned, loop.index) }}
+    {{ operator_roster_skill(skill, card.owned, card.main_skill_level, loop.index) }}
     {% endfor %}
   </div>
   {% endif %}

@@ -5,7 +5,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{{ title }}</title>
+  <title>{{ props.title }}</title>
   <style>
     {% include "index.css" %}
   </style>
@@ -20,14 +20,14 @@
     <div class="pointer-events-none absolute top-[146px] right-0 bottom-0 left-0 bg-[#363636]/30 backdrop-blur-[6px]"></div>
     {% endif %}
 
-    {{ operator_roster_header(status) }}
-    {{ operator_roster_filters(tags) }}
+    {{ operator_roster_header(props.status) }}
+    {{ operator_roster_filters(props.tags) }}
 
-    {% if cards %}
+    {% if props.cards %}
     <section
       class="relative z-10 grid grid-cols-4 content-start justify-start gap-[30px] px-[30px]"
     >
-      {% for card in cards %}
+      {% for card in props.cards %}
       {{ operator_roster_card(card) }}
       {% endfor %}
     </section>

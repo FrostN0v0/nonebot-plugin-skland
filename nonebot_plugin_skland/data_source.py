@@ -1,21 +1,40 @@
 """游戏数据加载与管理"""
 
+import os
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from nonebot import logger
+from nonebot.compat import model_dump
 
 from .exception import RequestException
-from .config import DATA_DIR, DATA_ROUTES, GACHA_DATA_PATH, config
+from .schemas.arknights.game_data import OperatorCatalog, OperatorMetadataSnapshot
+from .config import DATA_DIR, DATA_ROUTES, GACHA_DATA_PATH, OPERATOR_METADATA_PATH, config
 
 if TYPE_CHECKING:
     from .schemas import CharTable, GachaTable, GachaDetails
     from .schemas.endfield.gacha.base import EfGachaContentPool
 
 
+def _json_default(value: Any) -> list[Any]:
+    if isinstance(value, (set, frozenset)):
+        return sorted(value)
+    raise TypeError(f"unsupported JSON value: {type(value).__name__}")
+
+
 class GachaTableData:
     """明日方舟卡池数据管理"""
+
+    PRTS_API_URL = "https://prts.wiki/api.php"
+    PRTS_PAGE_SIZE = 500
+    OPERATOR_TABLE_FILES = (
+        "character_table.json",
+        "char_patch_table.json",
+        "uniequip_table.json",
+        "handbook_info_table.json",
+        "handbook_team_table.json",
+    )
 
     def __init__(self) -> None:
         self.version_file = DATA_DIR / "version"
@@ -29,6 +48,7 @@ class GachaTableData:
         self.gacha_table: list[GachaTable] = []
         self.gacha_details: list[GachaDetails] = []
         self.character_table: list[CharTable] = []
+        self.operator_catalog = OperatorCatalog()
 
     async def get_gacha_details(self):
         from .schemas import GachaDetails
@@ -67,8 +87,138 @@ class GachaTableData:
             self.version_file.write_text(self.origin_version, encoding="utf-8")
             self.version = self.origin_version
 
-    async def load(self, force: bool = False) -> bool:
-        """加载卡池数据，返回是否进行了下载"""
+    def _load_operator_tables(self) -> dict[str, dict[str, Any]]:
+        return {
+            filename: json.loads(GACHA_DATA_PATH.joinpath(filename).read_text(encoding="utf-8"))
+            for filename in self.OPERATOR_TABLE_FILES
+        }
+
+    @staticmethod
+    def _build_operator_catalog(
+        tables: dict[str, dict[str, Any]],
+        metadata_snapshot: OperatorMetadataSnapshot | None,
+    ) -> OperatorCatalog:
+        return OperatorCatalog.from_game_tables(
+            tables["character_table.json"],
+            tables["char_patch_table.json"],
+            tables["uniequip_table.json"],
+            tables["handbook_info_table.json"],
+            tables["handbook_team_table.json"],
+            metadata_snapshot,
+        )
+
+    @staticmethod
+    def _load_operator_metadata() -> OperatorMetadataSnapshot | None:
+        if not OPERATOR_METADATA_PATH.exists():
+            return None
+        try:
+            return OperatorMetadataSnapshot(**json.loads(OPERATOR_METADATA_PATH.read_text(encoding="utf-8")))
+        except (OSError, ValueError, json.JSONDecodeError) as e:
+            logger.warning(f"加载干员筛选元数据失败，将尝试重新获取: {e}")
+            return None
+
+    @staticmethod
+    def _write_operator_metadata(snapshot: OperatorMetadataSnapshot) -> None:
+        OPERATOR_METADATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+        temporary_path = OPERATOR_METADATA_PATH.with_suffix(".tmp")
+        try:
+            temporary_path.write_text(
+                json.dumps(
+                    model_dump(snapshot),
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                    default=_json_default,
+                ),
+                encoding="utf-8",
+            )
+            os.replace(temporary_path, OPERATOR_METADATA_PATH)
+        finally:
+            temporary_path.unlink(missing_ok=True)
+
+    async def _fetch_prts_operator_rows(self) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        offset = 0
+        try:
+            async with httpx.AsyncClient(
+                timeout=30,
+                headers={"User-Agent": "nonebot-plugin-skland operator metadata updater"},
+            ) as client:
+                while True:
+                    response = await client.get(
+                        self.PRTS_API_URL,
+                        params={
+                            "action": "cargoquery",
+                            "format": "json",
+                            "tables": "chara,chara_extra_info",
+                            "fields": (
+                                "chara.charId=char_id,chara.subProfession=branch,"
+                                "chara_extra_info.sex=gender,chara_extra_info.race=race"
+                            ),
+                            "join_on": "chara._pageName=chara_extra_info._pageName",
+                            "where": "chara.charIndex>0",
+                            "limit": self.PRTS_PAGE_SIZE,
+                            "offset": offset,
+                        },
+                    )
+                    response.raise_for_status()
+                    page = response.json().get("cargoquery") or []
+                    rows.extend(page)
+                    if len(page) < self.PRTS_PAGE_SIZE:
+                        break
+                    offset += self.PRTS_PAGE_SIZE
+        except (httpx.HTTPError, ValueError, TypeError) as e:
+            raise RequestException(f"获取 PRTS 干员筛选元数据失败: {type(e).__name__}: {e}")
+        if not rows:
+            raise RequestException("获取 PRTS 干员筛选元数据失败: 返回数据为空")
+        return rows
+
+    def _validate_operator_metadata(
+        self,
+        snapshot: OperatorMetadataSnapshot,
+        tables: dict[str, dict[str, Any]],
+    ) -> None:
+        catalog = self._build_operator_catalog(tables, snapshot)
+        official_ids = {entry.char_id for entry in catalog.entries}
+        metadata_ids = set(snapshot.by_id)
+        matched_count = len(official_ids.intersection(metadata_ids))
+        minimum_count = max(1, int(len(official_ids) * 0.75))
+        if matched_count < minimum_count:
+            raise RequestException(f"PRTS 干员筛选元数据覆盖率过低: {matched_count}/{len(official_ids)}")
+
+        branch_names: dict[str, str] = {}
+        for entry in catalog.entries:
+            metadata = snapshot.by_id.get(entry.char_id)
+            if not metadata or not metadata.branch_name or not entry.sub_profession_id:
+                continue
+            previous = branch_names.setdefault(entry.sub_profession_id, metadata.branch_name)
+            if previous != metadata.branch_name:
+                raise RequestException(
+                    f"PRTS 职业分支名称冲突: {entry.sub_profession_id} -> {previous}/{metadata.branch_name}"
+                )
+
+    async def _refresh_operator_metadata(
+        self,
+        tables: dict[str, dict[str, Any]],
+    ) -> OperatorMetadataSnapshot:
+        try:
+            snapshot = OperatorMetadataSnapshot.from_prts_rows(await self._fetch_prts_operator_rows())
+            self._validate_operator_metadata(snapshot, tables)
+        except ValueError as e:
+            raise RequestException(f"校验 PRTS 干员筛选元数据失败: {e}")
+        self._write_operator_metadata(snapshot)
+        logger.info(f"✅ 干员筛选元数据更新完成，共 {len(snapshot.operators)} 条")
+        return snapshot
+
+    def load_operator_catalog(self) -> OperatorCatalog:
+        try:
+            tables = self._load_operator_tables()
+            self.operator_catalog = self._build_operator_catalog(tables, self._load_operator_metadata())
+        except (OSError, ValueError, KeyError, json.JSONDecodeError) as e:
+            raise RequestException(f"加载干员目录失败，请尝试同步游戏数据: {e}")
+        return self.operator_catalog
+
+    async def load(self, force: bool = False, refresh_metadata: bool = False) -> bool:
+        """加载卡池和干员目录数据，返回是否更新了本地数据。"""
         from .schemas import CharTable, GachaTable
 
         await self.get_version()
@@ -76,7 +226,6 @@ class GachaTableData:
             self._update_version_file()
 
         downloaded = False
-
         if force:
             logger.info("正在重新下载卡池数据...")
             await self.download_game_data()
@@ -98,7 +247,18 @@ class GachaTableData:
         self.gacha_details = []
 
         try:
-            char_json = json.loads(GACHA_DATA_PATH.joinpath("character_table.json").read_text(encoding="utf-8"))
+            tables = self._load_operator_tables()
+            metadata_snapshot = self._load_operator_metadata()
+            metadata_updated = False
+            if force or refresh_metadata or downloaded or metadata_snapshot is None:
+                try:
+                    metadata_snapshot = await self._refresh_operator_metadata(tables)
+                    metadata_updated = True
+                except RequestException as e:
+                    fallback = "旧缓存" if metadata_snapshot is not None else "官方档案数据"
+                    logger.warning(f"干员筛选元数据更新失败，继续使用{fallback}: {e}")
+
+            char_json = tables["character_table.json"]
             for char_id, data in char_json.items():
                 char_table = CharTable(**data)
                 char_table.char_id = char_id
@@ -106,16 +266,13 @@ class GachaTableData:
 
             gacha_json = json.loads(GACHA_DATA_PATH.joinpath("gacha_table.json").read_text(encoding="utf-8"))
             self.gacha_table = [GachaTable(**item) for item in gacha_json.get("gachaPoolClient", [])]
-
+            self.operator_catalog = self._build_operator_catalog(tables, metadata_snapshot)
             await self.get_gacha_details()
-            from .roster import load_catalog
-
-            load_catalog.cache_clear()
-        except (json.JSONDecodeError, FileNotFoundError, KeyError) as e:
+        except (OSError, ValueError, json.JSONDecodeError, FileNotFoundError, KeyError) as e:
             logger.error(f"加载卡池数据失败: {type(e).__name__}: {e}")
             raise RequestException(f"加载卡池数据失败，请尝试删除数据目录后重新启动: {e}")
 
-        return downloaded
+        return downloaded or metadata_updated
 
 
 class EfGachaPoolTableData:

@@ -4,7 +4,6 @@ from pydantic import AnyUrl as Url
 from nonebot_plugin_htmlrender import template_to_pic
 
 from .model import Character
-from .roster import RosterCard
 from .config import RES_DIR, TEMPLATES_DIR, config
 from .schemas import (
     Clue,
@@ -13,6 +12,7 @@ from .schemas import (
     RogueData,
     PlayerBase,
     EndfieldCard,
+    OperatorRoster,
     GroupedGachaRecord,
     EfGroupedGachaRecord,
 )
@@ -39,20 +39,14 @@ from .filters import (
 
 async def render_operator_roster(
     *,
-    title: str,
-    status: Status,
-    tags: list[str],
-    cards: list[RosterCard],
+    props: OperatorRoster,
     background_image: str | Url | None,
 ) -> bytes:
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),
         template_name="operator_roster.html.jinja2",
         templates={
-            "title": title,
-            "status": status,
-            "tags": tags,
-            "cards": cards,
+            "props": props,
             "background_image": background_image,
         },
         pages={

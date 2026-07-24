@@ -137,7 +137,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 |        `skland__argot_expire`        |  否   |    `300`    |          暗语消息过期时间（秒）           |
 |      `skland__gacha_render_max`      |  否   |    `30`     | 明日方舟抽卡记录单图渲染上限（单位:卡池） |
 |    `skland__ef_gacha_render_max`     |  否   |     `5`     |      终末地抽卡记录单图渲染卡池上限       |
-|     `skland__roster_render_max`     |  否   |    `20`     |     干员盒/图鉴单图渲染干员数量上限      |
+|     `skland__roster_render_max`     |  否   |    `16`     |     干员盒/图鉴单图渲染干员数量上限      |
 |  `skland__roster_render_timeout`   |  否   |  `180000`   |      干员盒/图鉴截图超时时间（毫秒）      |
 
 > [!TIP]
@@ -263,7 +263,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | 指令 | 权限 | 说明 |
 | --- | --- | --- |
 | `skland box [@某人\|QQ]` | 已绑定 | 查询已拥有干员（Half 半身像长图） |
-| `skland book [@某人\|QQ]` | 已绑定 | 查询干员图鉴（未拥有灰显；已拥有用玩家皮肤） |
+| `skland box --book [@某人\|QQ]` | 已绑定 | 查询干员图鉴（未拥有灰显；已拥有用玩家皮肤） |
 
 **筛选（默认仅 6 星，按实装新→旧）：**
 
@@ -271,11 +271,16 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | --- | --- |
 | `-r/--rarity` | 稀有度：`6`（默认）/ `5,6` / `4-6` / `all` |
 | `-p/--profession` | 职业：`近卫` / `先锋,医疗` 等 |
-| `-n/--name` | 名称模糊筛选 |
+| `-b/--branch` | 职业分支：`收割者` / `收割者,解放者` 等 |
+| `--position` | 部署位置：`近战位` / `远程位` |
+| `--gender` | 性别：`男` / `女` / `其他` |
+| `-f/--faction` | 势力：`罗德岛` / `炎` 等 |
+| `--race` | 种族：`萨卡兹` / `卡特斯,奇美拉` 等 |
+| `-n/--name` | 中文名、英文代号或角色 ID 模糊筛选 |
 
 **快捷指令：** `干员盒` `图鉴`
 
-页面使用玩家信息头部和 4 列干员卡，展示精英阶段、等级、潜能、技能与模组，图鉴中未拥有干员灰显。`skland__background_source=default` 时使用纯色 `#3F3F3F`，其他背景选项直接复用普通角色卡的背景解析；结果超过 `skland__roster_render_max` 时自动分图，QQClient 使用合并转发，其余平台逐图发送。
+页面使用玩家信息头部和 4 列干员卡，展示精英阶段、等级、潜能、技能与模组，`--book` 模式中未拥有干员灰显。同一筛选维度内为“或”，不同维度之间为“且”；`--book` 不会自动包含全部星级，完整图鉴需显式使用 `--book -r all`。职业、部署位与势力来自官方游戏数据，职业分支、性别和种族由本地 PRTS 元数据快照补充，网络失败时沿用旧快照或官方档案降级。`skland__background_source=default` 时使用纯色 `#3F3F3F`，其他背景选项直接复用普通角色卡的背景解析；结果超过 `skland__roster_render_max` 时自动分图，QQClient 使用合并转发，其余平台逐图发送。
 
 </details>
 
@@ -415,7 +420,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `终末地抽卡记录`     | `skland efgacha`              | 终末地抽卡记录     |
 | `终末地抽卡更新`     | `skland efgacha -u`           | 拉取最新抽卡数据   |
 | `干员盒`             | `skland box`                  | 已拥有干员查询     |
-| `图鉴`               | `skland book`                 | 干员图鉴查询       |
+| `图鉴`               | `skland box --book`           | 干员图鉴查询       |
 
 </details>
 

@@ -24,6 +24,7 @@ DATA_ROUTES = [
     "gamedata/excel/handbook_team_table.json",
 ]
 GACHA_DATA_PATH = DATA_DIR / "gamedata" / "excel"
+OPERATOR_METADATA_PATH = DATA_DIR / "operator_metadata.json"
 
 
 class CustomSource(BaseModel):

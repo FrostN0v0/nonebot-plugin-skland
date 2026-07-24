@@ -279,26 +279,30 @@ async def _(
     target: Match[At | int],
     rarities: Match[str],
     professions: Match[str],
+    branches: Match[str],
+    positions: Match[str],
+    genders: Match[str],
+    factions: Match[str],
+    races: Match[str],
     name: Match[str],
     bot: Bot,
+    result: Arparma,
 ):
-    """明日方舟干员盒查询"""
+    """明日方舟干员盒与图鉴查询"""
     from .commands.box import box_handler
 
-    await box_handler(session, user_session, target, rarities, professions, name, bot)
-
-
-@skland.assign("book")
-async def _(
-    session: async_scoped_session,
-    user_session: UserSession,
-    target: Match[At | int],
-    rarities: Match[str],
-    professions: Match[str],
-    name: Match[str],
-    bot: Bot,
-):
-    """明日方舟干员图鉴查询"""
-    from .commands.box import book_handler
-
-    await book_handler(session, user_session, target, rarities, professions, name, bot)
+    await box_handler(
+        session,
+        user_session,
+        target,
+        rarities,
+        professions,
+        branches,
+        positions,
+        genders,
+        factions,
+        races,
+        name,
+        bot,
+        book=result.find("box.book"),
+    )

@@ -132,6 +132,7 @@ skland_command = Alconna(
     Subcommand(
         "box",
         Args["target?#目标", At | int],
+        Option("--book", help_text="显示完整图鉴，未拥有干员灰显"),
         Option(
             "-r|--rarity|rarity",
             Args["rarities", str],
@@ -142,24 +143,13 @@ skland_command = Alconna(
             Args["professions", str],
             help_text="职业筛选，例 近卫 / 先锋,医疗",
         ),
+        Option("-b|--branch|branch", Args["branches", str], help_text="职业分支筛选"),
+        Option("--position|position", Args["positions", str], help_text="部署位置筛选"),
+        Option("--gender|gender", Args["genders", str], help_text="性别筛选"),
+        Option("-f|--faction|faction", Args["factions", str], help_text="势力筛选"),
+        Option("--race|race", Args["races", str], help_text="种族筛选"),
         Option("-n|--name|name", Args["name", str], help_text="名称模糊筛选"),
-        help_text="明日方舟干员盒查询（仅已拥有）",
-    ),
-    Subcommand(
-        "book",
-        Args["target?#目标", At | int],
-        Option(
-            "-r|--rarity|rarity",
-            Args["rarities", str],
-            help_text="稀有度筛选，默认6；例 6 / 5,6 / 4-6 / all",
-        ),
-        Option(
-            "-p|--profession|profession",
-            Args["professions", str],
-            help_text="职业筛选，例 近卫 / 先锋,医疗",
-        ),
-        Option("-n|--name|name", Args["name", str], help_text="名称模糊筛选"),
-        help_text="明日方舟干员图鉴（未拥有灰显）",
+        help_text="明日方舟干员盒与图鉴查询",
     ),
     namespace=alc_config.namespaces["skland"],
     meta=CommandMeta(

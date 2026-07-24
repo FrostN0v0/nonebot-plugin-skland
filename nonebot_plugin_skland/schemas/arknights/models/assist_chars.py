@@ -1,10 +1,13 @@
-from urllib.parse import quote
-
-from nonebot import logger
 from pydantic import BaseModel
 
 from .base import Equip
-from ....config import RES_DIR, CACHE_DIR
+from ....filters import (
+    ark_elite_icon_url,
+    ark_skill_icon_url,
+    ark_skin_portrait_url,
+    ark_uniequip_icon_url,
+    ark_potential_icon_url,
+)
 
 
 class AssistChar(BaseModel):
@@ -36,41 +39,26 @@ class AssistChar(BaseModel):
 
     @property
     def portrait(self) -> str:
-        portrait_id = self.skinId
-        for symbol in ["@", "#"]:
-            if symbol in self.skinId:
-                portrait_id = self.skinId.replace(symbol, "_", 1)
-                break
-        img_path = CACHE_DIR / "portrait" / f"{portrait_id}.png"
-        if not img_path.exists():
-            encoded_id = quote(self.skinId, safe="")
-            img_path = f"https://web.hycdn.cn/arknights/game/assets/char_skin/portrait/{encoded_id}.png"
-            logger.debug(f"Portrait not found locally, using URL: {img_path}")
-            return img_path
-        return img_path.as_uri()
+        return ark_skin_portrait_url(self.skinId)
 
     @property
     def potential(self) -> str:
-        img_path = RES_DIR / "images" / "ark_card" / "potential" / f"potential_{self.potentialRank}.png"
-        return img_path.as_uri()
+        return ark_potential_icon_url(self.potentialRank)
 
     @property
     def skill(self) -> str:
-        img_path = CACHE_DIR / "skill" / f"skill_icon_{self.skillId}.png"
-        if not img_path.exists():
-            encoded_id = quote(self.skillId, safe="")
-            img_path = f"https://web.hycdn.cn/arknights/game/assets/char_skill/{encoded_id}.png"
-            logger.debug(f"Skill icon not found locally, using URL: {img_path}")
-            return img_path
-        return img_path.as_uri()
+        return ark_skill_icon_url(self.skillId)
 
     @property
     def evolve(self) -> str:
-        img_path = RES_DIR / "images" / "ark_card" / "elite" / f"elite_{self.evolvePhase}.png"
-        return img_path.as_uri()
+        return ark_elite_icon_url(self.evolvePhase)
 
 
 class Equipment(BaseModel):
     id: str
     name: str
     typeIcon: str
+
+    @property
+    def icon(self) -> str:
+        return ark_uniequip_icon_url(self.typeIcon)

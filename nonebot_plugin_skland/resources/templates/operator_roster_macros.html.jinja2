@@ -72,10 +72,10 @@
 {% endmacro %}
 
 {% macro operator_roster_module(module) %}
-<div class="relative size-6 overflow-hidden rounded-[5px] bg-[#080808]/45 outline-2 outline-white/45{% if module.locked %} grayscale brightness-50{% endif %}">
+<div class="relative size-8 overflow-hidden rounded-[5px] bg-[#080808]/45 outline-2 outline-white/45{% if module.locked %} grayscale brightness-50{% endif %}">
   <img class="size-full object-contain" src="{{ module.icon }}" alt="" />
   {% if not module.locked and module.level > 0 %}
-  <span class="absolute top-0 right-0 flex size-[9px] items-center justify-center rounded-tr-[5px] bg-[#080808]/80 font-[Bender] text-[7px] leading-none font-bold text-white">
+  <span class="absolute top-0 right-0 flex size-[11px] items-center justify-center rounded-tr-[5px] bg-[#080808]/80 font-[Bender] text-[8px] leading-none font-bold text-white">
     {{ module.level }}
   </span>
   {% endif %}
@@ -108,14 +108,14 @@
   </div>
 
   <div class="relative -mt-[9px] flex min-h-[42px] items-end justify-end py-[2px] pr-1 pl-[44px]">
-    <div class="absolute inset-0 z-[3] bg-[#1B1B1B]/80"></div>
+    <div class="absolute h-full inset-0 z-1 bg-[#1B1B1B]/80"></div>
     <div class="relative z-[8] max-h-10 overflow-hidden text-right font-[Akrobat] leading-5 font-bold text-white [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [text-shadow:0_1px_4px_#000] break-all{% if card.name|length > 6 %} text-[13px]{% else %} text-base{% endif %}">
       {{ card.name }}
     </div>
   </div>
 
-  <img class="pointer-events-none absolute top-[171px] left-0 z-2 h-[119px] w-full object-cover" src="{{ card.light }}" alt="" />
-  <img class="pointer-events-none absolute top-[205px] left-0 z-[4] h-[100px] w-full object-cover" src="{{ card.lh }}" alt="" />
+  <img class="pointer-events-none absolute top-[171px] left-0 z-2 h-[119px] w-full object-cover" src="{{ card.light }}" alt=""{% if card.rarity in (0, 2, 3, 4) %} style="clip-path: polygon(0 0, 100% 0, 100% 100%, 41px 100%, 0 100px);"{% endif %} />
+  <img class="pointer-events-none absolute top-[205px] left-0 z-3 h-[100px] w-full object-cover" src="{{ card.lh }}" alt="" />
 
   {% if card.class_icon %}
   <div class="absolute top-[6px] left-[8px] z-[6] flex size-[19px] items-center justify-center bg-[#444444] outline-[0.5px] outline-white/80">
@@ -125,7 +125,7 @@
   <img class="absolute top-[5px] left-[26px] z-[6] h-[19px] w-[67px] object-contain object-left" src="{{ card.rarity_icon }}" alt="" />
 
   {% if card.modules %}
-  <div class="absolute top-[3px] right-[2px] z-[6] flex w-6 flex-col gap-0.5">
+  <div class="absolute top-[3px] right-[2px] z-[6] flex w-8 flex-col gap-0.5">
     {% for module in card.modules[:2] %}
     {{ operator_roster_module(module) }}
     {% endfor %}

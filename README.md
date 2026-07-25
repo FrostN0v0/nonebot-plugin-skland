@@ -492,6 +492,13 @@ Bot: skland::skland 的快捷指令: "查战绩" 添加成功
 </details>
 
 <details>
+  <summary>🗃️ 方舟干员 Box</summary>
+
+![方舟干员box](docs/example_4.png)
+
+</details>
+
+<details>
   <summary>🫖 肉鸽战绩</summary>
 
 ![肉鸽战绩](docs/example_2.png)

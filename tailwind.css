@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "./nonebot_plugin_skland/resources/templates";
 
 @layer utilities {
   .avater-shadow {

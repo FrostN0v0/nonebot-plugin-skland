@@ -1,4 +1,5 @@
 import json
+import re
 from urllib.parse import quote
 from datetime import datetime, timedelta
 
@@ -117,6 +118,30 @@ def ark_skin_portrait_url(skin_id: str) -> str:
         return image_path.as_uri()
     encoded_id = quote(skin_id, safe="")
     return f"https://web.hycdn.cn/arknights/game/assets/char_skin/portrait/{encoded_id}.png"
+
+
+def ark_skin_illust_filename(skin_id: str) -> str:
+    """Map API skinId to ArknightsGameResource full-body art filename."""
+    normalized = skin_id.replace("@", "#")
+    if re.fullmatch(r"char_\d+_[^_#]+#\d+", normalized):
+        return f"{normalized.replace('#', '_')}b.png"
+    return f"{normalized}b.png"
+
+
+def ark_skin_illust_url(skin_id: str) -> str:
+    """Full-body skin illustration URL (local cache preferred)."""
+    from .config import config
+
+    filename = ark_skin_illust_filename(skin_id)
+    image_path = CACHE_DIR / "skin" / filename
+    if image_path.exists():
+        return image_path.as_uri()
+
+    encoded_name = quote(filename, safe="")
+    raw_url = f"https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/skin/{encoded_name}"
+    if config.github_proxy_url:
+        return f"{config.github_proxy_url}{raw_url}"
+    return raw_url
 
 
 def ark_skill_icon_url(skill_id: str) -> str:

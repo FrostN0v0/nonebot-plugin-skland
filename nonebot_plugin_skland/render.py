@@ -58,6 +58,62 @@ async def render_operator_roster(
     )
 
 
+def compare_card_scale(count: int) -> float:
+    """Fit n operator cards into the 1920x1080 compare frame."""
+    count = max(1, count)
+    padding_x = 80
+    gap = 24
+    available_w = 1920 - padding_x * 2 - gap * (count - 1)
+    scale_w = (available_w / count) / 136
+    # 314 visual card + ~20px for the name bar that was previously clipped
+    card_base_height = 334
+    available_h = 1080 - 260
+    scale_h = available_h / card_base_height
+    return min(scale_w, scale_h, 2.4)
+
+
+async def render_compare_cover(players) -> bytes:
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="compare_cover.html.jinja2",
+        templates={
+            "players": players,
+            "count": len(players),
+        },
+        pages={
+            "viewport": {"width": 1920, "height": 1080},
+            "base_url": f"file://{TEMPLATES_DIR}",
+        },
+        device_scale_factor=1,
+        screenshot_timeout=config.roster_render_timeout,
+    )
+
+
+async def render_compare_operator(*, players, cards, operator_name: str) -> bytes:
+    count = len(players)
+    card_scale = compare_card_scale(count)
+    card_base_height = 334
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="compare_operator.html.jinja2",
+        templates={
+            "players": players,
+            "cards": cards,
+            "count": count,
+            "operator_name": operator_name,
+            "card_scale": card_scale,
+            "card_gap": 24,
+            "card_base_height": card_base_height,
+        },
+        pages={
+            "viewport": {"width": 1920, "height": 1080},
+            "base_url": f"file://{TEMPLATES_DIR}",
+        },
+        device_scale_factor=1,
+        screenshot_timeout=config.roster_render_timeout,
+    )
+
+
 async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),

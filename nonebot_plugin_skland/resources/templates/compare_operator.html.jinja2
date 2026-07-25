@@ -1,0 +1,68 @@
+{% from 'operator_roster_macros.html.jinja2' import operator_roster_card %}
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ operator_name }} Compare</title>
+  <style>
+    {% include "index.css" %}
+  </style>
+</head>
+<body class="m-0 overflow-hidden bg-[#111111] font-sans">
+  <main class="box-border flex h-[1080px] w-[1920px] flex-col bg-[linear-gradient(180deg,#2a2a2a_0%,#1a1a1a_40%,#121212_100%)] px-10 pt-8 pb-6 text-white">
+    <header class="mb-4 flex shrink-0 items-end justify-between px-2">
+      <h1 class="m-0 font-[Akrobat] text-3xl font-bold tracking-wide text-white/90">
+        {{ operator_name }}
+      </h1>
+      <span class="font-[Bender] text-sm text-white/50">Operator Training Compare</span>
+    </header>
+
+    <section
+      class="mb-6 flex shrink-0 flex-nowrap items-end justify-center"
+      style="gap: {{ card_gap }}px;"
+    >
+      {% for player in players %}
+      <div class="relative flex flex-col items-center" style="width: {{ (136 * card_scale)|round|int }}px;">
+        <div class="relative">
+          <img
+            class="object-cover shadow-[0_0_0_3px_#FBFBF3,0_6px_14px_rgba(0,0,0,0.45)]"
+            style="width: {{ (96 * card_scale)|round|int }}px; height: {{ (96 * card_scale)|round|int }}px;"
+            src="{{ player.status.avatar.url }}"
+            alt="{{ player.status.name }}"
+          />
+          <div
+            class="absolute -top-3 -right-3 flex items-center justify-center rounded-full bg-[#080309]/85 ring-[3px] ring-[#f0f0f0]/65"
+            style="width: {{ (40 * card_scale)|round|int }}px; height: {{ (40 * card_scale)|round|int }}px;"
+          >
+            <span class="font-[Akrobat] font-bold text-[#FBFBF3]" style="font-size: {{ (16 * card_scale)|round|int }}px;">
+              {{ player.status.level }}
+            </span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </section>
+
+    <section
+      class="flex flex-1 items-start justify-center overflow-visible"
+      style="gap: {{ card_gap }}px;"
+    >
+      {% for card in cards %}
+      <div
+        class="relative shrink-0 overflow-visible"
+        style="width: {{ (136 * card_scale)|round|int }}px; height: {{ (card_base_height * card_scale)|round|int }}px;"
+      >
+        <div
+          class="origin-top-left"
+          style="transform: scale({{ card_scale }}); width: 136px;"
+        >
+          {{ operator_roster_card(card) }}
+        </div>
+      </div>
+      {% endfor %}
+    </section>
+  </main>
+</body>
+</html>

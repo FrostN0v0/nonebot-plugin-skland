@@ -48,6 +48,14 @@ async def startup():
     skland.shortcut("方舟抽卡记录", {"command": "skland gacha -l 3", "fuzzy": True, "prefix": True})
     skland.shortcut("导入抽卡记录", {"command": "skland import", "fuzzy": True, "prefix": True})
     skland.shortcut(
+        "方舟干员练度对比",
+        {"command": "skland compare", "fuzzy": True, "prefix": True},
+    )
+    skland.shortcut(
+        "方舟干员 练度对比",
+        {"command": "skland compare", "fuzzy": True, "prefix": True},
+    )
+    skland.shortcut(
         "方舟干员",
         {"command": "skland box", "fuzzy": True, "prefix": True, "compact": False},
     )

@@ -163,6 +163,11 @@ skland_command = Alconna(
         Option("-n|--name|name", Args["name", str], help_text="名称模糊筛选"),
         help_text="明日方舟干员查询；可直接追加 6星、近卫、满潜、未拥有、练度等筛选词",
     ),
+    Subcommand(
+        "compare",
+        Args["targets", MultiVar(At | int, "+")],
+        help_text="明日方舟干员练度对比视频；需 @ 2-6 名已绑定用户",
+    ),
     namespace=alc_config.namespaces["skland"],
     meta=CommandMeta(
         description="通过森空岛查询游戏数据",

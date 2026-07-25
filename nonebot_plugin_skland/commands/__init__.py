@@ -11,6 +11,7 @@ from .bind import qrcode_handler as qrcode_handler
 from .gacha import import_handler as import_handler
 from .rogue import rginfo_handler as rginfo_handler
 from .endfield import efcard_handler as efcard_handler
+from .compare import compare_handler as compare_handler
 from .endfield import ef_sign_handler as ef_sign_handler
 from .char import char_update_handler as char_update_handler
 from .arksign import arksign_all_handler as arksign_all_handler

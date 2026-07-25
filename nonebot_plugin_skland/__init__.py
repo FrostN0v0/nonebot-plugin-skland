@@ -312,3 +312,15 @@ async def _(
         sort,
         bot,
     )
+
+
+@skland.assign("compare")
+async def _(
+    session: async_scoped_session,
+    user_session: UserSession,
+    targets: Match[tuple[At | int, ...]],
+):
+    """明日方舟干员练度对比视频"""
+    from .commands.compare import compare_handler
+
+    await compare_handler(session, user_session, targets)

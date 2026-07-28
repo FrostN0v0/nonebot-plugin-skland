@@ -8,19 +8,14 @@ from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_alconna import At, Match, CustomNode, UniMessage
 
-from ..api import SklandAPI
 from ..config import config
+from ..player_data import get_ark_card
 from .card import check_user_character
 from ..exception import RequestException
 from ..data_source import gacha_table_data
 from ..render import render_operator_roster
-from ..schemas import CRED, OperatorCard, OperatorRoster, OperatorRosterQuery
-from ..utils import (
-    send_reaction,
-    get_background_image,
-    refresh_cred_token_if_needed,
-    refresh_access_token_if_needed,
-)
+from ..utils import send_reaction, get_background_image
+from ..schemas import OperatorCard, OperatorRoster, OperatorRosterQuery
 
 
 async def _resolve_target_id(user_session: UserSession, target: Match[At | int]) -> int:
@@ -67,12 +62,6 @@ def _build_query(
         name=_match_value(name),
         sort=_match_value(sort),
     )
-
-
-@refresh_cred_token_if_needed
-@refresh_access_token_if_needed
-async def _fetch_ark_card(user, uid: str):
-    return await SklandAPI.ark_card(CRED(cred=user.cred, token=user.cred_token), uid)
 
 
 async def _get_roster_background_image() -> str | Url | None:
@@ -208,7 +197,8 @@ async def box_handler(
     user, ark_character = await check_user_character(target_id, session)
     send_reaction(user_session, "processing")
 
-    info = await _fetch_ark_card(user, str(ark_character.uid))
+    info = await get_ark_card(user, ark_character)
+    await session.commit()
     if not info:
         return
 
@@ -232,4 +222,3 @@ async def box_handler(
         bot=bot,
     )
     send_reaction(user_session, "done")
-    await session.commit()

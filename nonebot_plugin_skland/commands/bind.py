@@ -12,6 +12,7 @@ from nonebot_plugin_alconna import Match, Arparma, MsgTarget, UniMessage
 
 from ..model import SkUser
 from ..schemas import CRED
+from ..player_data import ark_card_data
 from ..exception import RequestException
 from ..api import SklandAPI, SklandLoginAPI
 from ..utils import send_reaction, get_characters_and_bind
@@ -155,6 +156,7 @@ async def unbind_handler(
     await delete_characters(user, session)
     await delete_user(user, session)
     await session.commit()
+    await ark_card_data.invalidate_user(user.id)
 
     send_reaction(user_session, "done")
     await UniMessage("解绑成功，已清除所有绑定数据").finish(at_sender=True)

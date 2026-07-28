@@ -81,6 +81,10 @@ async def bind_characters(user: SkUser, session: async_scoped_session):
                     )
                 )
 
+    from .player_data import ark_card_data
+
+    await ark_card_data.invalidate_user(user.id)
+
 
 async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
     """获取并合并角色绑定信息，并提交到数据库"""

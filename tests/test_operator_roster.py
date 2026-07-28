@@ -772,6 +772,17 @@ def test_roster_config_defaults(app):
     from nonebot_plugin_skland.config import ScopedConfig
 
     assert ScopedConfig().roster_render_max == 16
+    assert ScopedConfig().ark_card_cache_ttl == 120
+    assert ScopedConfig().ark_card_cache_max_entries == 64
+
+
+def test_ark_card_cache_config_accepts_custom_values(app):
+    from nonebot_plugin_skland.config import ScopedConfig
+
+    configured = ScopedConfig(ark_card_cache_ttl=300, ark_card_cache_max_entries=128)
+
+    assert configured.ark_card_cache_ttl == 300
+    assert configured.ark_card_cache_max_entries == 128
 
 
 @pytest.mark.asyncio

@@ -43,6 +43,7 @@ nonebot_plugin_skland/
 ├── model.py             # nonebot-plugin-orm 模型：SkUser、Character、GachaRecord
 ├── db_handler.py        # 数据库查询、更新、删除与抽卡记录存取函数
 ├── data_source.py       # 游戏数据下载、干员目录构建与本地元数据缓存
+├── player_data.py       # 玩家实时数据短期缓存：ArkCard TTL/LRU/single-flight
 ├── download.py          # GitHub 资源下载器与版本检查
 ├── render.py            # HTML 模板渲染为图片的函数
 ├── filters.py           # Jinja2 过滤器与可复用图片资源 URL 函数
@@ -172,6 +173,8 @@ class Config(BaseModel):
 - `endfield_background_simple`: 是否默认启用终末地角色卡片简化背景。
 - `rogue_background_source`: 肉鸽背景来源，支持 `default` / `rogue` / `Lolicon` / `CustomSource`。
 - `argot_expire`: 暗语缓存过期时间（秒）。
+- `ark_card_cache_ttl`: 玩家角色卡内存缓存时间（秒），默认 120。
+- `ark_card_cache_max_entries`: 玩家角色卡内存缓存角色数量上限，默认 64。
 - `gacha_render_max`: 明日方舟抽卡记录单图渲染卡池上限。
 - `ef_gacha_render_max`: 终末地抽卡记录单图渲染各类别卡池上限。
 - `roster_render_max`: 方舟干员单图渲染数量上限，默认 16。
@@ -248,6 +251,15 @@ class Config(BaseModel):
 
 - `UnauthorizedException` 通常表示 `cred_token` 失效，使用 `SklandLoginAPI.refresh_token(user.cred)` 刷新。
 - `LoginException` 通常表示 `cred` 失效，若有 `access_token`，通过 grant code 重新获取 cred。
+
+
+### 玩家角色卡短期缓存
+
+- `player_data.py` 的 `ArkCardDataSource` 为 `commands/card.py`、`commands/box.py` 和 `commands/gacha.py` 统一缓存无副作用的 `ArkCard` API 读取；`get_ark_card()` 在每个命令请求上下文独立执行 token 刷新。
+- 缓存按森空岛账号、应用、服务器、角色 UID 与 role ID 隔离，使用绝对 TTL、固定容量 LRU 和同角色 single-flight；命中不会延长过期时间。
+- 默认 TTL 为 120 秒、容量为 64，可通过 `ark_card_cache_ttl` 和 `ark_card_cache_max_entries` 配置；只缓存成功解析的 `ArkCard`，异常与空结果不缓存。
+- 三个命令在读取完成后、任何提前返回或渲染发送前提交 session，确保自动刷新的 `cred` / `cred_token` 不因后续空结果或发送失败而回滚。
+- 角色绑定同步或解绑后会失效对应用户的缓存；旧的并发请求完成后不会重新写入已失效代际。
 
 ### 游戏数据与资源
 

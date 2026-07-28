@@ -8,13 +8,13 @@ from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_alconna import At, Match, UniMessage
 from nonebot_plugin_argot import Text, Argot, Image, ArgotEvent, on_argot
 
-from ..api import SklandAPI
+from ..schemas import Clue
 from ..config import config
-from ..schemas import CRED, Clue
 from ..model import SkUser, Character
+from ..player_data import get_ark_card
 from ..render import render_ark_card, render_clue_board
+from ..utils import send_reaction, get_background_image
 from ..db_handler import get_default_arknights_character
-from ..utils import send_reaction, get_background_image, refresh_cred_token_if_needed, refresh_access_token_if_needed
 
 
 async def check_user_character(user_id: int, session: async_scoped_session) -> tuple[SkUser, Character]:
@@ -35,11 +35,6 @@ async def card_handler(
 ):
     """角色卡片查询"""
 
-    @refresh_cred_token_if_needed
-    @refresh_access_token_if_needed
-    async def get_character_info(user: SkUser, uid: str):
-        return await SklandAPI.ark_card(CRED(cred=user.cred, token=user.cred_token), uid)
-
     if target.available:
         target_platform_id = target.result.target if isinstance(target.result, At) else target.result
         target_id = (await get_user(user_session.platform, str(target_platform_id))).id
@@ -49,7 +44,8 @@ async def card_handler(
     user, ark_characters = await check_user_character(target_id, session)
     send_reaction(user_session, "processing")
 
-    info = await get_character_info(user, str(ark_characters.uid))
+    info = await get_ark_card(user, ark_characters)
+    await session.commit()
     if not info:
         return
     background = await get_background_image("ark")
@@ -72,7 +68,6 @@ async def card_handler(
         )
     send_reaction(user_session, "done")
     await msg.send(reply_to=True)
-    await session.commit()
 
 
 @on_argot("clue")

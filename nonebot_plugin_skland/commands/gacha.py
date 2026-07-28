@@ -9,7 +9,8 @@ from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_alconna import At, Match, CustomNode, UniMessage
 
 from ..config import config
-from ..schemas import CRED, GachaInfo
+from ..schemas import GachaInfo
+from ..player_data import get_ark_card
 from ..render import render_gacha_history
 from ..api import SklandAPI, SklandLoginAPI
 from ..model import SkUser, Character, GachaRecord
@@ -20,8 +21,6 @@ from ..utils import (
     get_all_gacha_records,
     heybox_data_to_record,
     import_heybox_gacha_data,
-    refresh_cred_token_if_needed,
-    refresh_access_token_if_needed,
 )
 
 
@@ -45,11 +44,6 @@ async def gacha_handler(
     bot: Bot,
 ):
     """查询明日方舟抽卡记录"""
-
-    @refresh_cred_token_if_needed
-    @refresh_access_token_if_needed
-    async def get_user_info(user: SkUser, uid: str):
-        return await SklandAPI.ark_card(CRED(cred=user.cred, token=user.cred_token), uid)
 
     if target.available:
         target_platform_id = target.result.target if isinstance(target.result, At) else target.result
@@ -103,7 +97,8 @@ async def gacha_handler(
     all_gacha_records = records + record_to_save
 
     gacha_data_grouped = group_gacha_records(all_gacha_records)
-    user_info = await get_user_info(user, character.uid)
+    user_info = await get_ark_card(user, character)
+    await session.commit()
     if not user_info:
         return
     gacha_limit = limit.result if limit.available else None

@@ -135,6 +135,8 @@ _✨ 通过森空岛查询游戏数据 ✨_
 | `skland__endfield_background_simple` |  否   |   `False`   |          终末地背景图片简化模式           |
 |  `skland__rogue_background_source`   |  否   |  `"rogue"`  |           肉鸽战绩背景图片来源            |
 |        `skland__argot_expire`        |  否   |    `300`    |          暗语消息过期时间（秒）           |
+|   `skland__ark_card_cache_ttl`    |  否   |    `120`    |       玩家角色卡短期缓存时间（秒）        |
+| `skland__ark_card_cache_max_entries` |  否   |    `64`     |       玩家角色卡缓存角色数量上限          |
 |      `skland__gacha_render_max`      |  否   |    `30`     | 明日方舟抽卡记录单图渲染上限（单位:卡池） |
 |    `skland__ef_gacha_render_max`     |  否   |     `5`     |      终末地抽卡记录单图渲染卡池上限       |
 |     `skland__roster_render_max`     |  否   |    `16`     |      方舟干员单图渲染数量上限       |

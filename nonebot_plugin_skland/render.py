@@ -1,10 +1,10 @@
 from datetime import datetime
 
 from pydantic import AnyUrl as Url
-from nonebot_plugin_htmlrender import template_to_pic
 
 from .model import Character
 from .config import RES_DIR, TEMPLATES_DIR, config
+from .image_cache import cached_template_to_pic as template_to_pic
 from .schemas import (
     Clue,
     Status,

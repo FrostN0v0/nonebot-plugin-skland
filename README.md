@@ -131,6 +131,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 |      `skland__github_proxy_url`      |  否   |    `""`     |              GitHub 代理 URL              |
 |        `skland__github_token`        |  否   |    `""`     |               GitHub Token                |
 |      `skland__check_res_update`      |  否   |   `False`   |         是否在启动时检查资源更新          |
+| `skland__ark_portrait_cache_enabled` |  否   |   `False`   |      是否按需缓存方舟干员半身图       |
 |     `skland__background_source`      |  否   | `"default"` |               背景图片来源                |
 | `skland__endfield_background_simple` |  否   |   `False`   |          终末地背景图片简化模式           |
 |  `skland__rogue_background_source`   |  否   |  `"rogue"`  |           肉鸽战绩背景图片来源            |
@@ -145,7 +146,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 > [!TIP]
 > 以上配置项均~~没什么用~~按需填写，GitHub Token 用于解决 fetch_file_list 接口到达免费调用上限，但不会有那么频繁的更新频率，99.98%的概率是用不上的。~~只是因为我开发测试的时候上限了，所以有了这项~~,
 >
-> 本插件所使用的`干员半身像`、`技能图标`等资源，均优先调用本地，不存在则从网络请求获取，所以本地资源更新非必要选项，按需填写，不想过多请求网络资源可以自动或指令手动更新下载本地资源。
+> 本插件所使用的`干员半身像`、`技能图标`等资源均优先调用本地，不存在时从网络请求。开启 `skland__ark_portrait_cache_enabled` 后，首次渲染仍直接使用远程方舟干员或皮肤半身图；Chromium 加载成功后会将该响应写入本地缓存，后续渲染优先读取本地。该过程不会额外请求图片或重新生成 HTML，接口直接返回的图片链接仍由浏览器访问。全量资源更新仍为可选项。
 
 ### background_source
 

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from nonebot import logger
 
 from .config import RES_DIR, CACHE_DIR
+from .image_cache import register_missing_image
 
 
 def format_timestamp(timestamp: float) -> str:
@@ -73,6 +74,7 @@ def charId_to_portraitUrl(charId: str) -> str:
         encoded_id = quote(charId, safe="")
         img_url = f"https://web.hycdn.cn/arknights/game/assets/char/portrait/{encoded_id}.png"
         logger.debug(f"Portrait not found locally, using URL: {img_url}")
+        register_missing_image(img_url, img_path)
         return img_url
     return img_path.as_uri()
 
@@ -116,7 +118,9 @@ def ark_skin_portrait_url(skin_id: str) -> str:
     if image_path.exists():
         return image_path.as_uri()
     encoded_id = quote(skin_id, safe="")
-    return f"https://web.hycdn.cn/arknights/game/assets/char_skin/portrait/{encoded_id}.png"
+    image_url = f"https://web.hycdn.cn/arknights/game/assets/char_skin/portrait/{encoded_id}.png"
+    register_missing_image(image_url, image_path)
+    return image_url
 
 
 def ark_skill_icon_url(skill_id: str) -> str:

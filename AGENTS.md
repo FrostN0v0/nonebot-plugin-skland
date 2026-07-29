@@ -44,6 +44,7 @@ nonebot_plugin_skland/
 ├── db_handler.py        # 数据库查询、更新、删除与抽卡记录存取函数
 ├── data_source.py       # 游戏数据下载、干员目录构建与本地元数据缓存
 ├── player_data.py       # 玩家实时数据短期缓存：ArkCard TTL/LRU/single-flight
+├── image_cache.py       # 方舟半身图模板缺失收集、并发下载与本地缓存
 ├── download.py          # GitHub 资源下载器与版本检查
 ├── render.py            # HTML 模板渲染为图片的函数
 ├── filters.py           # Jinja2 过滤器与可复用图片资源 URL 函数
@@ -169,6 +170,7 @@ class Config(BaseModel):
 - `github_proxy_url`: GitHub 代理 URL。
 - `github_token`: GitHub Token，用于缓解 GitHub API 限流。
 - `check_res_update`: 启动时是否检查并下载图片资源。
+- `ark_portrait_cache_enabled`: 是否在首次渲染时按需缓存可拼链的方舟干员/皮肤半身图，默认关闭。
 - `background_source`: 明日方舟/终末地卡片背景来源，支持 `default` / `Lolicon` / `random` / `CustomSource`。
 - `endfield_background_simple`: 是否默认启用终末地角色卡片简化背景。
 - `rogue_background_source`: 肉鸽背景来源，支持 `default` / `rogue` / `Lolicon` / `CustomSource`。
@@ -296,6 +298,7 @@ class Config(BaseModel):
 - 实装排序使用官方目录 `sort_id`，获取排序使用 `gainTime`；`all` 使用获取或练度排序时先排列已拥有干员，再将未拥有干员按实装顺序放在末尾。`unowned` 不允许潜能、获取或练度条件。
 - `schemas/arknights/game_data.py` 从官方数据构造稳定目录，并以 PRTS 快照补充职业分支中文名、性别和种族；阿米娅各职业形态保持独立身份。
 - `filters.py` 统一提供立绘、技能、潜能、精英阶段、职业、稀有度、模组及 Half 卡片装饰资源 URL。
+- `image_cache.py` 仅在 `ark_portrait_cache_enabled=True` 时登记 `char/portrait` 与 `char_skin/portrait` 拼链资源。首次 HTML 仍保留远程 URL，Chromium 正常并发加载；成功的 `requestfinished` 响应经校验后原子写入 `CACHE_DIR/portrait`，后续渲染由 URL helper 返回本地 URI。不会额外发起图片请求或重新生成 HTML，接口直接返回的图片 URL 不参与缓存。
 - `render.render_operator_roster()` 接收单个 `OperatorRoster`，固定 706px Playwright 视口、1.5 设备缩放和可配置截图超时。
 - `operator_roster.html.jinja2` 维护 706px、4 列固定网格；筛选标签支持自动换行，样式编译到 `resources/templates/index.css`。
 
@@ -379,6 +382,7 @@ uv run pytest -s tests/test_skland_api.py
 - 数据库测试使用内存 SQLite：`sqlite+aiosqlite://`。
 - `tests/test_ef_gacha_joint_pool.py` 覆盖终末地联合寻访分类、统计与模板渲染相关行为。
 - `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、分页发送与渲染参数。
+- `tests/test_image_cache.py` 覆盖配置开关、单次模板生成、浏览器半身图响应落盘、本地复用、未知 URL 跳过与失败响应忽略。
 - `tests/test_skland_api.py` 会调用真实接口；单独运行时使用 `uv run pytest -s tests/test_skland_api.py`，其中 `-s` 用于显示终端二维码输出；凭证优先级为：
   1. `tests/cred_cache.json`
   2. 环境变量 `SKLAND_TOKEN` 或 `SKLAND_CRED`

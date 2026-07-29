@@ -62,6 +62,8 @@ class ScopedConfig(BaseModel):
     """GitHub Token"""
     check_res_update: bool = False
     """启动时检查资源更新"""
+    ark_portrait_cache_enabled: bool = False
+    """Cache deterministic Arknights portrait images after first render."""
     background_source: Literal["default", "Lolicon", "random"] | CustomSource = "default"
     """背景图片来源"""
     endfield_background_simple: bool = False

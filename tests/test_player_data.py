@@ -53,6 +53,40 @@ async def test_ark_card_data_source_reuses_value_until_ttl(app, mocker):
 
 
 @pytest.mark.asyncio
+async def test_ark_card_data_source_recovers_after_loader_error(app, mocker):
+    from nonebot_plugin_skland.player_data import ArkCardDataSource
+
+    calls = 0
+    value = object()
+
+    async def load(_user, _character) -> Any:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("load failed")
+        return value
+
+    source = ArkCardDataSource(ttl=120, max_entries=64, loader=load)
+    user = mocker.Mock(id=1, user_id="account-1")
+    character = mocker.Mock(
+        app_code="arknights",
+        channel_master_id="server-1",
+        uid="role-1",
+        role_id="role-id-1",
+    )
+
+    with pytest.raises(RuntimeError, match="load failed"):
+        await source.get(user, character)
+
+    recovered = await source.get(user, character)
+    cached = await source.get(user, character)
+
+    assert recovered is value
+    assert cached is recovered
+    assert calls == 2
+
+
+@pytest.mark.asyncio
 async def test_ark_card_data_source_merges_concurrent_requests(app, mocker):
     from nonebot_plugin_skland.player_data import ArkCardDataSource
 

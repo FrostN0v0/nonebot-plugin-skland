@@ -8,7 +8,7 @@ from typing import Any, Literal
 from urllib.parse import urlsplit
 from contextvars import ContextVar
 from collections.abc import Iterator
-from contextlib import suppress, contextmanager
+from contextlib import suppress, nullcontext, contextmanager
 
 from nonebot import logger
 from playwright.async_api import Page
@@ -187,16 +187,9 @@ async def cached_template_to_pic(
             screenshot_timeout=screenshot_timeout,
         )
 
-    pending: set[PendingImage] = set()
-    if config.ark_portrait_cache_enabled:
-        with _collect_missing_images() as pending:
-            html = await template_to_html(
-                template_path=template_path,
-                template_name=template_name,
-                filters=filters,
-                **templates,
-            )
-    else:
+    empty_pending: set[PendingImage] = set()
+    collector = _collect_missing_images() if config.ark_portrait_cache_enabled else nullcontext(empty_pending)
+    with collector as pending:
         html = await template_to_html(
             template_path=template_path,
             template_name=template_name,
@@ -211,7 +204,8 @@ async def cached_template_to_pic(
         }
 
     html_template_path = f"file://{template_path}"
-    if pending or readiness == "resources":
+    requires_custom_renderer = bool(pending) or readiness == "resources"
+    if requires_custom_renderer:
         return await _html_to_pic_with_cache(
             html=html,
             pending=pending,

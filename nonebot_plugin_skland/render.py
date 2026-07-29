@@ -55,6 +55,9 @@ async def render_operator_roster(
         },
         device_scale_factor=1.5,
         screenshot_timeout=config.roster_render_timeout,
+        readiness="resources",
+        type=config.roster_render_format,
+        quality=config.roster_jpeg_quality if config.roster_render_format == "jpeg" else None,
     )
 
 

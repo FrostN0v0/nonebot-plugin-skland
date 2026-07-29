@@ -11,6 +11,9 @@
   </style>
 </head>
 <body class="m-0 bg-[#111111] font-sans">
+  {% if background_image %}
+  <img src="{{ background_image }}" style="position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none;" alt="" aria-hidden="true" />
+  {% endif %}
   <main
     class="relative box-border w-[706px] overflow-hidden bg-[#3F3F3F] bg-cover bg-center bg-no-repeat text-white"
     {% if background_image %}style="background-image: url('{{ background_image }}');"{% endif %}

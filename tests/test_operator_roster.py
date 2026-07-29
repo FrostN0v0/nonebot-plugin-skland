@@ -740,13 +740,21 @@ def test_box_command_parses_natural_and_advanced_filters(app, operator_catalog):
     assert not skland_command.parse("/skland book").matched
 
 
+@pytest.mark.parametrize(
+    ("image_format", "jpeg_quality", "expected_quality"),
+    [("jpeg", 87, 87), ("png", 87, None)],
+)
 @pytest.mark.asyncio
-async def test_roster_render_uses_props_and_configured_timeout(app, mocker, monkeypatch, operator_catalog):
+async def test_roster_render_uses_props_and_configured_timeout(
+    app, mocker, monkeypatch, operator_catalog, image_format, jpeg_quality, expected_quality
+):
     from nonebot_plugin_skland.config import config
     from nonebot_plugin_skland.render import render_operator_roster
     from nonebot_plugin_skland.schemas import OperatorRoster, OperatorRosterQuery
 
     monkeypatch.setattr(config, "roster_render_timeout", 321_000)
+    monkeypatch.setattr(config, "roster_render_format", image_format)
+    monkeypatch.setattr(config, "roster_jpeg_quality", jpeg_quality)
     render = mocker.patch(
         "nonebot_plugin_skland.render.template_to_pic",
         new=mocker.AsyncMock(return_value=b"image"),
@@ -763,6 +771,9 @@ async def test_roster_render_uses_props_and_configured_timeout(app, mocker, monk
     assert render.await_args.kwargs["screenshot_timeout"] == 321_000
     assert render.await_args.kwargs["template_name"] == "operator_roster.html.jinja2"
     assert render.await_args.kwargs["device_scale_factor"] == 1.5
+    assert render.await_args.kwargs["readiness"] == "resources"
+    assert render.await_args.kwargs["type"] == image_format
+    assert render.await_args.kwargs["quality"] == expected_quality
     assert render.await_args.kwargs["pages"]["viewport"]["width"] == 706
     assert render.await_args.kwargs["templates"]["props"] is roster
     assert render.await_args.kwargs["templates"]["background_image"] == "background.jpg"
@@ -772,6 +783,8 @@ def test_roster_config_defaults(app):
     from nonebot_plugin_skland.config import ScopedConfig
 
     assert ScopedConfig().roster_render_max == 16
+    assert ScopedConfig().roster_render_format == "jpeg"
+    assert ScopedConfig().roster_jpeg_quality == 90
     assert ScopedConfig().ark_card_cache_ttl == 120
     assert ScopedConfig().ark_card_cache_max_entries == 64
 

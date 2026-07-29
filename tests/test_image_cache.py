@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -40,21 +41,29 @@ class FakePage:
         self.requests = requests
         self.handlers: dict[str, list[Any]] = {}
         self.html = ""
+        self.goto_wait_until: str | None = None
+        self.wait_until = ""
+        self.evaluated_scripts: list[str] = []
 
     def on(self, event: str, handler: Any) -> None:
         self.handlers.setdefault(event, []).append(handler)
 
-    async def goto(self, url: str) -> None:
+    async def goto(self, url: str, *, wait_until: str | None = None) -> None:
+        self.goto_wait_until = wait_until
         return None
 
     async def set_content(self, html: str, *, wait_until: str) -> None:
         self.html = html
+        self.wait_until = wait_until
         for request in self.requests:
             for handler in self.handlers.get("requestfinished", []):
                 handler(request)
 
     async def wait_for_timeout(self, timeout: int) -> None:
         return None
+
+    async def evaluate(self, script: str) -> None:
+        self.evaluated_scripts.append(script)
 
     async def screenshot(self, **kwargs: Any) -> bytes:
         return b"image"
@@ -225,6 +234,52 @@ async def test_cached_template_delegates_when_disabled(app, mocker, monkeypatch)
     assert result == b"image"
     renderer.assert_awaited_once()
     template_renderer.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_cached_template_waits_for_page_resources_when_requested(app, tmp_path, mocker, monkeypatch):
+    from nonebot_plugin_skland import image_cache
+    from nonebot_plugin_skland.config import config
+
+    monkeypatch.setattr(config, "ark_portrait_cache_enabled", False)
+    template_path = tmp_path / "templates"
+    template_path.mkdir()
+    template_name = "resources.html.jinja2"
+    (template_path / template_name).write_text('<img src="data:image/png;base64,AA==">', encoding="utf-8")
+    page = FakePage([])
+    monkeypatch.setattr(image_cache, "get_new_page", fake_page_context(page))
+    base_renderer = mocker.patch.object(
+        image_cache,
+        "base_template_to_pic",
+        new=mocker.AsyncMock(return_value=b"base-image"),
+    )
+
+    result = await image_cache.cached_template_to_pic(
+        template_path=str(template_path),
+        template_name=template_name,
+        templates={},
+        readiness="resources",
+    )
+
+    assert result == b"image"
+    base_renderer.assert_not_awaited()
+    assert page.goto_wait_until == "load"
+    assert page.wait_until == "load"
+    assert len(page.evaluated_scripts) == 1
+    assert "document.fonts.ready" in page.evaluated_scripts[0]
+    assert "image.decode" in page.evaluated_scripts[0]
+
+
+@pytest.mark.asyncio
+async def test_page_resource_wait_respects_timeout(app):
+    from nonebot_plugin_skland.image_cache import _wait_for_page_resources
+
+    class SlowPage:
+        async def evaluate(self, script: str) -> None:
+            await asyncio.sleep(0.05)
+
+    with pytest.raises(asyncio.TimeoutError):
+        await _wait_for_page_resources(SlowPage(), 1)
 
 
 def test_ark_portrait_cache_config(app):

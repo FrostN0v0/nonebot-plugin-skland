@@ -11,6 +11,7 @@ from collections.abc import Iterator
 from contextlib import suppress, contextmanager
 
 from nonebot import logger
+from playwright.async_api import Page
 from playwright.async_api import Request
 from nonebot_plugin_htmlrender import template_to_html
 from playwright.async_api import Error as PlaywrightError
@@ -20,6 +21,26 @@ from nonebot_plugin_htmlrender import template_to_pic as base_template_to_pic
 from .config import CACHE_DIR, config
 
 PendingImage = tuple[str, Path]
+PageReadiness = Literal["networkidle", "resources"]
+
+_RESOURCE_READY_SCRIPT = """async () => {
+  await document.fonts.ready;
+  await Promise.all(
+    Array.from(document.images, async image => {
+      if (!image.complete) {
+        await new Promise(resolve => {
+          image.addEventListener("load", resolve, { once: true });
+          image.addEventListener("error", resolve, { once: true });
+        });
+      }
+      if (typeof image.decode === "function") {
+        try {
+          await image.decode();
+        } catch {}
+      }
+    }),
+  );
+}"""
 
 _IMAGE_DOWNLOAD_MAX_BYTES = 10 * 1024 * 1024
 _ALLOWED_IMAGE_PATH_PREFIXES = (
@@ -43,6 +64,14 @@ def _collect_missing_images() -> Iterator[set[PendingImage]]:
         yield pending
     finally:
         _pending_images.reset(token)
+
+
+async def _wait_for_page_resources(page: Page, timeout: float | None) -> None:
+    waiter = page.evaluate(_RESOURCE_READY_SCRIPT)
+    if timeout is None:
+        await waiter
+        return
+    await asyncio.wait_for(waiter, timeout / 1000)
 
 
 def _is_allowed_image(url: str, path: Path) -> bool:
@@ -101,6 +130,7 @@ async def _html_to_pic_with_cache(
     device_scale_factor: float,
     screenshot_timeout: float | None,
     pages: dict[Any, Any],
+    readiness: PageReadiness,
 ) -> bytes:
     pending_by_url = dict(pending)
     cache_tasks: list[asyncio.Task[None]] = []
@@ -114,8 +144,10 @@ async def _html_to_pic_with_cache(
                 cache_tasks.append(asyncio.create_task(_cache_finished_request(request, path)))
 
         page.on("requestfinished", cache_request)
-        await page.goto(template_path)
-        await page.set_content(html, wait_until="networkidle")
+        await page.goto(template_path, wait_until="load")
+        await page.set_content(html, wait_until="load" if readiness == "resources" else "networkidle")
+        if readiness == "resources":
+            await _wait_for_page_resources(page, screenshot_timeout)
         await page.wait_for_timeout(wait)
         screenshot = await page.screenshot(
             full_page=True,
@@ -139,8 +171,9 @@ async def cached_template_to_pic(
     quality: int | None = None,
     device_scale_factor: float = 2,
     screenshot_timeout: float | None = 30_000,
+    readiness: PageReadiness = "networkidle",
 ) -> bytes:
-    if not config.ark_portrait_cache_enabled:
+    if not config.ark_portrait_cache_enabled and readiness == "networkidle":
         return await base_template_to_pic(
             template_path=template_path,
             template_name=template_name,
@@ -154,7 +187,16 @@ async def cached_template_to_pic(
             screenshot_timeout=screenshot_timeout,
         )
 
-    with _collect_missing_images() as pending:
+    pending: set[PendingImage] = set()
+    if config.ark_portrait_cache_enabled:
+        with _collect_missing_images() as pending:
+            html = await template_to_html(
+                template_path=template_path,
+                template_name=template_name,
+                filters=filters,
+                **templates,
+            )
+    else:
         html = await template_to_html(
             template_path=template_path,
             template_name=template_name,
@@ -169,7 +211,7 @@ async def cached_template_to_pic(
         }
 
     html_template_path = f"file://{template_path}"
-    if pending:
+    if pending or readiness == "resources":
         return await _html_to_pic_with_cache(
             html=html,
             pending=pending,
@@ -180,6 +222,7 @@ async def cached_template_to_pic(
             device_scale_factor=device_scale_factor,
             screenshot_timeout=screenshot_timeout,
             pages=pages,
+            readiness=readiness,
         )
 
     return await html_to_pic(

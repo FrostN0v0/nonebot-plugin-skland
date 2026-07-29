@@ -745,15 +745,15 @@ def test_box_command_parses_natural_and_advanced_filters(app, operator_catalog):
     [("jpeg", 87, 87), ("png", 87, None)],
 )
 @pytest.mark.asyncio
-async def test_roster_render_uses_props_and_configured_timeout(
+async def test_roster_render_uses_props_and_configured_output(
     app, mocker, monkeypatch, operator_catalog, image_format, jpeg_quality, expected_quality
 ):
     from nonebot_plugin_skland.config import config
     from nonebot_plugin_skland.render import render_operator_roster
     from nonebot_plugin_skland.schemas import OperatorRoster, OperatorRosterQuery
 
-    monkeypatch.setattr(config, "roster_render_timeout", 321_000)
     monkeypatch.setattr(config, "roster_render_format", image_format)
+    monkeypatch.setattr(config, "render_timeout", 321_000)
     monkeypatch.setattr(config, "roster_jpeg_quality", jpeg_quality)
     render = mocker.patch(
         "nonebot_plugin_skland.render.template_to_pic",
@@ -783,6 +783,7 @@ def test_roster_config_defaults(app):
     from nonebot_plugin_skland.config import ScopedConfig
 
     assert ScopedConfig().roster_render_max == 16
+    assert ScopedConfig().render_timeout == 180_000
     assert ScopedConfig().roster_render_format == "jpeg"
     assert ScopedConfig().roster_jpeg_quality == 90
     assert ScopedConfig().ark_card_cache_ttl == 120

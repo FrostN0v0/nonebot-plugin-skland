@@ -141,7 +141,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 |      `skland__gacha_render_max`      |  否   |    `30`     | 明日方舟抽卡记录单图渲染上限（单位:卡池） |
 |    `skland__ef_gacha_render_max`     |  否   |     `5`     |      终末地抽卡记录单图渲染卡池上限       |
 |     `skland__roster_render_max`     |  否   |    `16`     |      方舟干员单图渲染数量上限       |
-|  `skland__roster_render_timeout`   |  否   |  `180000`   |      方舟干员截图超时时间（毫秒）       |
+|       `skland__render_timeout`       |  否   |  `180000`   |          模板截图超时时间（毫秒）          |
 |   `skland__roster_render_format`   |  否   |  `"jpeg"`  |       方舟干员图片格式：`png` / `jpeg`       |
 |    `skland__roster_jpeg_quality`    |  否   |    `90`     |        方舟干员 JPEG 质量（1-100）         |
 

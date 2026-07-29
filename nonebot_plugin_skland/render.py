@@ -54,7 +54,7 @@ async def render_operator_roster(
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         device_scale_factor=1.5,
-        screenshot_timeout=config.roster_render_timeout,
+        screenshot_timeout=config.render_timeout,
         readiness="resources",
         type=config.roster_render_format,
         quality=config.roster_jpeg_quality if config.roster_render_format == "jpeg" else None,
@@ -91,6 +91,7 @@ async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:
             "viewport": {"width": 706, "height": 1160},
             "base_url": f"file://{TEMPLATES_DIR}",
         },
+        screenshot_timeout=config.render_timeout,
     )
 
 
@@ -117,6 +118,7 @@ async def render_rogue_card(props: RogueData, bg: str | Url) -> bytes:
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         device_scale_factor=1.5,
+        screenshot_timeout=config.render_timeout,
     )
 
 
@@ -149,6 +151,7 @@ async def render_rogue_info(props: RogueData, bg: str | Url, id: int, is_favored
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         device_scale_factor=1.5,
+        screenshot_timeout=config.render_timeout,
     )
 
 
@@ -164,6 +167,7 @@ async def render_clue_board(props: Clue):
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         device_scale_factor=1.5,
+        screenshot_timeout=config.render_timeout,
     )
 
 
@@ -189,6 +193,7 @@ async def render_gacha_history(
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         device_scale_factor=1.5,
+        screenshot_timeout=config.render_timeout,
     )
 
 
@@ -232,6 +237,7 @@ async def render_ef_gacha_history(
             "base_url": f"file://{TEMPLATES_DIR}",
         },
         device_scale_factor=1.5,
+        screenshot_timeout=config.render_timeout,
     )
 
 
@@ -308,4 +314,5 @@ async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = Fa
             "viewport": {"width": 706, "height": 1},
             "base_url": f"file://{TEMPLATES_DIR}",
         },
+        screenshot_timeout=config.render_timeout,
     )

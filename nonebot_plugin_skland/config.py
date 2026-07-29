@@ -82,8 +82,8 @@ class ScopedConfig(BaseModel):
     """终末地抽卡记录单图渲染卡池上限"""
     roster_render_max: int = Field(default=16, gt=0)
     """Maximum operators rendered in one roster image."""
-    roster_render_timeout: int = Field(default=180_000, gt=0)
-    """Operator roster screenshot timeout in milliseconds."""
+    render_timeout: int = Field(default=180_000, gt=0)
+    """Template screenshot timeout in milliseconds."""
     roster_render_format: Literal["png", "jpeg"] = "jpeg"
     """Operator roster image format."""
     roster_jpeg_quality: int = Field(default=90, ge=1, le=100)

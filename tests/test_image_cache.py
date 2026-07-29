@@ -233,6 +233,7 @@ async def test_cached_template_delegates_when_disabled(app, mocker, monkeypatch)
 
     assert result == b"image"
     renderer.assert_awaited_once()
+    assert renderer.await_args.kwargs["screenshot_timeout"] == 30_000
     template_renderer.assert_not_awaited()
 
 

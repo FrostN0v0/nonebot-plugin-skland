@@ -180,7 +180,7 @@ class Config(BaseModel):
 - `gacha_render_max`: 明日方舟抽卡记录单图渲染卡池上限。
 - `ef_gacha_render_max`: 终末地抽卡记录单图渲染各类别卡池上限。
 - `roster_render_max`: 方舟干员单图渲染数量上限，默认 16。
-- `roster_render_timeout`: 方舟干员传给 htmlrender 的截图超时时间（毫秒）。
+- `render_timeout`: 所有模板传给 htmlrender 的截图超时时间（毫秒），默认 180000。
 - `roster_render_format`: 方舟干员图片格式，支持 `png` / `jpeg`，默认 `jpeg`。
 - `roster_jpeg_quality`: 方舟干员 JPEG 质量，默认 90。
 

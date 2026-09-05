@@ -17,5 +17,5 @@ class ArkSignResponse(BaseModel):
 class ArkSignResult(BaseModel):
     success_count: int
     failed_count: int
-    results: dict[str, str]
+    results: list[tuple[str, str]]
     summary: str

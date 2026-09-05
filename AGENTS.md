@@ -40,15 +40,16 @@ nonebot_plugin_skland/
 ├── tasks.py             # APScheduler 定时任务：每日明日方舟/终末地签到
 ├── config.py            # Pydantic 配置、资源/缓存/数据目录常量
 ├── extras.py            # NoneBot 插件商店/帮助菜单 extra 数据
-├── model.py             # nonebot-plugin-orm 模型：SkUser、Character、GachaRecord
-├── db_handler.py        # 数据库查询、更新、删除与抽卡记录存取函数
+├── model.py             # nonebot-plugin-orm 模型：SkUser、Character、CharacterDefault、GachaRecord
+├── account.py           # 多账号角色快照、默认角色投影、角色同步与账号操作互斥
+├── db_handler.py        # 账号、角色、默认角色与抽卡记录查询/写入契约
 ├── data_source.py       # 游戏数据下载、干员目录构建与本地元数据缓存
-├── player_data.py       # 玩家实时数据短期缓存：ArkCard TTL/LRU/single-flight
+├── player_data.py       # 玩家实时数据账号级短期缓存：ArkCard TTL/LRU/single-flight
 ├── image_cache.py       # 方舟半身图浏览器响应缓存与显式资源就绪等待
 ├── download.py          # GitHub 资源下载器与版本检查
 ├── render.py            # HTML 模板渲染为图片的函数
 ├── filters.py           # Jinja2 过滤器与可复用图片资源 URL 函数
-├── utils.py             # Token 刷新装饰器、绑定同步、背景图、抽卡分组、资源下载等工具
+├── utils.py             # Token 刷新装饰器、背景图、抽卡/签到格式化与资源下载等工具
 ├── exception.py         # LoginException / RequestException / UnauthorizedException
 ├── api/
 │   ├── __init__.py      # API 模块导出
@@ -58,10 +59,10 @@ nonebot_plugin_skland/
 ├── commands/
 │   ├── __init__.py      # 命令 handler 导出
 │   ├── arksign.py       # 明日方舟签到与签到状态查询
-│   ├── bind.py          # token/cred 绑定、二维码绑定、解绑
+│   ├── bind.py          # token/cred/二维码确认式绑定与交互解绑
 │   ├── box.py           # 方舟干员查询、自然筛选与分页发送
 │   ├── card.py          # 明日方舟角色卡片查询
-│   ├── char.py          # 同步森空岛绑定角色
+│   ├── char.py          # 多账号角色总览、默认角色切换与逐账号同步
 │   ├── gacha.py         # 明日方舟抽卡记录查询、分页、导入小黑盒记录
 │   ├── rogue.py         # 肉鸽战绩查询与单局详情
 │   ├── sync.py          # 资源与数据同步命令
@@ -73,7 +74,7 @@ nonebot_plugin_skland/
 │       └── utils.py     # 终末地命令辅助函数
 ├── schemas/
 │   ├── __init__.py      # 对外集中导出 Pydantic 模型
-│   ├── binding.py       # 森空岛绑定角色/游戏列表结构
+│   ├── binding.py       # 森空岛 wire model、确认快照与绑定角色卡 DTO
 │   ├── cred.py          # CRED 凭证模型
 │   ├── arknights/
 │   │   ├── card.py      # ArkCard 角色卡片结构
@@ -98,6 +99,7 @@ nonebot_plugin_skland/
         ├── ark_card.html.jinja2
         ├── operator_roster.html.jinja2
         ├── operator_roster_macros.html.jinja2
+        ├── bound_roles.html.jinja2
         ├── endfield_card.html.jinja2
         ├── gacha.html.jinja2
         ├── gacha_macros.html.jinja2
@@ -141,6 +143,8 @@ skland arksign all
 skland efsign sign [--all] [-u <uid>]
 skland efsign status [--all]
 skland efsign all
+skland char
+skland char set <ark|arknights|ef|endfield> <index>
 skland char update [--all]
 skland sync [--img] [--data] [--force] [--update]
 skland rogue [target] [--topic 傀影|水月|萨米|萨卡兹|界园|黑流树海]
@@ -195,21 +199,23 @@ class Config(BaseModel):
 
 ### 数据库模型
 
-`model.py` 中有三个主要 ORM 模型：
+`model.py` 中有四个主要 ORM 模型：
 
 - `SkUser`
-  - 保存森空岛 `access_token`、`cred`、`cred_token`、`user_id`。
+  - 每行表示一个森空岛账号绑定；自增 `id` 为账号主键，`owner_id` 是所属 NoneBot 用户 ID。
+  - 保存 `access_token`、`cred`、`cred_token`、可空 `skland_user_id`；同一 owner 下非空远端账号 ID 唯一。
 - `Character`
-  - 保存用户绑定角色：`uid`、`role_id`、`app_code`、`channel_master_id`、`nickname`、`isdefault`。
-  - `id` + `uid` 为复合主键。
+  - 每行表示一个具体游戏角色，通过 `account_id` 归属森空岛账号。
+  - 角色身份为账号、`app_code`、`channel_master_id`、`role_id`；终末地同一 binding UID 下的多服务器角色可并存。
+  - `is_skland_default` 仅用于展示和首次默认候选，不直接决定插件查询角色。
+- `CharacterDefault`
+  - 以 `(owner_id, app_code)` 保存每个 NoneBot 用户在明日方舟/终末地各自选择的插件默认角色。
+  - 默认角色属于用户和游戏，而不是某个森空岛账号。
 - `GachaRecord`
-  - 保存明日方舟与终末地抽卡记录。
-  - `app_code` 区分 `arknights` / `endfield`。
-  - `item_type` 区分 `char` / `weapon`。
-  - `is_free` 用于终末地角色池免费抽记录。
-  - 唯一约束为 `char_uid + app_code + gacha_ts + pos`。
+  - 通过 `character_id` 直接归属具体角色；`item_type` 区分 `char` / `weapon`，`is_free` 标记终末地免费抽。
+  - 唯一约束为 `character_id + gacha_ts + pos`，不同账号角色可保存相同时间与位置的记录。
 
-新增或修改模型后需要添加迁移脚本。
+账号删除通过数据库/ORM 级联删除其角色、默认映射和抽卡记录。新增或修改模型后需要添加迁移脚本。
 
 ### API 与签名
 
@@ -257,11 +263,17 @@ class Config(BaseModel):
 - `LoginException` 通常表示 `cred` 失效，若有 `access_token`，通过 grant code 重新获取 cred。
 
 
-### 二维码绑定
+### 账号绑定与管理
 
-- `commands/bind.py` 使用 `UserSession.platform_user.avatar` 获取命令发起者头像；只下载 HTTP(S) 图片，并限制响应类型、大小与像素数量，获取失败时自动降级为无头像卡片，不影响扫码登录。
-- 登录二维码保持原生黑白点阵、M 级纠错和 4 模块静区，不做缩放或头像覆盖；Pillow 只在二维码外合成模糊头像背景、暗色遮罩、白色面板与圆形头像徽标。
-- 群聊发送时回复原消息并 @ 发起者，私聊不添加无意义的 @；二维码仍在约 100 秒后撤回，后续扫码轮询与账号绑定流程不变。
+- 同一 NoneBot 用户可绑定多个森空岛账号；token/cred 仅允许私聊，二维码入口保持群聊可用。
+- token、cred 和扫码所得凭证都先调用一次 binding API，渲染确认后的完整账号角色卡；只有命令发起者回复“确认”后才原子写入。
+- `skland char` 返回全部账号和角色；`skland char set <game> <index>` 按游戏独立序号切换插件默认角色，所有业务功能使用该角色所属账号的凭证。
+- 账号角色卡使用本地灰阶纹理、游戏字标与档案式布局；身份资料仅展示昵称、玩家 UID 和区服名称，保留账号/角色选择序号与默认/操作状态，不展示账号尾号、终末地绑定 UID、服务器内部编号或等级。
+- `BoundRoleCardItem.player_uid` 对方舟返回 `binding_uid`，对终末地返回 `game_role_id`；内部字段继续保留用于身份识别与确认校验。模板显式开启 Jinja autoescape，避免依赖 htmlrender 默认不转义的环境。
+- `BoundRoleCardItem.server_label` 仅将终末地接口区服名 `China` 显示为“国服”；其他游戏和未知区服名保持原样，不修改用于 API 请求和角色身份匹配的原始名称或服务器 ID。
+- `skland unbind` 先选择账号序号或“全部”，再二次确认；删除当前默认角色后清空默认，不自动切换到其他账号。
+- `UserSession.user_id` 会读取 `User.id` ORM 属性；解绑及角色选择流程必须在 `rollback()` / `commit()` 前保存普通整数身份，后续确认、错误反馈与提交后总览不得重新读取已过期的用户 ORM 属性。渲染和 waiter 期间不持有数据库事务。
+- 二维码卡继续使用安全头像下载、原生黑白点阵、M 级纠错和 4 模块静区，并在约 100 秒后撤回；扫码者身份不能由插件验证，最终绑定以命令发起者确认的角色卡为准。
 
 ### 玩家角色卡短期缓存
 
@@ -269,7 +281,7 @@ class Config(BaseModel):
 - 缓存按森空岛账号、应用、服务器、角色 UID 与 role ID 隔离，使用绝对 TTL、固定容量 LRU 和同角色 single-flight；命中不会延长过期时间。
 - 默认 TTL 为 120 秒、容量为 64，可通过 `ark_card_cache_ttl` 和 `ark_card_cache_max_entries` 配置；只缓存成功解析的 `ArkCard`，异常与空结果不缓存。
 - 三个命令在读取完成后、任何提前返回或渲染发送前提交 session，确保自动刷新的 `cred` / `cred_token` 不因后续空结果或发送失败而回滚。
-- 角色绑定同步或解绑后会失效对应用户的缓存；旧的并发请求完成后不会重新写入已失效代际。
+- 角色绑定同步或解绑后会失效对应森空岛账号的缓存；旧的并发请求完成后不会重新写入已失效代际。切换默认角色无需失效缓存。
 
 ### 游戏数据与资源
 
@@ -326,6 +338,7 @@ class Config(BaseModel):
 主要函数：
 
 - `render_ark_card()`：明日方舟角色卡片。
+- `render_bound_roles_card()`：多账号角色总览、绑定确认和解绑选择/确认卡片。
 - `render_operator_roster()`：方舟干员 Half 网格长图。
 - `render_ef_card()`：终末地角色卡片，支持 `show_all` 和 `simple` 背景。
 - `render_gacha_history()`：明日方舟抽卡记录。
@@ -334,6 +347,8 @@ class Config(BaseModel):
 - `render_clue_board()`：线索看板。
 
 模板位于 `resources/templates/`，过滤器位于 `filters.py`。Tailwind 输出 CSS 为 `nonebot_plugin_skland/resources/templates/index.css`。
+
+账号角色卡的纹理、阴影和字体样式集中于 `tailwind.css` 的 `bound-roles-*` 类，仅作用于本模板；沿用 706px 视口、1.5 倍 PNG 和全局截图超时，不额外请求角色详情或远程图片。
 
 ### 定时任务
 
@@ -388,10 +403,16 @@ uv run pytest -s tests/test_skland_api.py
 
 - `tests/conftest.py` 使用 nonebug 初始化 NoneBot，并加载 `pyproject.toml` 中配置的插件。
 - 数据库测试使用内存 SQLite：`sqlite+aiosqlite://`。
+- `make_user_session` fixture 将真实 `UserSession.user` 加入命令使用的同一个 SQLAlchemy session；解绑、缺少默认角色和签到选择失败的回归测试覆盖事务结束后用户 ORM 属性过期的行为，不能只用普通整数模拟 `user_id`。
 - `tests/test_ef_gacha_joint_pool.py` 覆盖终末地联合寻访分类、统计与模板渲染相关行为。
 - `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、JPEG/PNG 参数、分页发送与渲染参数。
 - `tests/test_image_cache.py` 覆盖配置开关、单次模板生成、浏览器半身图响应落盘、本地复用、显式字体/图片就绪、等待超时、未知 URL 跳过与失败响应忽略。
 - `tests/test_qrcode.py` 覆盖头像 URL 限制、图片下载校验、无头像降级、二维码原始像素保持、群聊发起者标记及扫码绑定流程。
+- `tests/test_account_management.py` 覆盖多账号所有权、分游戏默认角色、角色同步、账号操作互斥，以及未设置默认角色时本人提示卡与目标用户隐私边界。
+- `tests/test_bound_roles.py` 覆盖 binding API 规范化、角色卡投影、序号、默认徽标、两游戏玩家 UID 选择、内部 ID 隐藏、昵称转义、四种展示模式及空态/不可用角色。
+- `tests/test_multi_account_migration.py` 覆盖旧结构升级、数据保护检查、生成主键和不可表示数据的 downgrade 拒绝。
+- `tests/test_bind.py` 覆盖 token/cred 确认式新增/更新、取消/超时零写入、确认期间状态变化，以及真实 UserSession 下选择性/全量解绑的双 waiter 和提交后反馈。
+- `tests/test_sign.py` 覆盖多账号同名角色、角色所属凭证、签到缓存 list 结构，以及真实 UserSession 下角色标识不存在/不唯一和全角色列表为空时的提示。
 - `tests/test_skland_api.py` 会调用真实接口；单独运行时使用 `uv run pytest -s tests/test_skland_api.py`，其中 `-s` 用于显示终端二维码输出；凭证优先级为：
   1. `tests/cred_cache.json`
   2. 环境变量 `SKLAND_TOKEN` 或 `SKLAND_CRED`
@@ -442,7 +463,7 @@ nb orm revision -m "description" --branch-label "nonebot_plugin_skland"
 nb orm upgrade
 ```
 
-迁移脚本位于 `nonebot_plugin_skland/migrations/`。已有迁移包括初始表、抽卡记录表、`role_id`、模型类型修正、终末地抽卡支持等。
+迁移脚本位于 `nonebot_plugin_skland/migrations/`。已有迁移包括初始表、抽卡记录表、`role_id`、模型类型修正、终末地抽卡支持和多账号身份重建；多账号 downgrade 在旧结构无法无损表达当前数据时必须拒绝执行。
 
 ## 添加新功能的一般流程
 

@@ -29,7 +29,6 @@ from .config import Config
 from .matcher import skland
 from .extras import extra_data
 from . import tasks as tasks  # noqa: F401
-from .commands.card import check_user_character as check_user_character
 
 __plugin_meta__ = PluginMetadata(
     name="森空岛",
@@ -128,14 +127,17 @@ async def _(
     await arksign_all_handler(user_session, session, bot, is_superuser)
 
 
-@skland.assign("char.update")
+@skland.assign("char")
 async def _(
-    user_session: UserSession, session: async_scoped_session, result: Arparma, is_superuser: bool = Depends(SuperUser())
+    user_session: UserSession,
+    session: async_scoped_session,
+    result: Arparma,
+    is_superuser: bool = Depends(SuperUser()),
 ):
-    """更新森空岛角色信息"""
-    from .commands.char import char_update_handler
+    """Manage Skland accounts and default roles."""
+    from .commands.char import char_handler
 
-    await char_update_handler(user_session, session, result, is_superuser)
+    await char_handler(user_session, session, result, is_superuser)
 
 
 @skland.assign("sync")

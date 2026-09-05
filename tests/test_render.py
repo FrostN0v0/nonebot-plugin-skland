@@ -54,6 +54,7 @@ async def test_all_template_renderers_use_configured_timeout(app, mocker, monkey
     )
 
     await render.render_operator_roster(props=object(), background_image=None)
+    await render.render_bound_roles_card(object())
     await render.render_ark_card(ark_card, "background.jpg")
     await render.render_rogue_card(rogue_data, "background.jpg")
     await render.render_rogue_info(rogue_data, "background.jpg", 1, False)
@@ -62,9 +63,10 @@ async def test_all_template_renderers_use_configured_timeout(app, mocker, monkey
     await render.render_ef_gacha_history(ef_gacha, SimpleNamespace(avatarUrl=""), object())
     await render.render_ef_card(ef_card, "background.jpg")
 
-    assert template_renderer.await_count == 8
+    assert template_renderer.await_count == 9
     assert {call.kwargs["template_name"] for call in template_renderer.await_args_list} == {
         "operator_roster.html.jinja2",
+        "bound_roles.html.jinja2",
         "ark_card.html.jinja2",
         "rogue.html.jinja2",
         "rogue_info.html.jinja2",
@@ -73,4 +75,11 @@ async def test_all_template_renderers_use_configured_timeout(app, mocker, monkey
         "ef_gacha.html.jinja2",
         "endfield_card.html.jinja2",
     }
+    bound_roles_call = next(
+        call for call in template_renderer.await_args_list if call.kwargs["template_name"] == "bound_roles.html.jinja2"
+    )
+    assert set(bound_roles_call.kwargs["templates"]) == {"props"}
+    assert bound_roles_call.kwargs["pages"]["viewport"] == {"width": 706, "height": 1}
+    assert bound_roles_call.kwargs["device_scale_factor"] == 1.5
+    assert bound_roles_call.kwargs["type"] == "png"
     assert all(call.kwargs["screenshot_timeout"] == 321_000 for call in template_renderer.await_args_list)

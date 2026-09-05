@@ -24,12 +24,12 @@ skland_command = Alconna(
     Args["target?#目标", At | int],
     Subcommand(
         "-b|--bind|bind",
-        Args["token", str, Field(completion=lambda: "请输入 token 或 cred 完成绑定")],
-        Option("-u|--update|update", help_text="更新绑定的 token 或 cred"),
-        help_text="绑定森空岛账号",
+        Args["token", str, Field(completion=lambda: "请输入 token 或 cred 绑定森空岛账号")],
+        Option("-u|--update|update", help_text="更新由凭证识别的既有森空岛账号"),
+        help_text="新增森空岛账号并在角色列表确认后保存",
     ),
-    Subcommand("-q|--qrcode|qrcode", help_text="获取二维码进行扫码绑定"),
-    Subcommand("unbind", help_text="解绑森空岛账号"),
+    Subcommand("-q|--qrcode|qrcode", help_text="扫码并在角色列表确认后绑定森空岛账号"),
+    Subcommand("unbind", help_text="交互选择一个或全部森空岛账号解绑"),
     Subcommand(
         "arksign",
         Subcommand(
@@ -73,10 +73,21 @@ skland_command = Alconna(
     Subcommand(
         "char",
         Subcommand(
-            "-u|--update|update",
-            Option("-a|--all|all", help_text="更新所有绑定的角色"),
+            "set",
+            Args[
+                "game",
+                ["ark", "arknights", "ef", "endfield"],
+                Field(completion=lambda: "请输入 ark 或 ef"),
+            ],
+            Args["index", int, Field(completion=lambda: "请输入角色卡片中的序号")],
+            help_text="按游戏切换插件默认角色",
         ),
-        help_text="更新绑定角色信息",
+        Subcommand(
+            "-u|--update|update",
+            Option("-a|--all|all", help_text="更新全部森空岛账号的角色(仅超管可用)"),
+            help_text="同步森空岛账号角色",
+        ),
+        help_text="查看账号角色、切换默认角色或同步角色",
     ),
     Subcommand(
         "sync",

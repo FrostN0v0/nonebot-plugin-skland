@@ -24,14 +24,21 @@ async def efcard_handler(
     @refresh_cred_token_if_needed
     @refresh_access_token_if_needed
     async def get_character_info(user: SkUser, char: Character):
-        return await SklandAPI.endfield_card(CRED(cred=user.cred, token=user.cred_token), user.user_id, char)
+        return await SklandAPI.endfield_card(CRED(cred=user.cred, token=user.cred_token), user.skland_user_id, char)
 
     if target.available:
         target_platform_id = target.result.target if isinstance(target.result, At) else target.result
         target_id = (await get_user(user_session.platform, str(target_platform_id))).id
     else:
         target_id = user_session.user_id
-    user, ef_characters = await check_user_character(target_id, session)
+    selected = await check_user_character(target_id, user_session, session)
+    if selected is None:
+        return
+    user, ef_characters = selected
+    if not user.skland_user_id:
+        await session.rollback()
+        await UniMessage("账号身份尚未同步,请先执行 sk char update").send(at_sender=True)
+        return
     send_reaction(user_session, "processing")
 
     info = await get_character_info(user, ef_characters)

@@ -18,12 +18,12 @@ Clock = Callable[[], float]
 
 @dataclass(frozen=True, slots=True)
 class _ArkCardCacheKey:
-    user_id: int
-    account_id: str | None
+    account_id: int
+    skland_user_id: str | None
     app_code: str
     channel_master_id: str
     uid: str
-    role_id: str | None
+    role_id: str
     generation: int
 
 
@@ -51,28 +51,28 @@ class ArkCardDataSource:
         self._inflight: dict[_ArkCardCacheKey, asyncio.Task[ArkCard | None]] = {}
         self._generations: dict[int, int] = {}
 
-    def _prune_generation_if_unused(self, user_id: int) -> None:
-        if any(key.user_id == user_id for key in self._cache):
+    def _prune_generation_if_unused(self, account_id: int) -> None:
+        if any(key.account_id == account_id for key in self._cache):
             return
-        if any(key.user_id == user_id for key in self._inflight):
+        if any(key.account_id == account_id for key in self._inflight):
             return
-        self._generations.pop(user_id, None)
+        self._generations.pop(account_id, None)
 
     def _purge_expired(self, now: float) -> None:
         expired_keys = [key for key, entry in self._cache.items() if now >= entry.expires_at]
-        expired_user_ids = {key.user_id for key in expired_keys}
+        expired_account_ids = {key.account_id for key in expired_keys}
         for key in expired_keys:
             del self._cache[key]
-        for user_id in expired_user_ids:
-            self._prune_generation_if_unused(user_id)
+        for account_id in expired_account_ids:
+            self._prune_generation_if_unused(account_id)
 
     def _key(self, user: SkUser, character: Character) -> _ArkCardCacheKey:
         return _ArkCardCacheKey(
-            user_id=user.id,
-            account_id=user.user_id,
+            account_id=user.id,
+            skland_user_id=user.skland_user_id,
             app_code=character.app_code,
             channel_master_id=character.channel_master_id,
-            uid=str(character.uid),
+            uid=character.uid,
             role_id=character.role_id,
             generation=self._generations.get(user.id, 0),
         )
@@ -86,19 +86,19 @@ class ArkCardDataSource:
             async with self._lock:
                 now = self._clock()
                 self._purge_expired(now)
-                if self._generations.get(key.user_id, 0) == key.generation:
+                if self._generations.get(key.account_id, 0) == key.generation:
                     self._cache[key] = _ArkCardCacheEntry(value=value, expires_at=now + self._ttl)
                     self._cache.move_to_end(key)
                     while len(self._cache) > self._max_entries:
                         evicted_key, _ = self._cache.popitem(last=False)
-                        self._prune_generation_if_unused(evicted_key.user_id)
+                        self._prune_generation_if_unused(evicted_key.account_id)
             return value
         finally:
             current_task = asyncio.current_task()
             async with self._lock:
                 if self._inflight.get(key) is current_task:
                     del self._inflight[key]
-                self._prune_generation_if_unused(key.user_id)
+                self._prune_generation_if_unused(key.account_id)
 
     async def get(self, user: SkUser, character: Character) -> ArkCard | None:
         async with self._lock:
@@ -118,13 +118,13 @@ class ArkCardDataSource:
 
         return await asyncio.shield(task)
 
-    async def invalidate_user(self, user_id: int) -> None:
+    async def invalidate_account(self, account_id: int) -> None:
         async with self._lock:
-            self._generations[user_id] = self._generations.get(user_id, 0) + 1
-            stale_keys = [key for key in self._cache if key.user_id == user_id]
+            self._generations[account_id] = self._generations.get(account_id, 0) + 1
+            stale_keys = [key for key in self._cache if key.account_id == account_id]
             for key in stale_keys:
                 del self._cache[key]
-            self._prune_generation_if_unused(user_id)
+            self._prune_generation_if_unused(account_id)
 
 
 def _consume_task_exception(task: asyncio.Task[ArkCard | None]) -> None:

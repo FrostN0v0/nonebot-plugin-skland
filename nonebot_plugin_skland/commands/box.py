@@ -194,7 +194,10 @@ async def box_handler(
         return
 
     target_id = await _resolve_target_id(user_session, target)
-    user, ark_character = await check_user_character(target_id, session)
+    selected = await check_user_character(target_id, user_session, session)
+    if selected is None:
+        return
+    user, ark_character = selected
     send_reaction(user_session, "processing")
 
     info = await get_ark_card(user, ark_character)

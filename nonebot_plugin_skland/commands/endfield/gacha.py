@@ -12,7 +12,7 @@ from ...api import SklandAPI, SklandLoginAPI
 from ...data_source import ef_gacha_pool_data
 from ...render import render_ef_gacha_history
 from ...model import SkUser, Character, GachaRecord
-from ...db_handler import select_all_ef_gacha_records
+from ...db_handler import get_character_gacha_records
 from ...schemas import CRED, EfGachaInfo, EndfieldPoolType, EndfieldCharPoolType
 from ...utils import (
     send_reaction,
@@ -49,7 +49,7 @@ async def ef_gacha_history_handler(
     @refresh_cred_token_if_needed
     @refresh_access_token_if_needed
     async def get_user_info(user: SkUser, char: Character):
-        return await SklandAPI.endfield_card(CRED(cred=user.cred, token=user.cred_token), user.user_id, char)
+        return await SklandAPI.endfield_card(CRED(cred=user.cred, token=user.cred_token), user.skland_user_id, char)
 
     if target.available:
         target_platform_id = target.result.target if isinstance(target.result, At) else target.result
@@ -57,14 +57,24 @@ async def ef_gacha_history_handler(
     else:
         target_id = user_session.user_id
 
-    user, character = await check_user_character(target_id, session)
+    selected = await check_user_character(target_id, user_session, session)
+    if selected is None:
+        return
+    user, character = selected
+    if not user.skland_user_id:
+        await session.rollback()
+        await UniMessage("账号身份尚未同步,请先执行 sk char update").send(at_sender=True)
+        return
     send_reaction(user_session, "processing")
 
     new_count = 0
     if update:
         # ── 从接口拉取最新数据 ──
-        token = user.access_token
-        grant_code = await SklandLoginAPI.get_grant_code(token, 1)
+        if not user.access_token:
+            await session.rollback()
+            await UniMessage("当前角色所属账号未保存 token,请使用 token 或扫码更新该账号").send(at_sender=True)
+            return
+        grant_code = await SklandLoginAPI.get_grant_code(user.access_token, 1)
         role_token = await SklandLoginAPI.get_role_token_by_uid(character.uid, grant_code)
 
         # 获取所有角色池记录
@@ -83,7 +93,7 @@ async def ef_gacha_history_handler(
         logger.debug(f"正在获取角色：{character.nickname} 的终末地武器池抽卡记录，本次获取记录条数: {len(records)}")
 
         # 去重 + 构建 GachaRecord
-        db_records = await select_all_ef_gacha_records(user, character.uid, session)
+        db_records = await get_character_gacha_records(character.id, session)
         existing_records_set = {(r.gacha_ts, r.pos) for r in db_records}
 
         record_to_save: list[GachaRecord] = []
@@ -91,10 +101,7 @@ async def ef_gacha_history_handler(
             if (gacha_record.gacha_ts_sec, gacha_record.seq_id_int) in existing_records_set:
                 continue
             record = GachaRecord(
-                uid=user.id,
-                char_pk_id=character.id,
-                char_uid=character.uid,
-                app_code="endfield",
+                character_id=character.id,
                 item_type=gacha_record.item_type,
                 pool_id=gacha_record.poolId,
                 pool_name=gacha_record.poolName,
@@ -112,7 +119,7 @@ async def ef_gacha_history_handler(
         new_count = len(record_to_save)
     else:
         # ── 仅从数据库读取 ──
-        all_gacha_records = await select_all_ef_gacha_records(user, character.uid, session)
+        all_gacha_records = await get_character_gacha_records(character.id, session)
         if not all_gacha_records:
             await UniMessage.text("暂无抽卡记录，请先使用 -u 参数从接口拉取数据").send(reply_to=True)
             return

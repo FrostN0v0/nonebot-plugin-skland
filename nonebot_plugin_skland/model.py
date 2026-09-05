@@ -1,91 +1,122 @@
 from nonebot_plugin_orm import Model
 from sqlalchemy.orm import Mapped, relationship, mapped_column
-from sqlalchemy import VARCHAR, Text, Integer, BigInteger, ForeignKey, UniqueConstraint, ForeignKeyConstraint
+from sqlalchemy import VARCHAR, Text, BigInteger, ForeignKey, UniqueConstraint
 
 
 class SkUser(Model):
     __tablename__ = "skland_user"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    """User ID"""
-    access_token: Mapped[str] = mapped_column(Text, nullable=True)
-    """Skland Access Token"""
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    """Skland account binding ID."""
+    owner_id: Mapped[int] = mapped_column(index=True)
+    """NoneBot user ID that owns this binding."""
+    access_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    """Skland access token."""
     cred: Mapped[str] = mapped_column(Text)
-    """Skland Login Credential"""
+    """Skland login credential."""
     cred_token: Mapped[str] = mapped_column(Text)
-    """Skland Login Credential Token"""
-    user_id: Mapped[str] = mapped_column(Text, nullable=True)
-    """Skland User ID"""
+    """Skland login credential token."""
+    skland_user_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    """Remote Skland user ID."""
 
-    gacha_records: Mapped[list["GachaRecord"]] = relationship("GachaRecord", back_populates="user")
+    characters: Mapped[list["Character"]] = relationship(
+        back_populates="account",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    __table_args__ = (UniqueConstraint("owner_id", "skland_user_id", name="uq_skland_user_owner_account"),)
 
 
 class Character(Model):
     __tablename__ = "skland_characters"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    """Character ID"""
-    uid: Mapped[str] = mapped_column(primary_key=True)
-    """Character UID"""
-    role_id: Mapped[str] = mapped_column(VARCHAR, comment="角色ID", nullable=True)
-    """Role ID"""
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    """Game character ID."""
+    account_id: Mapped[int] = mapped_column(ForeignKey("skland_user.id", ondelete="CASCADE"), index=True)
+    """Owning Skland account binding ID."""
+    uid: Mapped[str] = mapped_column(Text)
+    """Top-level binding UID."""
+    role_id: Mapped[str] = mapped_column(VARCHAR, comment="Game role ID")
+    """Concrete game role ID."""
     app_code: Mapped[str] = mapped_column(Text)
-    """APP Code"""
+    """Game application code."""
     channel_master_id: Mapped[str] = mapped_column(Text)
-    """Channel Master ID"""
+    """Game server ID."""
+    server_name: Mapped[str] = mapped_column(Text)
+    """Game server display name."""
     nickname: Mapped[str] = mapped_column(Text)
-    """Character Nickname"""
-    isdefault: Mapped[bool] = mapped_column(default=False)
+    """Character nickname."""
+    level: Mapped[int | None] = mapped_column(nullable=True)
+    """Character level when exposed by the binding API."""
+    is_skland_default: Mapped[bool] = mapped_column(default=False, server_default="0")
+    """Remote default marker used only for display and initial selection."""
 
-    gacha_records: Mapped[list["GachaRecord"]] = relationship("GachaRecord", back_populates="character")
+    account: Mapped[SkUser] = relationship(back_populates="characters")
+    gacha_records: Mapped[list["GachaRecord"]] = relationship(
+        back_populates="character",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    default_records: Mapped[list["CharacterDefault"]] = relationship(
+        back_populates="character",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "account_id",
+            "app_code",
+            "channel_master_id",
+            "role_id",
+            name="uq_skland_character_account_game_role_server",
+        ),
+    )
+
+
+class CharacterDefault(Model):
+    __tablename__ = "skland_character_default"
+
+    owner_id: Mapped[int] = mapped_column(primary_key=True)
+    app_code: Mapped[str] = mapped_column(Text, primary_key=True)
+    character_id: Mapped[int] = mapped_column(
+        ForeignKey("skland_characters.id", ondelete="CASCADE"),
+        unique=True,
+    )
+
+    character: Mapped[Character] = relationship(back_populates="default_records")
 
 
 class GachaRecord(Model):
     __tablename__ = "skland_gacha_record"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    """Gacha Record ID"""
-    uid: Mapped[int] = mapped_column(ForeignKey("skland_user.id"), comment="关联的用户ID", index=True)
-    """关联的用户ID"""
-    char_pk_id: Mapped[int] = mapped_column(Integer, comment="关联角色的复合主键ID部分")
-    char_uid: Mapped[str] = mapped_column(VARCHAR, comment="关联的角色UID", index=True)
-    """关联的角色UID"""
-    user: Mapped["SkUser"] = relationship("SkUser", back_populates="gacha_records")
-    """关联的用户"""
-    character: Mapped["Character"] = relationship(
-        "Character",
-        back_populates="gacha_records",
-        primaryjoin="and_(GachaRecord.char_pk_id == Character.id, GachaRecord.char_uid == Character.uid)",
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    """Gacha record ID."""
+    character_id: Mapped[int] = mapped_column(
+        ForeignKey("skland_characters.id", ondelete="CASCADE"),
+        index=True,
     )
-    """关联的角色"""
-    app_code: Mapped[str] = mapped_column(Text, default="arknights", server_default="arknights", index=True)
-    """Game App Code: arknights / endfield"""
-    item_type: Mapped[str] = mapped_column(Text, default="char", server_default="char")
-    """Item Type: char / weapon"""
+    """Owning game character ID."""
+    character: Mapped[Character] = relationship(back_populates="gacha_records")
     pool_id: Mapped[str] = mapped_column(Text, index=True)
-    """Gacha Pool ID"""
+    """Gacha pool ID."""
     pool_name: Mapped[str] = mapped_column(Text)
-    """Gacha Pool Name"""
+    """Gacha pool name."""
+    item_type: Mapped[str] = mapped_column(Text, default="char", server_default="char")
+    """Item type: char or weapon."""
     char_id: Mapped[str] = mapped_column(Text)
-    """Item ID (Character ID or Weapon ID)"""
+    """Item ID."""
     char_name: Mapped[str] = mapped_column(Text)
-    """Item Name (Character Name or Weapon Name)"""
+    """Item name."""
     rarity: Mapped[int]
-    """Item Rarity"""
+    """Item rarity."""
     is_new: Mapped[bool]
-    """Is New Item"""
+    """Whether this was the first acquisition."""
     is_free: Mapped[bool] = mapped_column(default=False, server_default="0")
-    """Is Free Pull (终末地角色池专用)"""
-    gacha_ts: Mapped[BigInteger] = mapped_column(BigInteger, comment="Gacha Timestamp")
-    """Gacha Timestamp"""
+    """Whether this was a free Endfield character-pool pull."""
+    gacha_ts: Mapped[int] = mapped_column(BigInteger, comment="Gacha timestamp")
     pos: Mapped[int]
-    """Gacha Position / Sequence ID"""
+    """Gacha sequence position."""
 
-    __table_args__ = (
-        UniqueConstraint("char_uid", "app_code", "gacha_ts", "pos", name="_app_char_ts_pos_uc"),
-        ForeignKeyConstraint(
-            ["char_pk_id", "char_uid"],
-            ["skland_characters.id", "skland_characters.uid"],
-            name="fk_gacha_record_to_characters",
-        ),
-    )
+    __table_args__ = (UniqueConstraint("character_id", "gacha_ts", "pos", name="uq_skland_gacha_character_ts_pos"),)

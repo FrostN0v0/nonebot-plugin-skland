@@ -1,138 +1,137 @@
-from sqlalchemy import delete, select
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 from nonebot_plugin_orm import async_scoped_session
 
-from .model import SkUser, Character, GachaRecord
+from .model import SkUser, Character, GachaRecord, CharacterDefault
 
 
-async def get_arknights_characters(user: SkUser, session: async_scoped_session) -> list[Character]:
-    characters = (
-        (
-            await session.execute(
-                select(Character).where(Character.id == user.id).where(Character.app_code == "arknights")
-            )
+async def get_accounts(owner_id: int, session: async_scoped_session) -> list[SkUser]:
+    accounts = await session.scalars(select(SkUser).where(SkUser.owner_id == owner_id).order_by(SkUser.id))
+    return list(accounts)
+
+
+async def get_account(
+    owner_id: int,
+    skland_user_id: str,
+    session: async_scoped_session,
+) -> SkUser | None:
+    return await session.scalar(
+        select(SkUser).where(
+            SkUser.owner_id == owner_id,
+            SkUser.skland_user_id == skland_user_id,
         )
-        .scalars()
-        .all()
+    )
+
+
+async def select_all_accounts(session: async_scoped_session) -> list[SkUser]:
+    accounts = await session.scalars(select(SkUser).order_by(SkUser.owner_id, SkUser.id))
+    return list(accounts)
+
+
+async def get_account_characters(account_id: int, session: async_scoped_session) -> list[Character]:
+    characters = await session.scalars(
+        select(Character)
+        .where(Character.account_id == account_id)
+        .order_by(Character.app_code, Character.channel_master_id, Character.role_id)
     )
     return list(characters)
 
 
-async def get_default_arknights_character(user: SkUser, session: async_scoped_session) -> Character:
-    character = (
-        await session.execute(
-            select(Character).where(
-                Character.id == user.id,
-                Character.isdefault,
-                Character.app_code == "arknights",
-            )
-        )
-    ).scalar_one()
-    return character
-
-
-async def get_arknights_character_by_uid(user: SkUser, uid: str, session: async_scoped_session) -> Character:
-    character = (
-        await session.execute(
-            select(Character).where(
-                Character.id == user.id,
-                Character.uid == int(uid),
-                Character.app_code == "arknights",
-            )
-        )
-    ).scalar_one()
-    return character
-
-
-async def delete_characters(user: SkUser, session: async_scoped_session):
-    await session.execute(delete(Character).where(Character.id == user.id))
-
-
-async def select_all_users(session: async_scoped_session) -> list[SkUser]:
-    users = (await session.execute(select(SkUser))).scalars().all()
-    return list(users)
-
-
-async def select_user_characters(user: SkUser, session: async_scoped_session) -> list[Character]:
-    return list((await session.scalars(select(Character).where(Character.id == user.id))).all())
-
-
-async def select_all_gacha_records(user: SkUser, char_uid: str, session: async_scoped_session) -> list[GachaRecord]:
-    records = (
-        (await session.execute(select(GachaRecord).where(GachaRecord.uid == user.id, GachaRecord.char_uid == char_uid)))
-        .scalars()
-        .all()
+async def get_user_characters(
+    owner_id: int,
+    app_code: str | None,
+    session: async_scoped_session,
+) -> list[Character]:
+    statement = (
+        select(Character)
+        .join(Character.account)
+        .where(SkUser.owner_id == owner_id)
+        .options(joinedload(Character.account))
+        .order_by(SkUser.id, Character.channel_master_id, Character.role_id)
     )
-    return list(records)
+    if app_code is not None:
+        statement = statement.where(Character.app_code == app_code)
+    characters = await session.scalars(statement)
+    return list(characters)
 
 
-async def delete_character_gacha_records(character: Character, session: async_scoped_session):
-    await session.execute(
-        delete(GachaRecord).where(GachaRecord.char_pk_id == character.id, GachaRecord.char_uid == character.uid)
+async def get_default_character(
+    owner_id: int,
+    app_code: str,
+    session: async_scoped_session,
+) -> Character | None:
+    return await session.scalar(
+        select(Character)
+        .join(CharacterDefault, CharacterDefault.character_id == Character.id)
+        .join(Character.account)
+        .where(
+            CharacterDefault.owner_id == owner_id,
+            CharacterDefault.app_code == app_code,
+            Character.app_code == app_code,
+            SkUser.owner_id == owner_id,
+        )
+        .options(joinedload(Character.account))
     )
 
 
-async def get_default_endfield_character(user: SkUser, session: async_scoped_session) -> Character:
-    character = (
-        await session.execute(
-            select(Character).where(
-                Character.id == user.id,
-                Character.isdefault,
-                Character.app_code == "endfield",
-            )
+async def get_characters_by_role_id(
+    owner_id: int,
+    app_code: str,
+    role_id: str,
+    session: async_scoped_session,
+) -> list[Character]:
+    characters = await session.scalars(
+        select(Character)
+        .join(Character.account)
+        .where(
+            SkUser.owner_id == owner_id,
+            Character.app_code == app_code,
+            Character.role_id == role_id,
         )
-    ).scalar_one()
-    return character
-
-
-async def get_endfield_character_by_role_id(user: SkUser, role_id: str, session: async_scoped_session) -> Character:
-    character = (
-        await session.execute(
-            select(Character).where(
-                Character.id == user.id,
-                Character.role_id == role_id,
-                Character.app_code == "endfield",
-            )
-        )
-    ).scalar_one()
-    return character
-
-
-async def get_endfield_characters(user: SkUser, session: async_scoped_session) -> list[Character]:
-    characters = (
-        (
-            await session.execute(
-                select(Character).where(Character.id == user.id).where(Character.app_code == "endfield")
-            )
-        )
-        .scalars()
-        .all()
+        .options(joinedload(Character.account))
+        .order_by(SkUser.id, Character.channel_master_id, Character.role_id)
     )
     return list(characters)
 
 
-async def select_all_ef_gacha_records(user: SkUser, char_uid: str, session: async_scoped_session) -> list[GachaRecord]:
-    """查询指定用户和角色的所有终末地抽卡记录"""
-    records = (
-        (
-            await session.execute(
-                select(GachaRecord).where(
-                    GachaRecord.uid == user.id,
-                    GachaRecord.char_uid == char_uid,
-                    GachaRecord.app_code == "endfield",
-                )
+async def set_default_character(
+    owner_id: int,
+    app_code: str,
+    character_id: int,
+    session: async_scoped_session,
+) -> Character:
+    character = await session.scalar(
+        select(Character)
+        .join(Character.account)
+        .where(
+            Character.id == character_id,
+            Character.app_code == app_code,
+            SkUser.owner_id == owner_id,
+        )
+        .options(joinedload(Character.account))
+    )
+    if character is None:
+        raise ValueError("character does not belong to the requested owner and game")
+
+    default = await session.get(CharacterDefault, (owner_id, app_code))
+    if default is None:
+        session.add(
+            CharacterDefault(
+                owner_id=owner_id,
+                app_code=app_code,
+                character_id=character.id,
             )
         )
-        .scalars()
-        .all()
+    else:
+        default.character_id = character.id
+    return character
+
+
+async def get_character_gacha_records(
+    character_id: int,
+    session: async_scoped_session,
+) -> list[GachaRecord]:
+    records = await session.scalars(
+        select(GachaRecord).where(GachaRecord.character_id == character_id).order_by(GachaRecord.id)
     )
     return list(records)
-
-
-async def delete_user_all_gacha_records(user: SkUser, session: async_scoped_session):
-    """删除用户的所有抽卡记录"""
-    await session.execute(delete(GachaRecord).where(GachaRecord.uid == user.id))
-
-
-async def delete_user(user: SkUser, session: async_scoped_session):
-    """删除用户"""
-    await session.delete(user)

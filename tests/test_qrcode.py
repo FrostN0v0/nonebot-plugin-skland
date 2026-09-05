@@ -116,21 +116,21 @@ async def test_qrcode_handler_marks_group_owner(app, mocker):
     mocker.patch.object(bind, "send_reaction")
     mocker.patch.object(bind.SklandLoginAPI, "get_scan", new=mocker.AsyncMock(return_value="scan-id"))
     mocker.patch.object(bind.SklandLoginAPI, "get_scan_status", new=mocker.AsyncMock(return_value="scan-code"))
-    mocker.patch.object(bind.SklandLoginAPI, "get_token_by_scan_code", new=mocker.AsyncMock(return_value="token"))
+    mocker.patch.object(bind.SklandLoginAPI, "get_token_by_scan_code", new=mocker.AsyncMock(return_value="t" * 24))
     mocker.patch.object(bind.SklandLoginAPI, "get_grant_code", new=mocker.AsyncMock(return_value="grant"))
     mocker.patch.object(
         bind.SklandLoginAPI,
         "get_cred",
         new=mocker.AsyncMock(return_value=SimpleNamespace(cred="cred", token="cred-token", userId="skland-id")),
     )
-    bind_characters = mocker.patch.object(bind, "get_characters_and_bind", new=mocker.AsyncMock())
+    get_binding = mocker.patch.object(bind.SklandAPI, "get_binding", new=mocker.AsyncMock(return_value=[]))
+    confirm = mocker.patch.object(bind, "_confirm_account_binding", new=mocker.AsyncMock())
 
     qr_message = SimpleNamespace(recallable=True, recall=mocker.AsyncMock())
     send = mocker.patch.object(bind.UniMessage, "send", new=mocker.AsyncMock(return_value=qr_message))
     mocker.patch.object(bind.UniMessage, "finish", new=mocker.AsyncMock())
 
-    user = SimpleNamespace(access_token="", cred="", cred_token="")
-    session = SimpleNamespace(get=mocker.AsyncMock(return_value=user))
+    session = SimpleNamespace()
     user_session = SimpleNamespace(
         user_id=1,
         platform_user=SimpleNamespace(avatar="https://cdn.example.com/avatar.png"),
@@ -143,7 +143,7 @@ async def test_qrcode_handler_marks_group_owner(app, mocker):
     render_card.assert_called_once_with("hypergryph://scan_login?scanId=scan-id", avatar)
     send.assert_awaited_once_with(reply_to=True, at_sender=True)
     qr_message.recall.assert_awaited_once_with(index=0)
-    bind_characters.assert_awaited_once_with(user, session)
-    assert user.access_token == "token"
-    assert user.cred == "cred"
-    assert user.cred_token == "cred-token"
+    get_binding.assert_awaited_once()
+    confirm.assert_awaited_once()
+    assert confirm.await_args.kwargs["mode"] == "upsert"
+    assert confirm.await_args.kwargs["snapshot"].skland_user_id == "skland-id"

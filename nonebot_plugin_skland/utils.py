@@ -3,13 +3,12 @@ import itertools
 import contextlib
 from collections import defaultdict
 from collections.abc import Callable, Sequence, Coroutine
-from typing import Literal, TypeVar, ParamSpec, Concatenate, overload
+from typing import Any, Literal, TypeVar, ParamSpec, Concatenate, overload
 
 import httpx
 from pydantic import AnyUrl as Url
 from nonebot import logger, get_driver
 from nonebot_plugin_user import UserSession
-from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_alconna import UniMessage, message_reaction
 
 from .data_source import gacha_table_data
@@ -17,10 +16,8 @@ from .api import SklandAPI, SklandLoginAPI
 from .model import SkUser, Character, GachaRecord
 from .download import DownloadResult, GameResourceDownloader
 from .config import RES_DIR, CACHE_DIR, RESOURCE_ROUTES, CustomSource, config
-from .db_handler import select_user_characters, delete_character_gacha_records
 from .exception import LoginException, RequestException, UnauthorizedException
 from .schemas import (
-    CRED,
     GachaCate,
     GachaPool,
     GachaPull,
@@ -42,54 +39,6 @@ from .schemas import (
 P = ParamSpec("P")
 R = TypeVar("R")
 Refreshable = Callable[Concatenate[SkUser, P], Coroutine[None, None, R]]
-
-
-async def bind_characters(user: SkUser, session: async_scoped_session):
-    """获取并合并角色绑定信息到 session，不执行 commit"""
-    cred = CRED(cred=user.cred, token=user.cred_token)
-    binding_app_list = await SklandAPI.get_binding(cred)
-    new_uids = {char.uid for app in binding_app_list for char in app.bindingList}
-    for character in await select_user_characters(user, session):
-        if character.uid not in new_uids:
-            # 抽卡记录的外键引用了 skland_characters 表, 但未设置级联删除
-            await delete_character_gacha_records(character, session)
-            await session.delete(character)
-    for app in binding_app_list:
-        for character in app.bindingList:
-            if character.roles:
-                for role in character.roles:
-                    await session.merge(
-                        Character(
-                            id=user.id,
-                            uid=character.uid,
-                            role_id=role.roleId,
-                            nickname=role.nickname,
-                            app_code=app.appCode,
-                            channel_master_id=role.serverId,
-                            isdefault=len(character.roles) == 1 or role.isDefault,
-                        )
-                    )
-            else:
-                await session.merge(
-                    Character(
-                        id=user.id,
-                        uid=character.uid,
-                        nickname=character.nickName,
-                        app_code=app.appCode,
-                        channel_master_id=character.channelMasterId,
-                        isdefault=len(app.bindingList) == 1 or character.isDefault,
-                    )
-                )
-
-    from .player_data import ark_card_data
-
-    await ark_card_data.invalidate_user(user.id)
-
-
-async def get_characters_and_bind(user: SkUser, session: async_scoped_session):
-    """获取并合并角色绑定信息，并提交到数据库"""
-    await bind_characters(user, session)
-    await session.commit()
 
 
 def refresh_access_token_if_needed(func: Refreshable[P, R]) -> Refreshable[P, R | None]:
@@ -162,7 +111,7 @@ def refresh_access_token_with_error_return(func: Refreshable[P, R]) -> Refreshab
             return await func(user, *args, **kwargs)
         except LoginException:
             if not user.access_token:
-                await UniMessage("cred失效，用户没有绑定token，无法自动刷新cred").send(at_sender=True)
+                return "接口请求失败,cred失效且账号未保存token"
 
             try:
                 grant_code = await SklandLoginAPI.get_grant_code(user.access_token, 0)
@@ -232,34 +181,35 @@ async def get_rogue_background_image(rogue_id: str) -> str | Url:
     return background_image
 
 
-def format_sign_result(sign_data: dict, sign_time: str, is_text: bool) -> ArkSignResult:
-    """格式化签到结果"""
-    formatted_results = {}
+def _sign_entry_title(entry: dict[str, Any]) -> str:
+    return f"{entry['nickname']} | {entry['server_name']} | {entry['role_id']}"
+
+
+def format_sign_result(sign_data: list[dict[str, Any]], sign_time: str, is_text: bool) -> ArkSignResult:
+    """Format ordered Arknights sign cache entries."""
+    formatted_results: list[tuple[str, str]] = []
     success_count = 0
     failed_count = 0
-    for nickname, result_data in sign_data.items():
+    for entry in sign_data:
+        title = _sign_entry_title(entry)
+        result_data = entry["result"]
         if isinstance(result_data, dict):
             awards_text = "\n".join(
                 f"  {award['resource']['name']} x {award['count']}" for award in result_data["awards"]
             )
-            if is_text:
-                formatted_results[nickname] = f"✅ 角色：{nickname} 签到成功，获得了:\n📦{awards_text}"
-            else:
-                formatted_results[nickname] = f"✅ 签到成功，获得了:\n📦{awards_text}"
+            content = (
+                f"✅ 角色：{title} 签到成功，获得了:\n📦{awards_text}"
+                if is_text
+                else f"✅ 签到成功，获得了:\n📦{awards_text}"
+            )
             success_count += 1
-        elif isinstance(result_data, str):
-            if "请勿重复签到" in result_data:
-                if is_text:
-                    formatted_results[nickname] = f"ℹ️ 角色：{nickname} 已签到 (无需重复签到)"
-                else:
-                    formatted_results[nickname] = "ℹ️ 已签到 (无需重复签到)"
-                success_count += 1
-            else:
-                if is_text:
-                    formatted_results[nickname] = f"❌ 角色：{nickname} 签到失败: {result_data}"
-                else:
-                    formatted_results[nickname] = f"❌ 签到失败: {result_data}"
-                failed_count += 1
+        elif "请勿重复签到" in result_data:
+            content = f"ℹ️ 角色：{title} 已签到 (无需重复签到)" if is_text else "ℹ️ 已签到 (无需重复签到)"
+            success_count += 1
+        else:
+            content = f"❌ 角色：{title} 签到失败: {result_data}" if is_text else f"❌ 签到失败: {result_data}"
+            failed_count += 1
+        formatted_results.append((title, content))
     return ArkSignResult(
         failed_count=failed_count,
         success_count=success_count,
@@ -275,41 +225,38 @@ def format_sign_result(sign_data: dict, sign_time: str, is_text: bool) -> ArkSig
     )
 
 
-def format_endfield_sign_result(sign_data: dict, sign_time: str, is_text: bool) -> ArkSignResult:
-    """格式化终末地签到结果"""
-    formatted_results = {}
+def format_endfield_sign_result(
+    sign_data: list[dict[str, Any]],
+    sign_time: str,
+    is_text: bool,
+) -> ArkSignResult:
+    """Format ordered Endfield sign cache entries."""
+    formatted_results: list[tuple[str, str]] = []
     success_count = 0
     failed_count = 0
-    for nickname, result_data in sign_data.items():
+    for entry in sign_data:
+        title = _sign_entry_title(entry)
+        result_data = entry["result"]
         if isinstance(result_data, dict):
-            # 终末地签到成功返回的数据结构
             resource_info_map = result_data.get("resourceInfoMap", {})
-            award_ids = result_data.get("awardIds", [])
             award_lines = []
-            for award in award_ids:
+            for award in result_data.get("awardIds", []):
                 info = resource_info_map.get(award["id"], {})
-                name = info.get("name", "未知物品")
-                count = info.get("count", 0)
-                award_lines.append(f"  {name} x{count}")
+                award_lines.append(f"  {info.get('name', '未知物品')} x{info.get('count', 0)}")
             awards_text = "\n".join(award_lines)
-            if is_text:
-                formatted_results[nickname] = f"✅ 角色：{nickname} 签到成功，获得了:\n📦{awards_text}"
-            else:
-                formatted_results[nickname] = f"✅ 签到成功，获得了:\n📦{awards_text}"
+            content = (
+                f"✅ 角色：{title} 签到成功，获得了:\n📦{awards_text}"
+                if is_text
+                else f"✅ 签到成功，获得了:\n📦{awards_text}"
+            )
             success_count += 1
-        elif isinstance(result_data, str):
-            if "请勿重复签到" in result_data:
-                if is_text:
-                    formatted_results[nickname] = f"ℹ️ 角色：{nickname} 已签到 (无需重复签到)"
-                else:
-                    formatted_results[nickname] = "ℹ️ 已签到 (无需重复签到)"
-                success_count += 1
-            else:
-                if is_text:
-                    formatted_results[nickname] = f"❌ 角色：{nickname} 签到失败: {result_data}"
-                else:
-                    formatted_results[nickname] = f"❌ 签到失败: {result_data}"
-                failed_count += 1
+        elif "请勿重复签到" in result_data:
+            content = f"ℹ️ 角色：{title} 已签到 (无需重复签到)" if is_text else "ℹ️ 已签到 (无需重复签到)"
+            success_count += 1
+        else:
+            content = f"❌ 角色：{title} 签到失败: {result_data}" if is_text else f"❌ 签到失败: {result_data}"
+            failed_count += 1
+        formatted_results.append((title, content))
     return ArkSignResult(
         failed_count=failed_count,
         success_count=success_count,
@@ -629,8 +576,8 @@ def get_pool_id(pool_name: str, gacha_ts: int) -> str:
     return "NORM_1_0_1"
 
 
-def heybox_data_to_record(data: dict, uid: int, char_id: int, char_uid: str) -> list[GachaRecord]:
-    """将Heybox导出的抽卡记录转换为GachaRecord列表"""
+def heybox_data_to_record(data: dict, character_id: int) -> list[GachaRecord]:
+    """Convert Heybox export data into role-owned gacha records."""
     records: list[GachaRecord] = []
     for gacha_ts, gacha_data in data.items():
         pool_name = gacha_data["p"]
@@ -643,9 +590,7 @@ def heybox_data_to_record(data: dict, uid: int, char_id: int, char_uid: str) -> 
                 char_name = "麒麟R夜刀"
             records.append(
                 GachaRecord(
-                    uid=uid,
-                    char_pk_id=char_id,
-                    char_uid=char_uid,
+                    character_id=character_id,
                     pool_id=pool_id,
                     pool_name=pool_name,
                     char_id=get_char_id_by_char_name(char[0]),

@@ -307,11 +307,15 @@ class TestRealAPI:
         # 构造 Character 对象供 endfield_card 使用
         char = Character(
             id=0,
+            account_id=0,
             uid=char_info.uid,
             role_id=role.roleId,
             nickname=role.nickname,
             app_code="endfield",
             channel_master_id=role.serverId,
+            server_name=role.serverName,
+            level=role.level,
+            is_skland_default=role.isDefault,
         )
         card = await SklandAPI.endfield_card(cred, cred.userId, char)
         assert card is not None, "返回的终末地卡片数据不应为空"

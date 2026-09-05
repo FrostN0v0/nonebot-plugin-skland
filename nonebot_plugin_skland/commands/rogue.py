@@ -10,11 +10,11 @@ from nonebot.compat import model_dump, type_validate_json
 from nonebot_plugin_alconna import At, Match, MsgId, Arparma, UniMessage
 from nonebot_plugin_alconna.builtins.extensions import ReplyRecordExtension
 
+from ..model import SkUser
 from ..api import SklandAPI
 from ..config import config
-from ..model import SkUser, Character
+from .card import check_user_character
 from ..schemas import CRED, Topics, RogueData
-from ..db_handler import get_default_arknights_character
 from ..render import render_rogue_card, render_rogue_info
 from ..utils import (
     send_reaction,
@@ -22,17 +22,6 @@ from ..utils import (
     refresh_cred_token_if_needed,
     refresh_access_token_if_needed,
 )
-
-
-async def check_user_character(user_id: int, session: async_scoped_session) -> tuple[SkUser, Character]:
-    """检查用户和角色绑定状态"""
-    user = await session.get(SkUser, user_id)
-    if not user:
-        await UniMessage("未绑定 skland 账号").finish(at_sender=True)
-    char = await get_default_arknights_character(user, session)
-    if not char:
-        await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
-    return user, char
 
 
 async def rogue_handler(
@@ -47,7 +36,7 @@ async def rogue_handler(
     @refresh_access_token_if_needed
     async def get_rogue_info(user: SkUser, uid: str, topic_id: str):
         return await SklandAPI.get_rogue(
-            CRED(cred=user.cred, token=user.cred_token, userId=str(user.user_id)),
+            CRED(cred=user.cred, token=user.cred_token, userId=user.skland_user_id),
             uid,
             topic_id,
         )
@@ -58,7 +47,14 @@ async def rogue_handler(
     else:
         target_id = user_session.user_id
 
-    user, character = await check_user_character(target_id, session)
+    selected = await check_user_character(target_id, user_session, session)
+    if selected is None:
+        return
+    user, character = selected
+    if not user.skland_user_id:
+        await session.rollback()
+        await UniMessage("账号身份尚未同步,请先执行 sk char update").send(at_sender=True)
+        return
     send_reaction(user_session, "processing")
 
     topic_id = Topics(str(result.query("rogue.topic.topic_name"))).topic_id if result.find("rogue.topic") else ""

@@ -33,7 +33,7 @@ async def test_ark_card_data_source_reuses_value_until_ttl(app, mocker):
         return value
 
     source = ArkCardDataSource(ttl=120, max_entries=64, loader=load, clock=clock)
-    user = mocker.Mock(id=1, user_id="account-1")
+    user = mocker.Mock(id=1, skland_user_id="account-1")
     character = mocker.Mock(
         app_code="arknights",
         channel_master_id="server-1",
@@ -68,7 +68,7 @@ async def test_ark_card_data_source_recovers_after_loader_error(app, mocker):
         return value
 
     source = ArkCardDataSource(ttl=120, max_entries=64, loader=load)
-    user = mocker.Mock(id=1, user_id="account-1")
+    user = mocker.Mock(id=1, skland_user_id="account-1")
     character = mocker.Mock(
         app_code="arknights",
         channel_master_id="server-1",
@@ -104,7 +104,7 @@ async def test_ark_card_data_source_merges_concurrent_requests(app, mocker):
         return value
 
     source = ArkCardDataSource(ttl=120, max_entries=64, loader=load)
-    user = mocker.Mock(id=1, user_id="account-1")
+    user = mocker.Mock(id=1, skland_user_id="account-1")
     character = mocker.Mock(
         app_code="arknights",
         channel_master_id="server-1",
@@ -139,7 +139,7 @@ async def test_cancelled_waiter_does_not_cancel_shared_load(app, mocker):
         return value
 
     source = ArkCardDataSource(ttl=120, max_entries=64, loader=load)
-    user = mocker.Mock(id=1, user_id="account-1")
+    user = mocker.Mock(id=1, skland_user_id="account-1")
     character = mocker.Mock(
         app_code="arknights",
         channel_master_id="server-1",
@@ -174,7 +174,7 @@ async def test_ark_card_data_source_invalidates_user_cache(app, mocker):
         return value
 
     source = ArkCardDataSource(ttl=120, max_entries=64, loader=load)
-    user = mocker.Mock(id=1, user_id="account-1")
+    user = mocker.Mock(id=1, skland_user_id="account-1")
     character = mocker.Mock(
         app_code="arknights",
         channel_master_id="server-1",
@@ -183,7 +183,7 @@ async def test_ark_card_data_source_invalidates_user_cache(app, mocker):
     )
 
     first = await source.get(user, character)
-    await source.invalidate_user(user.id)
+    await source.invalidate_account(user.id)
     assert user.id not in source._generations
     refreshed = await source.get(user, character)
 
@@ -205,7 +205,7 @@ async def test_ark_card_data_source_does_not_cache_none(app, mocker):
         return None if calls == 1 else value
 
     source = ArkCardDataSource(ttl=120, max_entries=64, loader=load)
-    user = mocker.Mock(id=1, user_id="account-1")
+    user = mocker.Mock(id=1, skland_user_id="account-1")
     character = mocker.Mock(
         app_code="arknights",
         channel_master_id="server-1",
@@ -272,7 +272,7 @@ async def test_ark_card_data_source_evicts_least_recently_used_role(app, mocker)
         return object()
 
     source = ArkCardDataSource(ttl=120, max_entries=2, loader=load)
-    user = mocker.Mock(id=1, user_id="account-1")
+    user = mocker.Mock(id=1, skland_user_id="account-1")
 
     def character(uid: str):
         return mocker.Mock(
@@ -308,7 +308,7 @@ async def test_expired_entry_is_purged_before_lru_eviction(app, mocker):
         return object()
 
     source = ArkCardDataSource(ttl=10, max_entries=2, loader=load, clock=clock)
-    user = mocker.Mock(id=1, user_id="account-1")
+    user = mocker.Mock(id=1, skland_user_id="account-1")
 
     def character(uid: str):
         return mocker.Mock(
@@ -353,7 +353,7 @@ async def test_invalidated_inflight_result_is_not_cached(app, mocker):
         return value
 
     source = ArkCardDataSource(ttl=120, max_entries=64, loader=load)
-    user = mocker.Mock(id=1, user_id="account-1")
+    user = mocker.Mock(id=1, skland_user_id="account-1")
     character = mocker.Mock(
         app_code="arknights",
         channel_master_id="server-1",
@@ -363,7 +363,7 @@ async def test_invalidated_inflight_result_is_not_cached(app, mocker):
 
     first_request = asyncio.create_task(source.get(user, character))
     await started.wait()
-    await source.invalidate_user(user.id)
+    await source.invalidate_account(user.id)
     assert source._generations[user.id] == 1
     release.set()
 
@@ -384,7 +384,7 @@ async def test_shared_ark_card_data_source_uses_user_credentials(app, mocker):
     )
     user = mocker.Mock(
         id=99,
-        user_id="account-99",
+        skland_user_id="account-99",
         access_token="access-token",
         cred="cred-value",
         cred_token="cred-token-value",
@@ -395,7 +395,7 @@ async def test_shared_ark_card_data_source_uses_user_credentials(app, mocker):
         uid="role-99",
         role_id="role-id-99",
     )
-    await ark_card_data.invalidate_user(user.id)
+    await ark_card_data.invalidate_account(user.id)
 
     result = await get_ark_card(user, character)
 
@@ -404,7 +404,7 @@ async def test_shared_ark_card_data_source_uses_user_credentials(app, mocker):
     assert cred.cred == "cred-value"
     assert cred.token == "cred-token-value"
     assert uid == "role-99"
-    await ark_card_data.invalidate_user(user.id)
+    await ark_card_data.invalidate_account(user.id)
 
 
 @pytest.mark.asyncio
@@ -510,7 +510,7 @@ async def test_gacha_handler_uses_shared_ark_card_data_source(app, mocker):
     mocker.patch.object(gacha.SklandLoginAPI, "get_role_token_by_uid", new=mocker.AsyncMock(return_value="role"))
     mocker.patch.object(gacha.SklandLoginAPI, "get_ak_cookie", new=mocker.AsyncMock(return_value="cookie"))
     mocker.patch.object(gacha.SklandAPI, "get_gacha_categories", new=mocker.AsyncMock(return_value=[]))
-    mocker.patch.object(gacha, "select_all_gacha_records", new=mocker.AsyncMock(return_value=[]))
+    mocker.patch.object(gacha, "get_character_gacha_records", new=mocker.AsyncMock(return_value=[]))
     mocker.patch.object(gacha, "group_gacha_records", return_value=mocker.Mock())
     get_card = mocker.patch.object(gacha, "get_ark_card", new=mocker.AsyncMock(return_value=None))
 
@@ -534,7 +534,7 @@ async def test_gacha_handler_renders_after_session_commit(app, mocker):
 
     import nonebot_plugin_skland.render as render
     import nonebot_plugin_skland.commands.gacha as gacha
-    from nonebot_plugin_skland.model import SkUser, Character
+    from nonebot_plugin_skland.model import SkUser, Character, CharacterDefault
 
     rendered_html: list[str] = []
 
@@ -567,28 +567,34 @@ async def test_gacha_handler_renders_after_session_commit(app, mocker):
     mocker.patch.object(gacha.UniMessage, "image", return_value=message)
 
     async with get_session() as session:
+        owner_id = 91001
         user = SkUser(
-            id=91001,
+            owner_id=owner_id,
             access_token="access-token",
             cred="cred",
             cred_token="cred-token",
-            user_id="skland-user",
+            skland_user_id="skland-user",
         )
+        session.add(user)
+        await session.flush()
         character = Character(
-            id=user.id,
+            account_id=user.id,
             uid="role-1",
             role_id="role-1",
             app_code="arknights",
             channel_master_id="1",
+            server_name="Official",
             nickname="Doctor",
-            isdefault=True,
+            level=None,
+            is_skland_default=True,
         )
-        user_id = user.id
-        session.add_all([user, character])
+        session.add(character)
+        await session.flush()
+        session.add(CharacterDefault(owner_id=owner_id, app_code="arknights", character_id=character.id))
         await session.commit()
 
         await gacha.gacha_handler(
-            user_session=SimpleNamespace(user_id=user_id),
+            user_session=SimpleNamespace(user_id=owner_id),
             session=session,
             begin=mocker.Mock(available=False),
             limit=mocker.Mock(available=False),
@@ -599,48 +605,3 @@ async def test_gacha_handler_renders_after_session_commit(app, mocker):
     assert len(rendered_html) == 1
     assert "Doctor" in rendered_html[0]
     message.send.assert_awaited_once_with()
-
-
-@pytest.mark.asyncio
-async def test_bind_characters_invalidates_cached_player_data(app, mocker):
-    from nonebot_plugin_skland.utils import bind_characters
-    from nonebot_plugin_skland.player_data import ark_card_data
-
-    user = mocker.Mock(id=7, cred="cred", cred_token="token")
-    session = mocker.Mock()
-    mocker.patch(
-        "nonebot_plugin_skland.utils.SklandAPI.get_binding",
-        new=mocker.AsyncMock(return_value=[]),
-    )
-    mocker.patch(
-        "nonebot_plugin_skland.utils.select_user_characters",
-        new=mocker.AsyncMock(return_value=[]),
-    )
-    invalidate = mocker.patch.object(ark_card_data, "invalidate_user", new=mocker.AsyncMock())
-
-    await bind_characters(user, session)
-
-    invalidate.assert_awaited_once_with(user.id)
-
-
-@pytest.mark.asyncio
-async def test_unbind_handler_invalidates_cached_player_data(app, mocker):
-    import nonebot_plugin_skland.commands.bind as bind
-
-    user = mocker.Mock(id=7)
-    session = mocker.Mock(get=mocker.AsyncMock(return_value=user), commit=mocker.AsyncMock())
-    response = mocker.Mock()
-    response.extract_plain_text.return_value = "确认"
-    mocker.patch.object(bind, "prompt", new=mocker.AsyncMock(return_value=response))
-    mocker.patch.object(bind, "delete_user_all_gacha_records", new=mocker.AsyncMock())
-    mocker.patch.object(bind, "delete_characters", new=mocker.AsyncMock())
-    mocker.patch.object(bind, "delete_user", new=mocker.AsyncMock())
-    mocker.patch.object(bind, "send_reaction")
-    message = mocker.patch.object(bind, "UniMessage")
-    message.return_value.finish = mocker.AsyncMock()
-    invalidate = mocker.patch.object(bind.ark_card_data, "invalidate_user", new=mocker.AsyncMock())
-
-    await bind.unbind_handler(user_session=mocker.Mock(user_id=7), session=session)
-
-    session.commit.assert_awaited_once_with()
-    invalidate.assert_awaited_once_with(user.id)

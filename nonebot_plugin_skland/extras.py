@@ -9,9 +9,11 @@ extra_data = {
                 "- **绑定账号**\n\n"
                 "```bash\n"
                 "skland bind <token|cred>\n"
+                "skland bind -u <token|cred>\n"
                 "```\n\n"
                 " **快捷指令** ：`森空岛绑定`\n\n"
-                "如需要更新绑定的森空岛账号，请使用 `skland bind -u <token|cred>` 更新绑定信息。\n"
+                "同一用户可以绑定多个森空岛账号。插件会先展示该账号的角色列表，仅在命令发起者回复「确认」后保存。\n"
+                "`-u` 只更新由凭证识别出的既有账号；不带 `-u` 时新增账号。\n"
                 "其中 `token` 和 `cred` 的获取可以参考 `https://docs.qq.com/doc/p/2f705965caafb3ef342d4a979811ff3960bb3c17`。\n"
             ),
         },
@@ -26,8 +28,8 @@ extra_data = {
                 "skland qrcode\n"
                 "```\n\n"
                 " **快捷指令** ：`扫码绑定`\n\n"
-                "如需要使用二维码绑定森空岛账号，请使用 `skland qrcode` 获取二维码。\n"
-                "然后在两分钟内使用手机森空岛APP扫码登录以绑定森空岛账号。\n"
+                "在约两分钟内使用森空岛 App 扫码。扫码完成后插件会展示角色列表，"
+                "只有命令发起者确认后才会保存或更新对应账号。\n"
             ),
         },
         {
@@ -41,8 +43,7 @@ extra_data = {
                 "skland unbind\n"
                 "```\n\n"
                 " **快捷指令** ：`森空岛解绑`\n\n"
-                "解绑当前绑定的森空岛账号，将删除所有绑定数据（包括角色和抽卡记录）。\n"
-                "执行后需要回复「确认」以确认解绑操作。\n"
+                "先按卡片序号选择一个账号或回复「全部」，再进行第二次确认。只删除所选账号及其角色、抽卡记录；删除默认角色后需要重新选择。\n"
             ),
         },
         {
@@ -55,7 +56,7 @@ extra_data = {
                 "```bash\n"
                 "skland @某人 or 平台ID(QQ号)\n"
                 "```\n\n"
-                "**注意**: 如有多游戏角色绑定，默认查询森空岛设置的默认角色。"
+                "查询插件中选择的明日方舟默认角色，并使用该角色所属森空岛账号的凭证访问接口。"
             ),
         },
         {
@@ -327,31 +328,34 @@ extra_data = {
             ),
         },
         {
-            "func": "角色更新",
+            "func": "账号角色管理",
             "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**角色更新** | `skland char update`",
-            "brief_des": "同步森空岛绑定的游戏角色信息。",
+            "trigger_condition": "`skland char` | **角色更新** | `skland char update`",
+            "brief_des": "查看全部账号角色、切换默认角色并同步角色。",
             "detail_des": (
-                "-  **角色更新**\n\n"
+                "- **账号角色管理**\n\n"
                 "```bash\n"
+                "skland char\n"
+                "skland char set ark <index>\n"
+                "skland char set ef <index>\n"
                 "skland char update\n"
                 "```\n\n"
-                "**快捷指令** ：`角色更新`\n\n"
-                "同步森空岛绑定的游戏角色信息。"
+                "`skland char` 返回全部森空岛账号及其角色卡片；明日方舟和终末地分别维护一个插件默认角色。\n"
+                "角色序号按游戏独立生成，以最新卡片为准。`角色更新` 快捷指令对应 `skland char update`。"
             ),
         },
         {
             "func": "全体角色更新",
             "trigger_method": "**超级用户**",
             "trigger_condition": "**全体角色更新** | `skland char update --all`",
-            "brief_des": "更新所有绑定用户的角色信息。",
+            "brief_des": "逐账号更新所有绑定角色。",
             "detail_des": (
                 "-  **全体角色更新**\n\n"
                 "```bash\n"
                 "skland char update --all\n"
                 "```\n\n"
                 "**快捷指令** ：`全体角色更新`\n\n"
-                "更新所有绑定到bot的用户角色信息。\n\n"
+                "逐个森空岛账号同步角色；单个账号失败不会回滚其他已成功账号。\n\n"
                 "> **注意：** 该指令仅超管可用。"
             ),
         },

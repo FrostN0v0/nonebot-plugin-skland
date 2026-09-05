@@ -9,12 +9,13 @@ from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_alconna import At, Match, CustomNode, UniMessage
 
 from ..config import config
+from ..model import GachaRecord
 from ..schemas import GachaInfo
 from ..player_data import get_ark_card
+from .card import check_user_character
 from ..render import render_gacha_history
 from ..api import SklandAPI, SklandLoginAPI
-from ..model import SkUser, Character, GachaRecord
-from ..db_handler import select_all_gacha_records, get_default_arknights_character
+from ..db_handler import get_character_gacha_records
 from ..utils import (
     send_reaction,
     group_gacha_records,
@@ -22,17 +23,6 @@ from ..utils import (
     heybox_data_to_record,
     import_heybox_gacha_data,
 )
-
-
-async def check_user_character(user_id: int, session: async_scoped_session) -> tuple[SkUser, Character]:
-    """检查用户和角色绑定状态"""
-    user = await session.get(SkUser, user_id)
-    if not user:
-        await UniMessage("未绑定 skland 账号").finish(at_sender=True)
-    char = await get_default_arknights_character(user, session)
-    if not char:
-        await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
-    return user, char
 
 
 async def gacha_handler(
@@ -51,10 +41,16 @@ async def gacha_handler(
     else:
         target_id = user_session.user_id
 
-    user, character = await check_user_character(target_id, session)
+    selected = await check_user_character(target_id, user_session, session)
+    if selected is None:
+        return
+    user, character = selected
     send_reaction(user_session, "processing")
-    token = user.access_token
-    grant_code = await SklandLoginAPI.get_grant_code(token, 1)
+    if not user.access_token:
+        await session.rollback()
+        await UniMessage("当前角色所属账号未保存 token,请使用 token 或扫码更新该账号").send(at_sender=True)
+        return
+    grant_code = await SklandLoginAPI.get_grant_code(user.access_token, 1)
     role_token = await SklandLoginAPI.get_role_token_by_uid(character.uid, grant_code)
     ak_cookie = await SklandLoginAPI.get_ak_cookie(role_token)
     categories = await SklandAPI.get_gacha_categories(character.uid, role_token, user.access_token, ak_cookie)
@@ -71,15 +67,12 @@ async def gacha_handler(
             f"正在获取角色：{character.nickname} 的抽卡记录，"
             f"卡池类别：{cate_name}, 本次获取记录条数: {new_records_count}"
         )
-    records = await select_all_gacha_records(user, character.uid, session)
+    records = await get_character_gacha_records(character.id, session)
     existing_records_set = {(r.gacha_ts, r.pos) for r in records}
-    gacha_record_list: list[GachaRecord] = []
     record_to_save: list[GachaRecord] = []
     for gacha_record in all_gacha_records_flat:
         record = GachaRecord(
-            uid=user.id,
-            char_pk_id=character.id,
-            char_uid=character.uid,
+            character_id=character.id,
             pool_id=gacha_record.poolId,
             pool_name=gacha_record.poolName,
             char_id=gacha_record.charId,
@@ -89,7 +82,6 @@ async def gacha_handler(
             gacha_ts=gacha_record.gacha_ts_sec,
             pos=gacha_record.pos,
         )
-        gacha_record_list.append(record)
         if (int(gacha_record.gacha_ts_sec), gacha_record.pos) in existing_records_set:
             continue
         record_to_save.append(record)
@@ -190,12 +182,15 @@ async def gacha_handler(
 
 async def import_handler(url: Match[str], user_session: UserSession, session: async_scoped_session):
     """导入明日方舟抽卡记录"""
-    user, character = await check_user_character(user_session.user_id, session)
+    selected = await check_user_character(user_session.user_id, user_session, session)
+    if selected is None:
+        return
+    _user, character = selected
     if url.available:
         import_result = await import_heybox_gacha_data(url.result)
         if str(import_result["info"]["uid"]) == character.uid:
-            records = heybox_data_to_record(import_result["data"], user.id, character.id, character.uid)
-            db_records = await select_all_gacha_records(user, character.uid, session)
+            records = heybox_data_to_record(import_result["data"], character.id)
+            db_records = await get_character_gacha_records(character.id, session)
             existing_records_set = {(r.gacha_ts, r.pos) for r in db_records}
             record_to_save: list[GachaRecord] = []
             for record in records:

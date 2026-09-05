@@ -196,15 +196,22 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 <details open>
 <summary><b>🔐 账号管理</b></summary>
 
-| 指令                           | 权限 | 说明                     |
-| ------------------------------ | ---- | ------------------------ |
-| `skland bind <token\|cred>`    | 所有 | 绑定森空岛账号           |
-| `skland bind -u <token\|cred>` | 所有 | 更新绑定的 token 或 cred |
-| `skland qrcode`                | 所有 | 扫码绑定森空岛账号       |
-| `skland unbind`                | 所有 | 解绑森空岛账号           |
-| `skland char update`           | 所有 | 更新森空岛绑定角色信息   |
+| 指令                                          | 权限     | 说明                                           |
+| --------------------------------------------- | -------- | ---------------------------------------------- |
+| `skland bind <token\|cred>`                  | 所有     | 新增森空岛账号，确认角色列表后保存             |
+| `skland bind -u <token\|cred>`               | 所有     | 更新由凭证识别的既有森空岛账号                 |
+| `skland qrcode`                               | 所有     | 扫码后确认角色列表，新增或更新对应账号         |
+| `skland unbind`                               | 所有     | 交互选择一个账号或全部账号并二次确认解绑       |
+| `skland char`                                 | 所有     | 查看全部森空岛账号、游戏角色及当前插件默认角色 |
+| `skland char set <ark\|ef> <序号>`           | 所有     | 按游戏独立序号切换插件默认角色                 |
+| `skland char update`                          | 所有     | 逐账号同步自己的森空岛角色                     |
+| `skland char update --all`                    | 超级用户 | 逐账号同步所有用户的森空岛角色                 |
 
-**快捷指令：** `森空岛绑定` `扫码绑定` `森空岛解绑` `角色更新`
+同一 NoneBot 用户可绑定多个森空岛账号。明日方舟与终末地分别维护一个插件默认角色；角色查询、签到、肉鸽和抽卡始终使用所选角色所属账号的凭证。角色序号不会持久化，同步后请以最新 `skland char` 卡片为准。
+
+账号角色卡采用统一的档案式布局，展示昵称、玩家 UID、区服名称、选择序号和默认/绑定状态。方舟显示角色 UID，终末地显示游戏内玩家 UID；森空岛账号标识、终末地绑定 UID、服务器内部编号和等级不在卡片中展示。
+
+**快捷指令：** `森空岛绑定` `扫码绑定` `森空岛解绑` `角色更新` `全体角色更新`
 
 </details>
 
@@ -216,6 +223,8 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `skland`        | 所有 | 查询默认角色信息卡片   |
 | `skland @某人`  | 所有 | 查询指定用户的角色信息 |
 | `skland <QQ号>` | 所有 | 查询指定QQ号的角色信息 |
+
+默认角色由插件按游戏独立管理，不再跟随森空岛账号的默认设置。本人尚未选择默认角色时，相关命令会返回最新账号角色卡片并提示使用 `skland char set`。
 
 </details>
 
@@ -404,9 +413,9 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 
 | 触发词               | 执行指令                      | 说明               |
 | -------------------- | ----------------------------- | ------------------ |
-| `森空岛绑定`         | `skland bind`                 | 绑定账号           |
-| `扫码绑定`           | `skland qrcode`               | 扫码绑定           |
-| `森空岛解绑`         | `skland unbind`               | 解绑账号           |
+| `森空岛绑定`         | `skland bind`                 | 新增账号并确认角色列表 |
+| `扫码绑定`           | `skland qrcode`               | 扫码后确认绑定         |
+| `森空岛解绑`         | `skland unbind`               | 交互选择账号解绑       |
 | `明日方舟签到`       | `skland arksign sign --all`   | 签到所有角色       |
 | `签到详情`           | `skland arksign status`       | 个人签到状态       |
 | `全体签到`           | `skland arksign all`          | 全部角色签到       |
@@ -416,8 +425,8 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `终末地签到详情`     | `skland efsign status`        | 终末地签到状态     |
 | `终末地全体签到`     | `skland efsign all`           | 终末地全部签到     |
 | `终末地全体签到详情` | `skland efsign status --all`  | 终末地全部签到状态 |
-| `角色更新`           | `skland char update`          | 更新角色信息       |
-| `全体角色更新`       | `skland char update --all`    | 更新所有用户角色   |
+| `角色更新`           | `skland char update`          | 逐账号同步角色       |
+| `全体角色更新`       | `skland char update --all`    | 逐账号同步所有角色   |
 | `资源更新`           | `skland sync`                 | 更新资源文件       |
 | `树海肉鸽`           |`skland rogue --topic 黑流树海`| 黑流树海主题战绩   |
 | `界园肉鸽`           | `skland rogue --topic 界园`   | 界园主题战绩       |
@@ -479,7 +488,7 @@ Bot: skland::skland 的快捷指令: "查战绩" 添加成功
 >
 > 可以参考[`token获取`](https://docs.qq.com/doc/p/2f705965caafb3ef342d4a979811ff3960bb3c17)获取
 >
-> 本插件支持 cred 和 token 两种方式手动绑定，使用二维码绑定时会提供 token，请勿将 token 提供给不信任的 Bot 所有者
+> 本插件支持 cred 和 token 两种手动绑定方式，也支持二维码绑定；三种方式都会在保存前展示角色列表并要求命令发起者确认。token、cred 和二维码登录结果均属于敏感凭证，请勿交给不信任的 Bot 所有者。
 
 ### 📸 效果图
 

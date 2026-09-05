@@ -722,6 +722,26 @@ def test_box_command_parses_natural_and_advanced_filters(app, operator_catalog):
         "name": "阿米娅",
     }
 
+    overview = skland_command.parse("/skland char")
+    assert overview.matched
+    assert overview.find("char")
+
+    set_ark = skland_command.parse("/skland char set ark 2")
+    assert set_ark.matched
+    assert set_ark.all_matched_args == {"game": "ark", "index": 2}
+
+    set_endfield = skland_command.parse("/skland char set endfield 1")
+    assert set_endfield.matched
+    assert set_endfield.all_matched_args == {"game": "endfield", "index": 1}
+
+    update_all = skland_command.parse("/skland char update --all")
+    assert update_all.matched
+    assert update_all.find("char.update.all")
+
+    unbind = skland_command.parse("/skland unbind")
+    assert unbind.matched
+    assert unbind.find("unbind")
+
     skland.shortcut(
         "方舟干员",
         {"command": "skland box", "fuzzy": True, "prefix": True, "compact": False},

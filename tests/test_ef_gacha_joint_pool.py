@@ -74,10 +74,7 @@ def make_record(
     from nonebot_plugin_skland.model import GachaRecord
 
     return GachaRecord(
-        uid=1,
-        char_pk_id=1,
-        char_uid="endfield-uid",
-        app_code="endfield",
+        character_id=1,
         item_type="char",
         pool_id=pool_id,
         pool_name="辉光庆典",

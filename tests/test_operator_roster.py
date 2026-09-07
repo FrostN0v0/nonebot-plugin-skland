@@ -703,7 +703,7 @@ def test_box_command_parses_natural_and_advanced_filters(app, operator_catalog):
     }
 
     advanced = skland_command.parse(
-        "/skland box -o all -r 4-6 -p 近卫,医疗 -b 收割者 --position 近战位 "
+        "/skland box -o all -ra 4-6 -p 近卫,医疗 -b 收割者 --position 近战位 "
         "--gender 女 -f 炎 --race 萨卡兹 --potential 5,6 -s training -n 阿米娅"
     )
     assert advanced.matched

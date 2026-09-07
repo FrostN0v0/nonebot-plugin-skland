@@ -165,6 +165,8 @@ async def box_handler(
     name: Match[str],
     sort: Match[str],
     bot: Bot,
+    *,
+    role_index: int | None = None,
 ):
     """Query operators by ownership, progression, and catalog metadata."""
     if not gacha_table_data.operator_catalog.entries:
@@ -194,7 +196,7 @@ async def box_handler(
         return
 
     target_id = await _resolve_target_id(user_session, target)
-    selected = await check_user_character(target_id, user_session, session)
+    selected = await check_user_character(target_id, user_session, session, role_index=role_index)
     if selected is None:
         return
     user, ark_character = selected

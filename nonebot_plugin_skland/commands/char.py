@@ -128,7 +128,7 @@ async def send_bound_roles_overview(
         await UniMessage(text or "角色列表渲染失败").send(at_sender=True)
         return False
     instruction = (
-        "临时查询: sk --role <序号> / sk efcard --role <序号>\n"
+        "临时选角: 查询、签到、状态及抽卡导入命令可追加 -r <序号>\n"
         "切换默认角色: sk char set ark <序号> / sk char set ef <序号>"
     )
     message_text = f"{text}\n{instruction}" if text else instruction

@@ -118,6 +118,11 @@ class BoundRoleCardItem(BindingRoleSnapshot):
 
     @property
     def server_label(self) -> str:
+        if self.app_code == "arknights":
+            if self.server_id == "1":
+                return "官服"
+            if self.server_id == "2":
+                return "bilibili服"
         if self.app_code == "endfield" and self.server_name == "China":
             return "国服"
         return self.server_name

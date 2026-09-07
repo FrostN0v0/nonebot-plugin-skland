@@ -31,7 +31,13 @@ async def startup():
     skland.shortcut("扫码绑定", {"command": "skland qrcode", "fuzzy": False, "prefix": True})
     skland.shortcut("森空岛解绑", {"command": "skland unbind", "fuzzy": False, "prefix": True})
     skland.shortcut("明日方舟签到", {"command": "skland arksign sign --all", "fuzzy": False, "prefix": True})
-    skland.shortcut("签到详情", {"command": "skland arksign status", "fuzzy": False, "prefix": True})
+    # Preserve all-role signing for the bare shortcut; forward explicit options separately.
+    skland.shortcut(
+        r"明日方舟签到\s+",
+        {"command": "skland arksign sign", "fuzzy": True, "prefix": True, "humanized": "明日方舟签到 <参数>"},
+    )
+    skland_command.shortcut("签到详情", delete=True)
+    skland.shortcut("签到详情", {"command": "skland arksign status", "fuzzy": True, "prefix": True, "compact": False})
     skland.shortcut("全体签到", {"command": "skland arksign all", "fuzzy": False, "prefix": True})
     skland.shortcut("全体签到详情", {"command": "skland arksign status --all", "fuzzy": False, "prefix": True})
     skland.shortcut("树海肉鸽", {"command": "skland rogue --topic 黑流树海", "fuzzy": True, "prefix": True})
@@ -61,8 +67,16 @@ async def startup():
         {"command": "skland box", "fuzzy": True, "prefix": True, "compact": False},
     )
     skland.shortcut("终末地签到", {"command": "skland efsign sign --all", "fuzzy": False, "prefix": True})
+    skland.shortcut(
+        r"终末地签到\s+",
+        {"command": "skland efsign sign", "fuzzy": True, "prefix": True, "humanized": "终末地签到 <参数>"},
+    )
     skland.shortcut("终末地全体签到", {"command": "skland efsign all", "fuzzy": False, "prefix": True})
-    skland.shortcut("终末地签到详情", {"command": "skland efsign status", "fuzzy": False, "prefix": True})
+    skland_command.shortcut("终末地签到详情", delete=True)
+    skland.shortcut(
+        "终末地签到详情",
+        {"command": "skland efsign status", "fuzzy": True, "prefix": True, "compact": False},
+    )
     skland.shortcut("终末地全体签到详情", {"command": "skland efsign status --all", "fuzzy": False, "prefix": True})
     skland.shortcut(r"(ef|zmd)", {"command": "skland efcard", "fuzzy": True, "prefix": True})
     skland.shortcut("终末地抽卡记录", {"command": "skland efgacha", "fuzzy": True, "prefix": True})

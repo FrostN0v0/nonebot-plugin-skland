@@ -280,8 +280,9 @@ async def test_sign_selection_uses_owning_account_without_changing_defaults(
 
 
 @pytest.mark.parametrize("game", ["arknights", "endfield"])
+@pytest.mark.parametrize("operation", ["sign", "status"])
 @pytest.mark.asyncio
-async def test_role_index_and_all_are_rejected_without_side_effects(app, mocker, make_user_session, game):
+async def test_role_index_and_all_are_rejected_without_side_effects(app, mocker, make_user_session, game, operation):
     from nonebot_plugin_orm import get_session
 
     import nonebot_plugin_skland.commands.arksign as arksign
@@ -305,12 +306,11 @@ async def test_role_index_and_all_are_rejected_without_side_effects(app, mocker,
         reaction = mocker.patch.object(command, "send_reaction")
         sign = mocker.patch.object(command.SklandAPI, api_name, new=mocker.AsyncMock())
 
-        await handler(
-            user_session,
-            session,
-            2,
-            SimpleNamespace(find=lambda path: path == all_path),
-        )
+        if operation == "sign":
+            await handler(user_session, session, 2, SimpleNamespace(find=lambda path: path == all_path))
+        else:
+            status_handler = arksign.arksign_status_handler if game == "arknights" else efsign.ef_sign_status_handler
+            await status_handler(user_session, session, mocker.Mock(), True, is_superuser=True, role_index=2)
 
         assert session.in_transaction() is False
         assert len(messages) == 1
@@ -318,3 +318,71 @@ async def test_role_index_and_all_are_rejected_without_side_effects(app, mocker,
         assert "--all" in messages[0]
         reaction.assert_not_called()
         sign.assert_not_awaited()
+
+
+@pytest.mark.parametrize("game", ["arknights", "endfield"])
+@pytest.mark.parametrize("scope", ["selected", "personal", "global", "missing_selected"])
+@pytest.mark.asyncio
+async def test_sign_status_filters_role_and_owner_without_changing_defaults(
+    app, mocker, make_user_session, tmp_path, game, scope
+):
+    from nonebot_plugin_orm import get_session
+
+    import nonebot_plugin_skland.commands.arksign as arksign
+    import nonebot_plugin_skland.commands.endfield.sign as efsign
+    from nonebot_plugin_skland.db_handler import get_user_characters, get_default_character, set_default_character
+
+    command, handler, cache_name = (
+        (arksign, arksign.arksign_status_handler, "sign_result.json")
+        if game == "arknights"
+        else (efsign, efsign.ef_sign_status_handler, "endfield_sign_result.json")
+    )
+    async with get_session() as session:
+        await _seed_sign_roles(session, 150)
+        roles = await get_user_characters(150, game, session)
+        default_id = roles[0].id
+        await set_default_character(150, game, default_id, session)
+        entries = [
+            {
+                "owner_id": 150,
+                "character_id": role.id,
+                "nickname": role.nickname,
+                "role_id": role.role_id,
+                "server_id": role.channel_master_id,
+                "server_name": role.server_name,
+                "result": f"cached-{index}",
+            }
+            for index, role in enumerate(roles)
+        ]
+        entries.append({**entries[1], "owner_id": 999, "result": "other-owner"})
+        if scope == "missing_selected":
+            entries.pop(1)
+        (tmp_path / cache_name).write_text(json.dumps({"data": entries}), encoding="utf-8")
+        mocker.patch.object(command, "CACHE_DIR", tmp_path)
+        mocker.patch.object(command, "send_reaction")
+        user_session = await make_user_session(session, 150)
+        user_session.session.scope = "Console"
+        if scope == "global":
+            await session.commit()
+            assert inspect(user_session.user).expired
+        messages = []
+
+        async def send(message, **_kwargs):
+            assert not session.in_transaction()
+            messages.append(message.extract_plain_text())
+
+        mocker.patch.object(command.UniMessage, "send", new=send)
+        await handler(
+            user_session,
+            session,
+            mocker.Mock(),
+            scope == "global",
+            is_superuser=True,
+            role_index=2 if scope in ("selected", "missing_selected") else None,
+        )
+
+        assert len(messages) == 1
+        assert ("cached-0" in messages[0]) == (scope in ("personal", "global"))
+        assert ("cached-1" in messages[0]) == (scope in ("selected", "personal", "global"))
+        assert ("other-owner" in messages[0]) == (scope == "global")
+        assert (await get_default_character(150, game, session)).id == default_id

@@ -39,6 +39,8 @@ async def ef_gacha_history_handler(
     target: Match[At | int],
     bot: Bot,
     update: bool = False,
+    *,
+    role_index: int | None = None,
 ):
     """查询终末地抽卡记录
 
@@ -57,7 +59,7 @@ async def ef_gacha_history_handler(
     else:
         target_id = user_session.user_id
 
-    selected = await check_user_character(target_id, user_session, session)
+    selected = await check_user_character(target_id, user_session, session, role_index=role_index)
     if selected is None:
         return
     user, character = selected

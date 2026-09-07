@@ -138,27 +138,29 @@ skland bind <token|cred> [-u]
 skland qrcode
 skland unbind
 skland arksign sign [--all | -r|--role <index>]
-skland arksign status [--all]
+skland arksign status [--all | -r|--role <index>]
 skland arksign all
 skland efsign sign [--all | -r|--role <index>]
-skland efsign status [--all]
+skland efsign status [--all | -r|--role <index>]
 skland efsign all
 skland char
 skland char set <ark|arknights|ef|endfield> <index>
 skland char update [--all]
 skland sync [--img] [--data] [--force] [--update]
-skland rogue [target] [--topic 傀影|水月|萨米|萨卡兹|界园|黑流树海]
-skland rginfo <id> [-f]
-skland gacha [target] [-b <begin>] [-l <limit>]
-skland import <url>
-skland box [target] [filters ...] [-o <owned|unowned|all>] [-r <rarity>] [-p <profession>] [-b <branch>] [--position <position>] [--gender <gender>] [-f <faction>] [--race <race>] [--potential <potential>] [-s <release|acquired|training>] [-n <name>]
+skland rogue [target] [-r|--role <index>] [--topic <topic>]
+skland rginfo <id> [-r|--role <index>] [-f]
+skland gacha [target] [-r|--role <index>] [-b <begin>] [-l <limit>]
+skland import <url> [-r|--role <index>]
+skland box [target] [filters ...] [-r|--role <index>] [-o <owned|unowned|all>] [-ra <rarity>] [-p <profession>] [-b <branch>] [--position <position>] [--gender <gender>] [-f <faction>] [--race <race>] [--potential <potential>] [-s <release|acquired|training>] [-n <name>]
 skland efcard [target] [-r|--role <index>] [-a] [-s]
-skland efgacha [target] [-u] [-b <begin>] [-l <limit>]
+skland efgacha [target] [-r|--role <index>] [-u] [-b <begin>] [-l <limit>]
 ```
 
 内置快捷指令在 `hook.py` 启动时注册，并通过 `nonebot_plugin_alconna.command_manager` 持久化到插件缓存目录的 `shortcut.db`。当前包括：森空岛绑定、扫码绑定、森空岛解绑、森空岛角色、切换方舟角色、切换终末地角色、明日方舟签到、签到详情、全体签到、全体签到详情、各肉鸽主题、角色更新、全体角色更新、资源更新、战绩详情、收藏战绩详情、方舟抽卡记录、导入抽卡记录、方舟干员、终末地签到、终末地签到详情、终末地全体签到、终末地全体签到详情、`ef|zmd`、终末地抽卡记录、终末地抽卡更新。
 
 `森空岛角色` 精确匹配 `skland char`；`切换方舟角色 <index>` / `切换终末地角色 <index>` 分别映射到 `skland char set ark <index>` / `skland char set ef <index>`，使用 `fuzzy=True` 接收序号、`compact=False` 要求空格分隔，并沿用 Bot 的命令前缀。内置快捷指令在加载缓存后注册。
+
+个人签到快捷指令保留裸命令签到全部个人角色的行为；追加选项时由独立的带空白前缀规则转发到 `sign`，支持 `-r` / `--role`，不会隐式叠加 `--all`。签到详情快捷指令也允许追加选角参数。其他按角色查询的中文快捷指令继续透传参数。
 
 ## 核心实现说明
 
@@ -270,12 +272,15 @@ class Config(BaseModel):
 - 同一 NoneBot 用户可绑定多个森空岛账号；token/cred 仅允许私聊，二维码入口保持群聊可用。
 - token、cred 和扫码所得凭证都先调用一次 binding API，渲染确认后的完整账号角色卡；只有命令发起者回复“确认”后才原子写入。
 - `skland char` 返回全部账号和角色；`skland char set <game> <index>` 按游戏独立序号切换插件默认角色，所有业务功能使用该角色所属账号的凭证。
-- `skland --role <index>`、`skland efcard --role <index>` 和两游戏的 `sign --role <index>` 使用最新角色卡的分游戏序号临时选择自己的角色，不写入 `CharacterDefault`，也不要求已设置默认角色。`get_character_by_index()` 与 `char set` 共用 `get_user_characters()` 的排序；无效序号不回退默认，错误提示渲染前结束读事务，不能临时选择其他用户的角色。
-- 四个临时选角入口均支持 `-r` 作为 `--role` 的别名，解析结果仍使用 `role.role_index`，业务 handler 不区分长短选项。`skland box -r` 保持稀有度语义，现有签到快捷指令继续签到全部个人角色。
+- 角色卡片、两游戏抽卡查询/更新、抽卡导入、干员查询、肉鸽及详情、两游戏个人签到及状态共 12 个入口统一支持 `-r` / `--role`。`matcher._role_option()` 为每个作用域构建独立选项，命令分发传入 `role_index`；各 handler 共用两游戏的 `check_user_character()`，使用角色所属账号、不写 `CharacterDefault`、不要求已有默认角色，也不能临时选择他人的角色。`get_character_by_index()` 与 `char set` 共用 `get_user_characters()` 排序，无效序号不回退默认。
+- `skland box -r` 统一用于角色序号，原星级短选项改为 `-ra`；`--rarity`、`rarity` 和自然筛选词继续保留。所有旧示例和调用必须同步迁移，不能根据值猜测 `-r` 是星级还是角色。
+- 签到状态不带选角参数时保留本人全部角色结果；显式选角时按 owner 和角色主键共同过滤缓存，防止跨账号、跨用户混入。`--all` 为超管全体状态，与选角互斥；全体签到提交后展示状态时不读取已过期的 `UserSession.user`。
+- 肉鸽详情不带选角参数时使用引用图片的缓存数据；显式选角时获取所选角色的新数据，引用图片只提供主题，无引用时使用角色当前主题。肉鸽 API 读取后在渲染前提交凭证刷新；线索、背景等暗语继续沿用原卡片携带的数据。
 - 个人签到的 `-u` / `--uid` / `uid` 选角入口已移除；`--role` 与 `--all` 同时出现时拒绝执行。绑定、同步和抽卡中表示更新的 `-u` 维持原义。主卡片 handler 使用选项感知的分发，根 `--role` 与不支持的子命令组合会明确拒绝，避免误触发双 handler。
 - 账号角色卡使用本地灰阶纹理、游戏字标与档案式布局；身份资料仅展示昵称、玩家 UID 和区服名称，保留账号/角色选择序号与默认/操作状态，不展示账号尾号、终末地绑定 UID、服务器内部编号或等级。
+- 角色选择编号仅显示数字，不在数字下方重复标注“序号”，也不在卡片右下角显示分游戏编号说明。
 - `BoundRoleCardItem.player_uid` 对方舟返回 `binding_uid`，对终末地返回 `game_role_id`；内部字段继续保留用于身份识别与确认校验。模板显式开启 Jinja autoescape，避免依赖 htmlrender 默认不转义的环境。
-- `BoundRoleCardItem.server_label` 仅将终末地接口区服名 `China` 显示为“国服”；其他游戏和未知区服名保持原样，不修改用于 API 请求和角色身份匹配的原始名称或服务器 ID。
+- `BoundRoleCardItem.server_label` 按方舟渠道 ID 将 `1` / `2` 显示为“官服” / “bilibili服”，覆盖旧迁移将编号存入 `server_name` 的记录；终末地接口区服名 `China` 仍显示为“国服”。未知渠道沿用原区服名，不修改数据库、API 请求和角色身份匹配使用的原始名称或服务器 ID。
 - `skland unbind` 先选择账号序号或“全部”，再二次确认；删除当前默认角色后清空默认，不自动切换到其他账号。
 - `UserSession.user_id` 会读取 `User.id` ORM 属性；解绑及角色选择流程必须在 `rollback()` / `commit()` 前保存普通整数身份，后续确认、错误反馈与提交后总览不得重新读取已过期的用户 ORM 属性。渲染和 waiter 期间不持有数据库事务。
 - 二维码卡继续使用安全头像下载、原生黑白点阵、M 级纠错和 4 模块静区，并在约 100 秒后撤回；扫码者身份不能由插件验证，最终绑定以命令发起者确认的角色卡为准。
@@ -413,12 +418,12 @@ uv run pytest -s tests/test_skland_api.py
 - `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、JPEG/PNG 参数、分页发送与渲染参数。
 - `tests/test_image_cache.py` 覆盖配置开关、单次模板生成、浏览器半身图响应落盘、本地复用、显式字体/图片就绪、等待超时、未知 URL 跳过与失败响应忽略。
 - `tests/test_qrcode.py` 覆盖头像 URL 限制、图片下载校验、无头像降级、二维码原始像素保持、群聊发起者标记及扫码绑定流程。
-- `tests/test_account_management.py` 覆盖多账号所有权、分游戏默认角色、角色同步、账号操作互斥、临时选角与角色卡序号一致、默认映射不变，以及缺少默认角色和跨用户临时选角时的隐私/事务边界。
+- `tests/test_account_management.py` 覆盖多账号所有权、分游戏默认角色、角色同步、账号操作互斥、临时选角与角色卡序号一致、默认映射不变、按选定角色导入记录，以及缺少默认角色和跨用户临时选角时的隐私/事务边界。
 - `tests/test_bound_roles.py` 覆盖 binding API 规范化、角色卡投影、序号、默认徽标、两游戏玩家 UID 选择、内部 ID 隐藏、昵称转义、四种展示模式及空态/不可用角色。
 - `tests/test_multi_account_migration.py` 覆盖旧结构升级、数据保护检查、生成主键和不可表示数据的 downgrade 拒绝。
 - `tests/test_bind.py` 覆盖 token/cred 确认式新增/更新、取消/超时零写入、确认期间状态变化，以及真实 UserSession 下选择性/全量解绑的双 waiter 和提交后反馈。
-- `tests/test_sign.py` 覆盖多账号同名/同 UID 角色、角色所属凭证、签到缓存 list 结构、序号选角和默认不变，以及真实 UserSession 下无效序号、空角色列表和 `--role`/`--all` 冲突的处理。
-- `tests/test_role_selection.py` 覆盖四个临时选角入口的 `-r` / `--role` 命令语法、旧 UID 语法拒绝、更新开关保留，以及根/终末地角色卡短选项的实际 matcher 分发。
+- `tests/test_sign.py` 覆盖多账号同名/同 UID 角色、角色所属凭证、签到缓存 list 结构、序号选角和默认不变，以及签到/状态的 `--role`/`--all` 冲突、状态 owner/角色联合过滤、空结果和全体状态的 ORM 过期边界。
+- `tests/test_role_selection.py` 覆盖全部 12 个选角入口的长短选项、`-r` / `-ra` 冲突隔离、旧 UID 语法拒绝、更新开关保留，以及存在默认角色时无效序号的真实 matcher 分发，确保没有回退默认和外部数据访问。
 - `tests/test_skland_api.py` 会调用真实接口；单独运行时使用 `uv run pytest -s tests/test_skland_api.py`，其中 `-s` 用于显示终端二维码输出；凭证优先级为：
   1. `tests/cred_cache.json`
   2. 环境变量 `SKLAND_TOKEN` 或 `SKLAND_CRED`

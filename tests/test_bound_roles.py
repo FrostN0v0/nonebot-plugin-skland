@@ -184,10 +184,17 @@ def test_bound_role_card_item_player_uid_uses_public_identifier_per_game(app):
 
 
 @pytest.mark.parametrize(
-    ("app_code", "server_name", "expected"),
-    [("endfield", "China", "国服"), ("endfield", "Asia", "Asia"), ("arknights", "China", "China")],
+    ("app_code", "server_id", "server_name", "expected"),
+    [
+        ("arknights", "1", "1", "官服"),
+        ("arknights", "2", "2", "bilibili服"),
+        ("arknights", "2", "渠道服", "bilibili服"),
+        ("endfield", "1", "China", "国服"),
+        ("endfield", "2", "Asia", "Asia"),
+        ("arknights", "server-code", "China", "China"),
+    ],
 )
-def test_bound_role_server_label_preserves_raw_identity(app, app_code, server_name, expected):
+def test_bound_role_server_label_preserves_raw_identity(app, app_code, server_id, server_name, expected):
     from nonebot_plugin_skland.schemas import BoundRoleCardItem
 
     role = BoundRoleCardItem(
@@ -196,7 +203,7 @@ def test_bound_role_server_label_preserves_raw_identity(app, app_code, server_na
         nickname="Player",
         binding_uid="binding-uid",
         game_role_id="player-uid",
-        server_id="server-code",
+        server_id=server_id,
         server_name=server_name,
         level=None,
         is_skland_default=False,
@@ -208,7 +215,7 @@ def test_bound_role_server_label_preserves_raw_identity(app, app_code, server_na
 
     assert role.server_label == expected
     assert role.server_name == server_name
-    assert role.server_id == "server-code"
+    assert role.server_id == server_id
 
 
 @pytest.mark.asyncio

@@ -673,3 +673,47 @@ async def test_card_handler_uses_requested_role_data_path(app, mocker, make_user
             )
 
             assert calls == [(second_remote_id, second_character_id)]
+
+
+@pytest.mark.asyncio
+async def test_import_records_targets_selected_role_without_changing_default(app, mocker, make_user_session):
+    from nonebot_plugin_alconna import Match
+    from nonebot_plugin_orm import get_session
+
+    import nonebot_plugin_skland.utils as utils
+    import nonebot_plugin_skland.commands.gacha as gacha
+    from nonebot_plugin_skland.db_handler import (
+        get_default_character,
+        set_default_character,
+        get_character_gacha_records,
+    )
+
+    async with get_session() as session:
+        _first_account, _second_account, roles = await _seed_role_selection_data(session, owner_id=160)
+        first_role, selected_role = roles["arknights"]
+        first_id, selected_id, selected_uid = first_role.id, selected_role.id, selected_role.uid
+        await set_default_character(160, "arknights", first_id, session)
+        user_session = await make_user_session(session, 160)
+        mocker.patch.object(
+            gacha,
+            "import_heybox_gacha_data",
+            new=mocker.AsyncMock(
+                return_value={
+                    "info": {"uid": selected_uid},
+                    "data": {"1700000000": {"p": "Test Pool", "c": [["Operator", 5, True]]}},
+                }
+            ),
+        )
+        mocker.patch.object(utils, "get_pool_id", return_value="TEST_POOL")
+        mocker.patch.object(utils, "get_char_id_by_char_name", return_value="char_test")
+        mocker.patch.object(gacha, "send_reaction")
+        mocker.patch.object(gacha.UniMessage, "send", new=mocker.AsyncMock())
+
+        await gacha.import_handler(
+            Match("https://example.com/export", available=True), user_session, session, role_index=2
+        )
+
+        assert await get_character_gacha_records(first_id, session) == []
+        imported = await get_character_gacha_records(selected_id, session)
+        assert [(record.char_id, record.gacha_ts, record.pos) for record in imported] == [("char_test", 1700000000, 0)]
+        assert (await get_default_character(160, "arknights", session)).id == first_id

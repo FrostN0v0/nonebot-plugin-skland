@@ -134,8 +134,40 @@ async def ef_sign_status_handler(
     bot: Bot,
     result: Arparma | bool,
     is_superuser: bool = Depends(SuperUser()),
+    *,
+    role_index: int | None = None,
 ) -> None:
     """Show cached Endfield sign results."""
+    show_all = (isinstance(result, Arparma) and result.find("efsign.status.all")) or (
+        isinstance(result, bool) and result
+    )
+    owner_id: int | None = None
+    character_ids: set[int] | None = None
+    if role_index is not None and show_all:
+        await session.rollback()
+        await UniMessage("角色序号 (-r/--role) 与全体状态 (--all) 不能同时使用").send(at_sender=True)
+        return
+    if show_all:
+        if not is_superuser:
+            await session.rollback()
+            await UniMessage.text("该指令仅超管可用").send()
+            return
+    else:
+        owner_id = user_session.user_id
+        if role_index is not None:
+            selected = await check_user_character(owner_id, user_session, session, role_index=role_index)
+            if selected is None:
+                return
+            character_ids = {selected[1].id}
+        else:
+            accounts = await get_accounts(owner_id, session)
+            if not accounts:
+                await session.rollback()
+                await UniMessage("你还没有绑定森空岛账号").send(at_sender=True)
+                return
+            character_ids = {character.id for character in await get_user_characters(owner_id, "endfield", session)}
+    await session.rollback()
+
     sign_result_file = CACHE_DIR / "endfield_sign_result.json"
     if not sign_result_file.exists():
         await UniMessage.text("未找到签到结果").send()
@@ -147,29 +179,15 @@ async def ef_sign_status_handler(
         await UniMessage("签到结果格式已更新,请等待下一次自动签到或重新执行全体签到").send(at_sender=True)
         return
     sign_time = sign_result.get("timestamp", "未记录签到时间")
-
-    show_all = (isinstance(result, Arparma) and result.find("efsign.status.all")) or (
-        isinstance(result, bool) and result
-    )
-    if show_all:
-        if not is_superuser:
-            await UniMessage.text("该指令仅超管可用").send()
-            return
-    else:
-        accounts = await get_accounts(user_session.user_id, session)
-        if not accounts:
-            await session.rollback()
-            await UniMessage("你还没有绑定森空岛账号").send(at_sender=True)
-            return
-        character_ids = {
-            character.id for character in await get_user_characters(user_session.user_id, "endfield", session)
-        }
+    if character_ids is not None:
         sign_data = [
             entry
             for entry in sign_data
-            if entry.get("owner_id") == user_session.user_id and entry.get("character_id") in character_ids
+            if entry.get("owner_id") == owner_id and entry.get("character_id") in character_ids
         ]
-        await session.rollback()
+    if not sign_data:
+        await UniMessage.text("未找到签到结果").send()
+        return
 
     send_reaction(user_session, "processing")
     if user_session.platform == "QQClient":

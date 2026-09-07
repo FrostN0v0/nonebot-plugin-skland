@@ -19,14 +19,19 @@ from nonebot_plugin_alconna import (
 ns = Namespace("skland", disable_builtin_options=set())
 alc_config.namespaces["skland"] = ns
 
+
+def _role_option() -> Option:
+    return Option(
+        "-r|--role",
+        Args["role_index", int, Field(completion=lambda: "请输入角色卡片中对应游戏的角色序号")],
+        help_text="临时选择自己的游戏角色，不修改默认角色",
+    )
+
+
 skland_command = Alconna(
     "skland",
     Args["target?#目标", At | int],
-    Option(
-        "-r|--role",
-        Args["role_index", int, Field(completion=lambda: "请输入 sk char 中的方舟角色序号")],
-        help_text="临时查询指定序号的角色，不修改默认角色",
-    ),
+    _role_option(),
     Subcommand(
         "-b|--bind|bind",
         Args["token", str, Field(completion=lambda: "请输入 token 或 cred 绑定森空岛账号")],
@@ -39,16 +44,13 @@ skland_command = Alconna(
         "arksign",
         Subcommand(
             "sign",
-            Option(
-                "-r|--role",
-                Args["role_index", int, Field(completion=lambda: "请输入 sk char 中的方舟角色序号")],
-                help_text="按角色序号签到，不修改默认角色；不可与 --all 同用",
-            ),
+            _role_option(),
             Option("--all", help_text="签到所有个人绑定的角色"),
             help_text="个人绑定角色签到",
         ),
         Subcommand(
             "status",
+            _role_option(),
             Option("--all", help_text="查看所有绑定角色签到状态(仅超管可用)"),
             help_text="查看绑定角色签到状态",
         ),
@@ -59,16 +61,13 @@ skland_command = Alconna(
         "efsign",
         Subcommand(
             "sign",
-            Option(
-                "-r|--role",
-                Args["role_index", int, Field(completion=lambda: "请输入 sk char 中的终末地角色序号")],
-                help_text="按角色序号签到，不修改默认角色；不可与 --all 同用",
-            ),
+            _role_option(),
             Option("--all", help_text="签到所有个人绑定的角色"),
             help_text="个人绑定角色签到",
         ),
         Subcommand(
             "status",
+            _role_option(),
             Option("--all", help_text="查看所有绑定角色签到状态(仅超管可用)"),
             help_text="查看绑定角色签到状态",
         ),
@@ -105,6 +104,7 @@ skland_command = Alconna(
     Subcommand(
         "rogue",
         Args["target?#目标", At | int],
+        _role_option(),
         Option(
             "-t|--topic|topic",
             Args[
@@ -119,26 +119,27 @@ skland_command = Alconna(
     Subcommand(
         "rginfo",
         Args["id#战绩ID", int, Field(completion=lambda: "请输入战绩ID进行查询")],
+        _role_option(),
         Option("-f|--favored|favored", help_text="是否查询收藏的战绩"),
         help_text="查询单局肉鸽战绩详情",
     ),
     Subcommand(
         "gacha",
         Args["target?#目标", At | int],
+        _role_option(),
         Option("-b|--begin|begin", Args["begin", int], help_text="查询起始位置"),
         Option("-l|--limit|limit", Args["limit", int], help_text="查询抽卡记录卡池渲染上限"),
     ),
     Subcommand(
-        "import", Args["url", str, Field(completion=lambda: "请输入抽卡记录导出链接")], help_text="导入抽卡记录"
+        "import",
+        Args["url", str, Field(completion=lambda: "请输入抽卡记录导出链接")],
+        _role_option(),
+        help_text="导入抽卡记录",
     ),
     Subcommand(
         "efcard",
         Args["target?#目标", At | int],
-        Option(
-            "-r|--role",
-            Args["role_index", int, Field(completion=lambda: "请输入 sk char 中的终末地角色序号")],
-            help_text="临时查询指定序号的角色，不修改默认角色",
-        ),
+        _role_option(),
         Option("-a|--all|all", help_text="展示所有角色"),
         Option("-s|--simple|simple", help_text="使用简化背景"),
         help_text="终末地角色面板查询",
@@ -146,6 +147,7 @@ skland_command = Alconna(
     Subcommand(
         "efgacha",
         Args["target?#目标", At | int],
+        _role_option(),
         Option("-b|--begin|begin", Args["begin", int], help_text="查询起始位置"),
         Option("-l|--limit|limit", Args["limit", int], help_text="查询抽卡记录卡池渲染上限"),
         Option("-u|--update|update", help_text="从接口拉取最新数据并更新"),
@@ -155,13 +157,14 @@ skland_command = Alconna(
         "box",
         Args["target?#目标", At | int],
         Args["filters", MultiVar(str, "*")],
+        _role_option(),
         Option(
             "-o|--ownership|ownership",
             Args["ownership", str],
             help_text="持有状态，默认 owned；可选 owned / unowned / all",
         ),
         Option(
-            "-r|--rarity|rarity",
+            "-ra|--rarity|rarity",
             Args["rarities", str],
             help_text="稀有度筛选，默认全部；例 6 / 5,6 / 4-6 / all",
         ),

@@ -52,7 +52,7 @@ async def _(session: async_scoped_session, user_session: UserSession, target: Ma
     from .commands.card import card_handler
 
     if result.subcommands:
-        await skland.finish("该位置不支持 --role，请在角色查询或个人签到命令后使用该参数")
+        await skland.finish("请将 -r/--role 放在需要选角的具体子命令后使用")
     await card_handler(session, user_session, target, role_index=result.query("role.role_index"))
 
 
@@ -106,13 +106,15 @@ async def arksign_status(
     user_session: UserSession,
     session: async_scoped_session,
     bot: Bot,
-    result: Arparma | bool,
+    result: Arparma,
     is_superuser: bool = Depends(SuperUser()),
 ):
     """查看签到状态"""
     from .commands.arksign import arksign_status_handler
 
-    await arksign_status_handler(user_session, session, bot, result, is_superuser)
+    await arksign_status_handler(
+        user_session, session, bot, result, is_superuser, role_index=result.query("arksign.status.role.role_index")
+    )
 
 
 @skland.assign("arksign.all")
@@ -163,7 +165,7 @@ async def _(
     """获取明日方舟肉鸽战绩"""
     from .commands.rogue import rogue_handler
 
-    await rogue_handler(user_session, session, result, target)
+    await rogue_handler(user_session, session, result, target, role_index=result.query("rogue.role.role_index"))
 
 
 @skland.assign("rginfo")
@@ -173,11 +175,14 @@ async def _(
     ext: ReplyRecordExtension,
     result: Arparma,
     user_session: UserSession,
+    session: async_scoped_session,
 ):
     """获取明日方舟肉鸽战绩详情"""
     from .commands.rogue import rginfo_handler
 
-    await rginfo_handler(id, msg_id, ext, result, user_session)
+    await rginfo_handler(
+        id, msg_id, ext, result, user_session, session, role_index=result.query("rginfo.role.role_index")
+    )
 
 
 @skland.assign("gacha")
@@ -188,19 +193,22 @@ async def _(
     limit: Match[int],
     target: Match[At | int],
     bot: Bot,
+    result: Arparma,
 ):
     """查询明日方舟抽卡记录"""
     from .commands.gacha import gacha_handler
 
-    await gacha_handler(user_session, session, begin, limit, target, bot)
+    await gacha_handler(
+        user_session, session, begin, limit, target, bot, role_index=result.query("gacha.role.role_index")
+    )
 
 
 @skland.assign("import")
-async def _(url: Match[str], user_session: UserSession, session: async_scoped_session):
+async def _(url: Match[str], user_session: UserSession, session: async_scoped_session, result: Arparma):
     """导入明日方舟抽卡记录"""
     from .commands.gacha import import_handler
 
-    await import_handler(url, user_session, session)
+    await import_handler(url, user_session, session, role_index=result.query("import.role.role_index"))
 
 
 @skland.assign("efsign.sign")
@@ -220,13 +228,15 @@ async def efsign_status(
     user_session: UserSession,
     session: async_scoped_session,
     bot: Bot,
-    result: Arparma | bool,
+    result: Arparma,
     is_superuser: bool = Depends(SuperUser()),
 ):
     """查看终末地签到状态"""
     from .commands.endfield import ef_sign_status_handler
 
-    await ef_sign_status_handler(user_session, session, bot, result, is_superuser)
+    await ef_sign_status_handler(
+        user_session, session, bot, result, is_superuser, role_index=result.query("efsign.status.role.role_index")
+    )
 
 
 @skland.assign("efsign.all")
@@ -273,7 +283,9 @@ async def _(
     from .commands.endfield import ef_gacha_history_handler
 
     update = result.find("efgacha.update")
-    await ef_gacha_history_handler(user_session, session, begin, limit, target, bot, update)
+    await ef_gacha_history_handler(
+        user_session, session, begin, limit, target, bot, update, role_index=result.query("efgacha.role.role_index")
+    )
 
 
 @skland.assign("box")
@@ -294,6 +306,7 @@ async def _(
     name: Match[str],
     sort: Match[str],
     bot: Bot,
+    result: Arparma,
 ):
     """明日方舟干员查询"""
     from .commands.box import box_handler
@@ -315,4 +328,5 @@ async def _(
         name,
         sort,
         bot,
+        role_index=result.query("box.role.role_index"),
     )

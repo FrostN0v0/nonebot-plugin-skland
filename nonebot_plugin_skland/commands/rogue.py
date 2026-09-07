@@ -24,22 +24,25 @@ from ..utils import (
 )
 
 
+@refresh_cred_token_if_needed
+@refresh_access_token_if_needed
+async def _get_rogue_data(user: SkUser, uid: str, topic_id: str):
+    return await SklandAPI.get_rogue(
+        CRED(cred=user.cred, token=user.cred_token, userId=user.skland_user_id),
+        uid,
+        topic_id,
+    )
+
+
 async def rogue_handler(
     user_session: UserSession,
     session: async_scoped_session,
     result: Arparma,
     target: Match[At | int],
+    *,
+    role_index: int | None = None,
 ):
     """获取明日方舟肉鸽战绩"""
-
-    @refresh_cred_token_if_needed
-    @refresh_access_token_if_needed
-    async def get_rogue_info(user: SkUser, uid: str, topic_id: str):
-        return await SklandAPI.get_rogue(
-            CRED(cred=user.cred, token=user.cred_token, userId=user.skland_user_id),
-            uid,
-            topic_id,
-        )
 
     if target.available:
         target_platform_id = target.result.target if isinstance(target.result, At) else target.result
@@ -47,7 +50,7 @@ async def rogue_handler(
     else:
         target_id = user_session.user_id
 
-    selected = await check_user_character(target_id, user_session, session)
+    selected = await check_user_character(target_id, user_session, session, role_index=role_index)
     if selected is None:
         return
     user, character = selected
@@ -58,7 +61,8 @@ async def rogue_handler(
     send_reaction(user_session, "processing")
 
     topic_id = Topics(str(result.query("rogue.topic.topic_name"))).topic_id if result.find("rogue.topic") else ""
-    rogue = await get_rogue_info(user, str(character.uid), topic_id)
+    rogue = await _get_rogue_data(user, str(character.uid), topic_id)
+    await session.commit()
     if not rogue:
         return
     background = await get_rogue_background_image(topic_id)
@@ -73,7 +77,6 @@ async def rogue_handler(
         + Argot("background", argot_seg, command="background", expired_at=config.argot_expire)
     ).send()
     send_reaction(user_session, "done")
-    await session.commit()
 
 
 async def rginfo_handler(
@@ -82,27 +85,46 @@ async def rginfo_handler(
     ext: ReplyRecordExtension,
     result: Arparma,
     user_session: UserSession,
+    session: async_scoped_session,
+    *,
+    role_index: int | None = None,
 ):
-    """获取明日方舟肉鸽战绩详情"""
+    """Show cached rogue details or query an explicitly selected role."""
+    owner_id = user_session.user_id
+    rogue_data: RogueData | None = None
     if reply := ext.get_reply(msg_id):
         argot = await get_argot("data", reply.id)
-        if not argot:
+        if not argot or not (data := argot.dump_segment()):
+            await session.rollback()
             send_reaction(user_session, "unmatch")
             await UniMessage.text("未找到该暗语或暗语已过期").finish(at_sender=True)
-        if data := argot.dump_segment():
-            send_reaction(user_session, "processing")
-            rogue_data = type_validate_json(RogueData, UniMessage.load(data).extract_plain_text())
-            background = await get_rogue_background_image(rogue_data.topic)
-            if result.find("rginfo.favored"):
-                img = await render_rogue_info(rogue_data, background, id.result, True)
-            else:
-                img = await render_rogue_info(rogue_data, background, id.result, False)
-            if str(background).startswith("http"):
-                argot_seg = [Text(str(background)), Image(url=str(background))]
-            else:
-                argot_seg = Image(path=str(background))
-            await UniMessage(
-                Image(raw=img) + Argot("background", argot_seg, command="background", expired_at=config.argot_expire)
-            ).send()
+        rogue_data = type_validate_json(RogueData, UniMessage.load(data).extract_plain_text())
+
+    if role_index is not None:
+        selected = await check_user_character(owner_id, user_session, session, role_index=role_index)
+        if selected is None:
+            return
+        user, character = selected
+        if not user.skland_user_id:
+            await session.rollback()
+            await UniMessage("账号身份尚未同步,请先执行 sk char update").send(at_sender=True)
+            return
+        rogue_data = await _get_rogue_data(user, character.uid, rogue_data.topic if rogue_data is not None else "")
+        await session.commit()
+        if rogue_data is None:
+            return
     else:
-        await UniMessage.text("请回复一条肉鸽战绩").finish()
+        await session.rollback()
+        if rogue_data is None:
+            await UniMessage.text("请回复一条肉鸽战绩，或使用 -r 指定自己的角色").finish()
+
+    send_reaction(user_session, "processing")
+    background = await get_rogue_background_image(rogue_data.topic)
+    img = await render_rogue_info(rogue_data, background, id.result, result.find("rginfo.favored"))
+    if str(background).startswith("http"):
+        argot_seg = [Text(str(background)), Image(url=str(background))]
+    else:
+        argot_seg = Image(path=str(background))
+    await UniMessage(
+        Image(raw=img) + Argot("background", argot_seg, command="background", expired_at=config.argot_expire)
+    ).send()

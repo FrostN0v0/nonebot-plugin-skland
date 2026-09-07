@@ -32,6 +32,8 @@ async def gacha_handler(
     limit: Match[int],
     target: Match[At | int],
     bot: Bot,
+    *,
+    role_index: int | None = None,
 ):
     """查询明日方舟抽卡记录"""
 
@@ -41,7 +43,7 @@ async def gacha_handler(
     else:
         target_id = user_session.user_id
 
-    selected = await check_user_character(target_id, user_session, session)
+    selected = await check_user_character(target_id, user_session, session, role_index=role_index)
     if selected is None:
         return
     user, character = selected
@@ -180,9 +182,15 @@ async def gacha_handler(
     await session.commit()
 
 
-async def import_handler(url: Match[str], user_session: UserSession, session: async_scoped_session):
+async def import_handler(
+    url: Match[str],
+    user_session: UserSession,
+    session: async_scoped_session,
+    *,
+    role_index: int | None = None,
+):
     """导入明日方舟抽卡记录"""
-    selected = await check_user_character(user_session.user_id, user_session, session)
+    selected = await check_user_character(user_session.user_id, user_session, session, role_index=role_index)
     if selected is None:
         return
     _user, character = selected

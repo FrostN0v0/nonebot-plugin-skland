@@ -19,9 +19,6 @@
 <div class="relative flex min-w-0 gap-4 py-4">
   <div class="flex w-11 shrink-0 flex-col items-center border-r border-[#080808]/10 pr-3">
     <span class="font-[Akrobat] text-[30px] leading-8 {% if role.is_available %}text-[#080808]/75{% else %}text-[#080808]/35{% endif %}">{{ '%02d' | format(role.index) if role.index is not none else '—' }}</span>
-    {% if role.index is not none %}
-    <span class="mt-1 text-[10px] tracking-wider text-[#080808]/60">序号</span>
-    {% endif %}
   </div>
   <div class="min-w-0 flex-1">
     <div class="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
@@ -132,7 +129,6 @@
     <div class="flex items-start gap-4 text-[#080808]/85">
       <span class="mt-0.5 shrink-0 text-[12px] font-bold">切换默认角色</span>
       <div class="flex-1 space-y-1.5 text-[13px] leading-4"><div class="flex items-center gap-2"><span class="h-1.5 w-1.5 bg-[#23BAFC]"></span><span class="font-[Bender]">sk char set ark</span> &lt;序号&gt;</div><div class="flex items-center gap-2"><span class="h-1.5 w-1.5 bg-[#B4AC00]"></span><span class="font-[Bender]">sk char set ef</span> &lt;序号&gt;</div></div>
-      <span class="text-[11px] text-[#080808]/80">角色序号按游戏分别计算</span>
     </div>
     {% endif %}
   </section>

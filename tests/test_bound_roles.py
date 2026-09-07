@@ -41,7 +41,7 @@ def _contains_visible_token(text: str, token: str) -> bool:
 
 def _bound_roles_template():
     template_dir = Path("nonebot_plugin_skland/resources/templates")
-    environment = Environment(loader=FileSystemLoader(template_dir))
+    environment = Environment(loader=FileSystemLoader(template_dir), autoescape=True)
     return environment.get_template("bound_roles.html.jinja2")
 
 

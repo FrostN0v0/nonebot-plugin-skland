@@ -276,7 +276,8 @@ async def test_reconcile_clears_removed_default_without_replacement(app):
 
 @pytest.mark.asyncio
 async def test_account_operation_lock_rejects_same_owner_only(app):
-    from nonebot_plugin_skland.account import AccountOperationInProgress, exclusive_account_operation
+    from nonebot_plugin_skland.account import exclusive_account_operation
+    from nonebot_plugin_skland.exception import AccountOperationInProgress
 
     entered = asyncio.Event()
     release = asyncio.Event()
@@ -303,7 +304,8 @@ async def test_account_operation_lock_rejects_same_owner_only(app):
 async def test_account_sync_commits_success_before_later_failure(app, mocker):
     from nonebot_plugin_orm import get_session
 
-    import nonebot_plugin_skland.commands.char as char_command
+    import nonebot_plugin_skland.account as account_service
+    from nonebot_plugin_skland.exception import RequestException
     from nonebot_plugin_skland.db_handler import get_user_characters
     from nonebot_plugin_skland.schemas import BindingRoleSnapshot, BindingAccountSnapshot
 
@@ -333,14 +335,14 @@ async def test_account_sync_commits_success_before_later_failure(app, mocker):
             ],
         )
         mocker.patch.object(
-            char_command,
+            account_service,
             "_fetch_account_snapshot",
-            new=mocker.AsyncMock(side_effect=[snapshot, "request failed"]),
+            new=mocker.AsyncMock(side_effect=[snapshot, RequestException("request failed")]),
         )
-        mocker.patch.object(char_command.ark_card_data, "invalidate_account", new=mocker.AsyncMock())
+        mocker.patch.object(account_service.ark_card_data, "invalidate_account", new=mocker.AsyncMock())
 
-        first_result = await char_command._sync_account(first_id, session)
-        second_result = await char_command._sync_account(second_id, session)
+        first_result = await account_service.sync_account(first_id, session)
+        second_result = await account_service.sync_account(second_id, session)
 
         assert first_result.success is True
         assert second_result.success is False
@@ -409,21 +411,18 @@ async def test_unsupported_persisted_roles_are_hidden_and_preserved(app):
 
 
 @pytest.mark.parametrize(
-    ("module_name", "game_token"),
-    [("nonebot_plugin_skland.commands.card", "ark"), ("nonebot_plugin_skland.commands.endfield.utils", "ef")],
+    ("app_code", "game_token"),
+    [("arknights", "ark"), ("endfield", "ef")],
 )
 @pytest.mark.parametrize("feedback", ["own_missing", "target_missing", "own_unbound"])
 @pytest.mark.asyncio
 async def test_missing_default_feedback_survives_expired_user_session(
-    app, mocker, make_user_session, module_name, game_token, feedback
+    app, mocker, make_user_session, app_code, game_token, feedback
 ):
-    from importlib import import_module
-
     from nonebot_plugin_orm import get_session
 
-    import nonebot_plugin_skland.commands.char as char_command
+    import nonebot_plugin_skland.commands.selection as selection
 
-    command = import_module(module_name)
     target_owner_id = 81 if feedback == "target_missing" else 80
     async with get_session() as session:
         if feedback != "own_unbound":
@@ -443,9 +442,9 @@ async def test_missing_default_feedback_survives_expired_user_session(
             assert inspect(user_session.user).expired
             messages.append(message.extract_plain_text())
 
-        mocker.patch.object(char_command, "render_bound_roles_card", new=render)
-        mocker.patch.object(command.UniMessage, "send", new=send)
-        selected = await command.check_user_character(target_owner_id, user_session, session)
+        mocker.patch.object(selection, "render_bound_roles_card", new=render)
+        mocker.patch.object(selection.UniMessage, "send", new=send)
+        selected = await selection.check_user_character(target_owner_id, user_session, session, app_code=app_code)
 
         assert selected is None
         assert session.in_transaction() is False
@@ -459,22 +458,13 @@ async def test_missing_default_feedback_survives_expired_user_session(
             assert messages[0].startswith(expected)
 
 
-@pytest.mark.parametrize(
-    ("module_name", "app_code"),
-    [
-        ("nonebot_plugin_skland.commands.card", "arknights"),
-        ("nonebot_plugin_skland.commands.endfield.utils", "endfield"),
-    ],
-)
+@pytest.mark.parametrize("app_code", ["arknights", "endfield"])
 @pytest.mark.asyncio
-async def test_explicit_role_selection_uses_overview_index_without_changing_defaults(
-    app, make_user_session, module_name, app_code
-):
-    from importlib import import_module
-
+async def test_explicit_role_selection_uses_overview_index_without_changing_defaults(app, make_user_session, app_code):
     from nonebot_plugin_orm import get_session
 
     from nonebot_plugin_skland.account import build_bound_roles_plan
+    from nonebot_plugin_skland.commands.selection import check_user_character
     from nonebot_plugin_skland.db_handler import get_default_character, set_default_character
 
     async with get_session() as session:
@@ -495,9 +485,8 @@ async def test_explicit_role_selection_uses_overview_index_without_changing_defa
         role_index = next(role.index for role in indexed_roles if role.game_role_id == target_character.role_id)
         assert role_index == 2
 
-        command = import_module(module_name)
         user_session = await make_user_session(session, 100)
-        selected = await command.check_user_character(100, user_session, session, role_index=role_index)
+        selected = await check_user_character(100, user_session, session, app_code=app_code, role_index=role_index)
 
         assert selected is not None
         assert selected[0].id == second_account.id
@@ -506,28 +495,20 @@ async def test_explicit_role_selection_uses_overview_index_without_changing_defa
         assert (await get_default_character(100, "endfield", session)).id == roles["endfield"][0].id
 
 
-@pytest.mark.parametrize(
-    ("module_name", "app_code"),
-    [
-        ("nonebot_plugin_skland.commands.card", "arknights"),
-        ("nonebot_plugin_skland.commands.endfield.utils", "endfield"),
-    ],
-)
+@pytest.mark.parametrize("app_code", ["arknights", "endfield"])
 @pytest.mark.asyncio
-async def test_explicit_role_selection_does_not_require_default(app, make_user_session, module_name, app_code):
-    from importlib import import_module
-
+async def test_explicit_role_selection_does_not_require_default(app, make_user_session, app_code):
     from nonebot_plugin_orm import get_session
 
     from nonebot_plugin_skland.db_handler import get_default_character
+    from nonebot_plugin_skland.commands.selection import check_user_character
 
     async with get_session() as session:
         _first_account, second_account, roles = await _seed_role_selection_data(session, owner_id=110)
         await session.commit()
 
-        command = import_module(module_name)
         user_session = await make_user_session(session, 110)
-        selected = await command.check_user_character(110, user_session, session, role_index=2)
+        selected = await check_user_character(110, user_session, session, app_code=app_code, role_index=2)
 
         assert selected is not None
         assert selected[0].id == second_account.id
@@ -535,23 +516,15 @@ async def test_explicit_role_selection_does_not_require_default(app, make_user_s
         assert await get_default_character(110, app_code, session) is None
 
 
-@pytest.mark.parametrize(
-    ("module_name", "app_code"),
-    [
-        ("nonebot_plugin_skland.commands.card", "arknights"),
-        ("nonebot_plugin_skland.commands.endfield.utils", "endfield"),
-    ],
-)
+@pytest.mark.parametrize("app_code", ["arknights", "endfield"])
 @pytest.mark.parametrize("role_index", [0, 3])
 @pytest.mark.asyncio
 async def test_explicit_role_selection_rejects_boundary_without_default_fallback(
-    app, mocker, make_user_session, module_name, app_code, role_index
+    app, mocker, make_user_session, app_code, role_index
 ):
-    from importlib import import_module
-
     from nonebot_plugin_orm import get_session
 
-    import nonebot_plugin_skland.commands.char as char_command
+    import nonebot_plugin_skland.commands.selection as selection
     from nonebot_plugin_skland.db_handler import get_default_character, set_default_character
 
     async with get_session() as session:
@@ -560,7 +533,6 @@ async def test_explicit_role_selection_rejects_boundary_without_default_fallback
         await set_default_character(120, app_code, default_character_id, session)
         await session.commit()
         user_session = await make_user_session(session, 120)
-        command = import_module(module_name)
         rendered_cards = []
         messages = []
 
@@ -571,10 +543,12 @@ async def test_explicit_role_selection_rejects_boundary_without_default_fallback
         async def send(message, **_kwargs):
             messages.append(message.extract_plain_text())
 
-        mocker.patch.object(char_command, "render_bound_roles_card", new=render)
-        mocker.patch.object(command.UniMessage, "send", new=send)
+        mocker.patch.object(selection, "render_bound_roles_card", new=render)
+        mocker.patch.object(selection.UniMessage, "send", new=send)
 
-        selected = await command.check_user_character(120, user_session, session, role_index=role_index)
+        selected = await selection.check_user_character(
+            120, user_session, session, app_code=app_code, role_index=role_index
+        )
 
         assert selected is None
         assert len(rendered_cards) == 1
@@ -582,97 +556,37 @@ async def test_explicit_role_selection_rejects_boundary_without_default_fallback
         assert (await get_default_character(120, app_code, session)).id == default_character_id
 
 
-@pytest.mark.parametrize(
-    ("module_name", "app_code"),
-    [
-        ("nonebot_plugin_skland.commands.card", "arknights"),
-        ("nonebot_plugin_skland.commands.endfield.utils", "endfield"),
-    ],
-)
+@pytest.mark.parametrize("app_code", ["arknights", "endfield"])
 @pytest.mark.asyncio
-async def test_explicit_role_selection_rejects_other_owner_before_lookup(
-    app, mocker, make_user_session, module_name, app_code
+async def test_explicit_role_selection_rejects_other_owner_without_disclosing_roles(
+    app, mocker, make_user_session, app_code
 ):
-    from importlib import import_module
-
     from nonebot_plugin_orm import get_session
+
+    import nonebot_plugin_skland.commands.selection as selection
 
     async with get_session() as session:
         await _seed_role_selection_data(session, owner_id=130)
         await session.commit()
         user_session = await make_user_session(session, 131)
-        command = import_module(module_name)
-        lookup = mocker.patch.object(command, "get_character_by_index", new=mocker.AsyncMock())
-        overview = mocker.patch.object(command, "send_bound_roles_overview", new=mocker.AsyncMock())
+        rendered_cards = []
         messages = []
+
+        async def render(card):
+            rendered_cards.append(card)
+            return b"card"
 
         async def send(message, **_kwargs):
             messages.append(message.extract_plain_text())
 
-        mocker.patch.object(command.UniMessage, "send", new=send)
+        mocker.patch.object(selection, "render_bound_roles_card", new=render)
+        mocker.patch.object(selection.UniMessage, "send", new=send)
 
-        selected = await command.check_user_character(130, user_session, session, role_index=1)
+        selected = await selection.check_user_character(130, user_session, session, app_code=app_code, role_index=1)
 
         assert selected is None
-        lookup.assert_not_awaited()
-        overview.assert_not_awaited()
+        assert rendered_cards == []
         assert len(messages) == 1
-
-
-@pytest.mark.parametrize("game", ["arknights", "endfield"])
-@pytest.mark.asyncio
-async def test_card_handler_uses_requested_role_data_path(app, mocker, make_user_session, game):
-    from nonebot_plugin_alconna import Match
-    from nonebot_plugin_orm import get_session
-
-    import nonebot_plugin_skland.commands.card as ark_card
-    import nonebot_plugin_skland.commands.endfield.card as ef_card
-    from nonebot_plugin_skland.db_handler import set_default_character
-
-    async with get_session() as session:
-        _first_account, second_account, roles = await _seed_role_selection_data(session, owner_id=140)
-        first_character, second_character = roles[game]
-        second_account_id = second_account.id
-        second_remote_id = second_account.skland_user_id
-        second_character_id = second_character.id
-        await set_default_character(140, game, first_character.id, session)
-        await session.commit()
-        user_session = await make_user_session(session, 140)
-
-        if game == "arknights":
-            calls = []
-
-            async def get_card(user, character):
-                calls.append((user.id, user.skland_user_id, character.id))
-                return None
-
-            mocker.patch.object(ark_card, "get_ark_card", new=get_card)
-            mocker.patch.object(ark_card, "send_reaction")
-            await ark_card.card_handler(
-                session,
-                user_session,
-                Match(0, available=False),
-                role_index=2,
-            )
-
-            assert calls == [(second_account_id, second_remote_id, second_character_id)]
-        else:
-            calls = []
-
-            async def get_card(_cred, remote_id, character):
-                calls.append((remote_id, character.id))
-                return None
-
-            mocker.patch.object(ef_card.SklandAPI, "endfield_card", new=get_card)
-            mocker.patch.object(ef_card, "send_reaction")
-            await ef_card.efcard_handler(
-                user_session,
-                session,
-                Match(0, available=False),
-                role_index=2,
-            )
-
-            assert calls == [(second_remote_id, second_character_id)]
 
 
 @pytest.mark.asyncio
@@ -680,8 +594,8 @@ async def test_import_records_targets_selected_role_without_changing_default(app
     from nonebot_plugin_alconna import Match
     from nonebot_plugin_orm import get_session
 
-    import nonebot_plugin_skland.utils as utils
     import nonebot_plugin_skland.commands.gacha as gacha
+    import nonebot_plugin_skland.services.gacha as gacha_service
     from nonebot_plugin_skland.db_handler import (
         get_default_character,
         set_default_character,
@@ -704,8 +618,8 @@ async def test_import_records_targets_selected_role_without_changing_default(app
                 }
             ),
         )
-        mocker.patch.object(utils, "get_pool_id", return_value="TEST_POOL")
-        mocker.patch.object(utils, "get_char_id_by_char_name", return_value="char_test")
+        mocker.patch.object(gacha_service, "get_pool_id", return_value="TEST_POOL")
+        mocker.patch.object(gacha_service, "get_char_id_by_char_name", return_value="char_test")
         mocker.patch.object(gacha, "send_reaction")
         mocker.patch.object(gacha.UniMessage, "send", new=mocker.AsyncMock())
 

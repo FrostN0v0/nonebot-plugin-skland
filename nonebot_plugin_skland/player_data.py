@@ -10,7 +10,7 @@ from .api import SklandAPI
 from .config import config
 from .schemas import CRED, ArkCard
 from .model import SkUser, Character
-from .utils import refresh_cred_token_if_needed, refresh_access_token_if_needed
+from .services.auth import refresh_credentials
 
 ArkCardLoader = Callable[[SkUser, Character], Awaitable[ArkCard | None]]
 Clock = Callable[[], float]
@@ -143,7 +143,6 @@ ark_card_data = ArkCardDataSource(
 )
 
 
-@refresh_cred_token_if_needed
-@refresh_access_token_if_needed
+@refresh_credentials
 async def get_ark_card(user: SkUser, character: Character) -> ArkCard | None:
     return await ark_card_data.get(user, character)

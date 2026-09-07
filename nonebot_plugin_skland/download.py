@@ -101,8 +101,6 @@ class DownloadProgress(Progress):
 class GameResourceDownloader:
     """游戏数据下载"""
 
-    DOWNLOAD_COUNT: int = 0
-    DOWNLOAD_TIME: datetime
     SEMAPHORE = asyncio.Semaphore(100)
     RAW_BASE_URL = "https://raw.githubusercontent.com/{owner}/{repo}/{branch}/"
     VERSION_URL = "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/refs/heads/main/version"
@@ -189,8 +187,8 @@ class GameResourceDownloader:
         Returns:
             DownloadResult: 下载结果，包含版本号、成功数量和失败数量
         """
-        cls.download_count = 0
-        cls.download_time = datetime.now()
+        success_count = 0
+        started_at = datetime.now()
         url = cls.BASE_URL.format(owner=owner, repo=repo, branch=branch)
         dl_url = cls.RAW_BASE_URL.format(owner=owner, repo=repo, branch=branch)
         files = await cls.fetch_file_list(url=url, dl_url=dl_url, route=route)
@@ -213,6 +211,8 @@ class GameResourceDownloader:
 
                 async def worker(file: File):
                     """每个文件下载任务"""
+                    nonlocal success_count
+
                     if not update and (save_path / file.name).exists():
                         return
                     async with cls.SEMAPHORE:
@@ -225,7 +225,7 @@ class GameResourceDownloader:
                                 progress,
                                 task_id=task_id,
                             )
-                            cls.download_count += 1
+                            success_count += 1
                         except TimeoutException as e:
                             error_msg = f"下载文件 {file.name} 超时: {e}"
                             failed_files.append(error_msg)
@@ -245,15 +245,15 @@ class GameResourceDownloader:
             for error_msg in failed_files:
                 logger.error(f"  - {error_msg}")
 
-        time_consumed = datetime.now() - cls.download_time
+        time_consumed = datetime.now() - started_at
         failed_count = len(failed_files)
 
-        if cls.download_count == 0 and failed_count == 0:
+        if success_count == 0 and failed_count == 0:
             logger.info(f"✅ 资源 {route} 无新增文件")
-        elif cls.download_count == 0 and failed_count > 0:
+        elif success_count == 0 and failed_count > 0:
             logger.warning(f"⚠️ 资源 {route} 无新增文件，但有 {failed_count} 个文件下载失败")
         else:
-            success_msg = f"🎉 资源 {route} 下载完成，成功 {cls.download_count} 个"
+            success_msg = f"🎉 资源 {route} 下载完成，成功 {success_count} 个"
             if failed_count > 0:
                 success_msg += f"，失败 {failed_count} 个"
             success_msg += f"，耗时 {time_consumed}"
@@ -261,7 +261,7 @@ class GameResourceDownloader:
 
         return DownloadResult(
             version=None,
-            success_count=cls.download_count,
+            success_count=success_count,
             failed_count=failed_count,
         )
 
@@ -291,3 +291,38 @@ class GameResourceDownloader:
                         progress.update(task_id, advance=len(data))
         except HTTPError as e:
             raise RequestException(f"下载文件{file.name}失败: {type(e).__name__}: {e}")
+
+
+async def download_img_resource(force: bool, update: bool) -> DownloadResult:
+    """Download image resources, optionally bypassing version checks or replacing files."""
+    from .config import CACHE_DIR, RESOURCE_ROUTES
+
+    origin_version = await GameResourceDownloader.get_version()
+    version_file = CACHE_DIR.joinpath("version")
+    local_version = version_file.read_text(encoding="utf-8") if version_file.exists() else None
+    if local_version == origin_version and not force:
+        logger.info("游戏图片资源已是最新版本")
+        return DownloadResult(version=None, success_count=0, failed_count=0)
+
+    logger.info(f"检测到新版本 {origin_version}，开始下载游戏资源")
+    total_success = 0
+    total_failed = 0
+    for route in RESOURCE_ROUTES:
+        logger.info(f"正在下载: {route}")
+        result = await GameResourceDownloader.download_all(
+            owner="yuanyan3060",
+            repo="ArknightsGameResource",
+            route=route,
+            save_dir=CACHE_DIR,
+            branch="main",
+            update=update,
+        )
+        total_success += result.success_count
+        total_failed += result.failed_count
+    GameResourceDownloader.update_version_file(origin_version)
+    logger.success(f"游戏资源已更新到版本：{origin_version}")
+    return DownloadResult(
+        version=origin_version,
+        success_count=total_success,
+        failed_count=total_failed,
+    )

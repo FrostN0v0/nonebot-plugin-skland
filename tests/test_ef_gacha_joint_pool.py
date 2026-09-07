@@ -30,7 +30,7 @@ def test_endfield_joint_pool_type_value(app):
 
 
 def test_joint_pool_id_is_classified_as_joint(app):
-    from nonebot_plugin_skland.utils import _infer_pool_category
+    from nonebot_plugin_skland.services.gacha import _infer_pool_category
     from nonebot_plugin_skland.schemas.endfield.gacha.pool import EfGachaPoolInfo
     from nonebot_plugin_skland.schemas.endfield.gacha.base import EfGachaPull, EfGachaGroup
 
@@ -89,7 +89,7 @@ def make_record(
 
 
 def test_group_ef_gacha_records_routes_joint_pool_separately(app):
-    from nonebot_plugin_skland.utils import group_ef_gacha_records
+    from nonebot_plugin_skland.services.gacha import group_ef_gacha_records
 
     grouped = group_ef_gacha_records([make_record()])
 
@@ -102,7 +102,7 @@ def test_group_ef_gacha_records_routes_joint_pool_separately(app):
 
 
 def test_visible_pool_ids_include_joint_pools_and_respect_slicing(app):
-    from nonebot_plugin_skland.utils import group_ef_gacha_records
+    from nonebot_plugin_skland.services.gacha import group_ef_gacha_records
 
     grouped = group_ef_gacha_records(
         [
@@ -134,7 +134,7 @@ def test_visible_pool_ids_include_joint_pools_and_respect_slicing(app):
 
 
 def test_joint_statistics_use_only_six_star_count_and_six_average(app):
-    from nonebot_plugin_skland.utils import group_ef_gacha_records
+    from nonebot_plugin_skland.services.gacha import group_ef_gacha_records
 
     grouped = group_ef_gacha_records(
         [
@@ -153,7 +153,7 @@ def test_joint_statistics_use_only_six_star_count_and_six_average(app):
 
 
 def test_joint_six_avg_is_zero_without_six_star_pulls(app):
-    from nonebot_plugin_skland.utils import group_ef_gacha_records
+    from nonebot_plugin_skland.services.gacha import group_ef_gacha_records
 
     grouped = group_ef_gacha_records(
         [
@@ -170,7 +170,7 @@ def test_joint_six_avg_is_zero_without_six_star_pulls(app):
 
 
 def test_joint_current_pity_uses_latest_joint_pool(app):
-    from nonebot_plugin_skland.utils import group_ef_gacha_records
+    from nonebot_plugin_skland.services.gacha import group_ef_gacha_records
 
     grouped = group_ef_gacha_records(
         [
@@ -257,7 +257,7 @@ def test_joint_pool_does_not_show_spook_stats(app):
 
 
 def test_ef_gacha_viewport_expands_when_joint_pools_exist(app):
-    from nonebot_plugin_skland.utils import group_ef_gacha_records
+    from nonebot_plugin_skland.services.gacha import group_ef_gacha_records
     from nonebot_plugin_skland.render import get_ef_gacha_min_width, get_ef_gacha_viewport_width
 
     standard_grouped = group_ef_gacha_records([make_record(pool_id="standard", rarity=4)])

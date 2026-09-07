@@ -7,20 +7,17 @@ from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_alconna import At, Match, CustomNode, UniMessage
 
 from ...config import config
-from .utils import check_user_character
+from ...exception import SklandException
 from ...api import SklandAPI, SklandLoginAPI
+from ..selection import check_user_character
 from ...data_source import ef_gacha_pool_data
 from ...render import render_ef_gacha_history
+from ...services.auth import refresh_credentials
 from ...model import SkUser, Character, GachaRecord
 from ...db_handler import get_character_gacha_records
+from ...utils.message import send_reaction, send_request_error
+from ...services.gacha import group_ef_gacha_records, get_all_ef_gacha_records
 from ...schemas import CRED, EfGachaInfo, EndfieldPoolType, EndfieldCharPoolType
-from ...utils import (
-    send_reaction,
-    group_ef_gacha_records,
-    get_all_ef_gacha_records,
-    refresh_cred_token_if_needed,
-    refresh_access_token_if_needed,
-)
 
 # 需要遍历的角色池类型
 EF_CHAR_POOL_TYPES: list[EndfieldCharPoolType] = [
@@ -48,10 +45,14 @@ async def ef_gacha_history_handler(
         update: 是否从接口拉取最新数据并更新，默认仅从数据库读取渲染
     """
 
-    @refresh_cred_token_if_needed
-    @refresh_access_token_if_needed
-    async def get_user_info(user: SkUser, char: Character):
-        return await SklandAPI.endfield_card(CRED(cred=user.cred, token=user.cred_token), user.skland_user_id, char)
+    @refresh_credentials
+    async def get_user_info(user: SkUser, char: Character, user_id: str):
+        return await SklandAPI.endfield_card(
+            CRED(cred=user.cred, token=user.cred_token),
+            user_id=user_id,
+            role_id=char.role_id,
+            server_id=char.channel_master_id,
+        )
 
     if target.available:
         target_platform_id = target.result.target if isinstance(target.result, At) else target.result
@@ -59,7 +60,7 @@ async def ef_gacha_history_handler(
     else:
         target_id = user_session.user_id
 
-    selected = await check_user_character(target_id, user_session, session, role_index=role_index)
+    selected = await check_user_character(target_id, user_session, session, app_code="endfield", role_index=role_index)
     if selected is None:
         return
     user, character = selected
@@ -153,7 +154,12 @@ async def ef_gacha_history_handler(
     weapon_total = gacha_data.weapon_total_pulls
     new_count = len(record_to_save)
 
-    user_info = await get_user_info(user, character)
+    try:
+        user_info = await get_user_info(user, character, user.skland_user_id)
+    except SklandException as error:
+        await session.commit()
+        await send_request_error(error)
+        return
     if not user_info:
         await UniMessage.text("获取用户信息失败，无法渲染抽卡记录").send(reply_to=True)
         return

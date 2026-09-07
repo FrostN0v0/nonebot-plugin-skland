@@ -10,8 +10,6 @@ import httpx
 from nonebot import logger
 from nonebot.compat import type_validate_python
 
-from nonebot_plugin_skland.model import Character
-
 from ..exception import LoginException, RequestException, UnauthorizedException
 from ..schemas import (
     CRED,
@@ -363,9 +361,12 @@ class SklandAPI:
             return EndfieldSignResponse(**response.json()["data"])
 
     @classmethod
-    async def endfield_card(cls, cred: CRED, uid: str, char: Character) -> EndfieldCard:
-        """获取终末地角色信息"""
-        game_info_url = f"https://zonai.skland.com/web/v1/game/endfield/card/detail?roleId={char.role_id}&serverId={char.channel_master_id}&userId={uid}"
+    async def endfield_card(cls, cred: CRED, *, user_id: str, role_id: str, server_id: str) -> EndfieldCard:
+        """Fetch an Endfield card using API identity values only."""
+        game_info_url = (
+            "https://zonai.skland.com/web/v1/game/endfield/card/detail"
+            f"?roleId={role_id}&serverId={server_id}&userId={user_id}"
+        )
         headers = await cls.get_sign_header(
             cred,
             game_info_url,

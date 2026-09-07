@@ -410,121 +410,42 @@ async def test_shared_ark_card_data_source_uses_user_credentials(app, mocker):
 @pytest.mark.asyncio
 async def test_get_ark_card_refreshes_each_waiter_context(app, mocker):
     from nonebot_plugin_skland.api import SklandLoginAPI
+    import nonebot_plugin_skland.player_data as player_data
     from nonebot_plugin_skland.exception import UnauthorizedException
-    from nonebot_plugin_skland.player_data import get_ark_card, ark_card_data
 
     value = object()
+    loads = []
+    both_refreshed = asyncio.Event()
+    refreshes = 0
 
-    async def get(user, _character) -> Any:
+    async def load(user, _character):
+        loads.append(user.cred_token)
         if user.cred_token == "expired-token":
-            raise UnauthorizedException
+            raise UnauthorizedException("expired")
         return value
 
-    get_card = mocker.patch.object(ark_card_data, "get", new=mocker.AsyncMock(side_effect=get))
-    refresh = mocker.patch.object(
-        SklandLoginAPI,
-        "refresh_token",
-        new=mocker.AsyncMock(return_value="fresh-token"),
-    )
-    users = [mocker.Mock(cred="cred-value", cred_token="expired-token") for _ in range(2)]
-    character = mocker.Mock()
+    async def refresh(_cred):
+        nonlocal refreshes
+        refreshes += 1
+        if refreshes == 2:
+            both_refreshed.set()
+        await asyncio.wait_for(both_refreshed.wait(), timeout=1)
+        return "fresh-token"
 
-    results = await asyncio.gather(*(get_ark_card(user, character) for user in users))
+    source = player_data.ArkCardDataSource(ttl=60, max_entries=10, loader=load)
+    mocker.patch.object(player_data, "ark_card_data", source)
+    mocker.patch.object(SklandLoginAPI, "refresh_token", new=refresh)
+    users = [
+        SimpleNamespace(id=1, skland_user_id="remote", cred="cred-value", cred_token="expired-token") for _ in range(2)
+    ]
+    character = SimpleNamespace(app_code="arknights", channel_master_id="1", uid="uid", role_id="role")
+
+    results = await asyncio.gather(*(player_data.get_ark_card(user, character) for user in users))
 
     assert results == [value, value]
     assert all(user.cred_token == "fresh-token" for user in users)
-    assert get_card.await_count == 4
-    assert refresh.await_count == 2
-
-
-@pytest.mark.asyncio
-async def test_box_handler_uses_shared_ark_card_data_source(app, mocker, monkeypatch):
-    import nonebot_plugin_skland.commands.box as box
-
-    user = mocker.Mock()
-    character = mocker.Mock()
-    match = mocker.Mock()
-    session = mocker.Mock(commit=mocker.AsyncMock())
-    user_session = mocker.Mock()
-    monkeypatch.setattr(box, "gacha_table_data", mocker.Mock(operator_catalog=mocker.Mock(entries=(object(),))))
-    mocker.patch.object(box, "_build_query", return_value=mocker.Mock())
-    mocker.patch.object(box, "_resolve_target_id", new=mocker.AsyncMock(return_value=1))
-    mocker.patch.object(box, "check_user_character", new=mocker.AsyncMock(return_value=(user, character)))
-    mocker.patch.object(box, "send_reaction")
-    get_card = mocker.patch.object(box, "get_ark_card", new=mocker.AsyncMock(return_value=None))
-
-    await box.box_handler(
-        session=session,
-        user_session=user_session,
-        target=match,
-        filters=match,
-        ownership=match,
-        rarities=match,
-        professions=match,
-        branches=match,
-        positions=match,
-        genders=match,
-        factions=match,
-        races=match,
-        potentials=match,
-        name=match,
-        sort=match,
-        bot=mocker.Mock(),
-    )
-
-    get_card.assert_awaited_once_with(user, character)
-    session.commit.assert_awaited_once_with()
-
-
-@pytest.mark.asyncio
-async def test_card_handler_uses_shared_ark_card_data_source(app, mocker):
-    import nonebot_plugin_skland.commands.card as card
-
-    user = mocker.Mock()
-    character = mocker.Mock()
-    user_session = mocker.Mock(user_id=1)
-    session = mocker.Mock(commit=mocker.AsyncMock())
-    target = mocker.Mock(available=False)
-    mocker.patch.object(card, "check_user_character", new=mocker.AsyncMock(return_value=(user, character)))
-    mocker.patch.object(card, "send_reaction")
-    get_card = mocker.patch.object(card, "get_ark_card", new=mocker.AsyncMock(return_value=None))
-
-    await card.card_handler(session=session, user_session=user_session, target=target)
-
-    get_card.assert_awaited_once_with(user, character)
-    session.commit.assert_awaited_once_with()
-
-
-@pytest.mark.asyncio
-async def test_gacha_handler_uses_shared_ark_card_data_source(app, mocker):
-    import nonebot_plugin_skland.commands.gacha as gacha
-
-    user = mocker.Mock(access_token="access-token")
-    character = mocker.Mock(uid="role-1")
-    user_session = mocker.Mock(user_id=1)
-    session = mocker.Mock(commit=mocker.AsyncMock())
-    target = mocker.Mock(available=False)
-    mocker.patch.object(gacha, "check_user_character", new=mocker.AsyncMock(return_value=(user, character)))
-    mocker.patch.object(gacha, "send_reaction")
-    mocker.patch.object(gacha.SklandLoginAPI, "get_grant_code", new=mocker.AsyncMock(return_value="grant"))
-    mocker.patch.object(gacha.SklandLoginAPI, "get_role_token_by_uid", new=mocker.AsyncMock(return_value="role"))
-    mocker.patch.object(gacha.SklandLoginAPI, "get_ak_cookie", new=mocker.AsyncMock(return_value="cookie"))
-    mocker.patch.object(gacha.SklandAPI, "get_gacha_categories", new=mocker.AsyncMock(return_value=[]))
-    mocker.patch.object(gacha, "get_character_gacha_records", new=mocker.AsyncMock(return_value=[]))
-    mocker.patch.object(gacha, "group_gacha_records", return_value=mocker.Mock())
-    get_card = mocker.patch.object(gacha, "get_ark_card", new=mocker.AsyncMock(return_value=None))
-
-    await gacha.gacha_handler(
-        user_session=user_session,
-        session=session,
-        begin=mocker.Mock(available=False),
-        limit=mocker.Mock(available=False),
-        target=target,
-        bot=mocker.Mock(),
-    )
-
-    get_card.assert_awaited_once_with(user, character)
-    session.commit.assert_awaited_once_with()
+    assert loads == ["expired-token", "fresh-token"]
+    assert refreshes == 2
 
 
 @pytest.mark.asyncio

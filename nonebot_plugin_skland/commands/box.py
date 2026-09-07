@@ -10,11 +10,12 @@ from nonebot_plugin_alconna import At, Match, CustomNode, UniMessage
 
 from ..config import config
 from ..player_data import get_ark_card
-from .card import check_user_character
-from ..exception import RequestException
 from ..data_source import gacha_table_data
 from ..render import render_operator_roster
-from ..utils import send_reaction, get_background_image
+from .selection import check_user_character
+from ..utils.background import get_background_image
+from ..exception import SklandException, RequestException
+from ..utils.message import send_reaction, send_request_error
 from ..schemas import OperatorCard, OperatorRoster, OperatorRosterQuery
 
 
@@ -196,13 +197,18 @@ async def box_handler(
         return
 
     target_id = await _resolve_target_id(user_session, target)
-    selected = await check_user_character(target_id, user_session, session, role_index=role_index)
+    selected = await check_user_character(target_id, user_session, session, app_code="arknights", role_index=role_index)
     if selected is None:
         return
     user, ark_character = selected
     send_reaction(user_session, "processing")
 
-    info = await get_ark_card(user, ark_character)
+    try:
+        info = await get_ark_card(user, ark_character)
+    except SklandException as error:
+        await session.commit()
+        await send_request_error(error)
+        return
     await session.commit()
     if not info:
         return

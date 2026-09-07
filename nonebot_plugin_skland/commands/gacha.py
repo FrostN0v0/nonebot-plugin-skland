@@ -12,12 +12,13 @@ from ..config import config
 from ..model import GachaRecord
 from ..schemas import GachaInfo
 from ..player_data import get_ark_card
-from .card import check_user_character
+from ..exception import SklandException
 from ..render import render_gacha_history
 from ..api import SklandAPI, SklandLoginAPI
+from .selection import check_user_character
 from ..db_handler import get_character_gacha_records
-from ..utils import (
-    send_reaction,
+from ..utils.message import send_reaction, send_request_error
+from ..services.gacha import (
     group_gacha_records,
     get_all_gacha_records,
     heybox_data_to_record,
@@ -43,7 +44,7 @@ async def gacha_handler(
     else:
         target_id = user_session.user_id
 
-    selected = await check_user_character(target_id, user_session, session, role_index=role_index)
+    selected = await check_user_character(target_id, user_session, session, app_code="arknights", role_index=role_index)
     if selected is None:
         return
     user, character = selected
@@ -93,7 +94,12 @@ async def gacha_handler(
     gacha_data_grouped = group_gacha_records(all_gacha_records)
     character_nickname = character.nickname
     character_channel_master_id = character.channel_master_id
-    user_info = await get_ark_card(user, character)
+    try:
+        user_info = await get_ark_card(user, character)
+    except SklandException as error:
+        await session.commit()
+        await send_request_error(error)
+        return
     await session.commit()
     if not user_info:
         return
@@ -190,7 +196,9 @@ async def import_handler(
     role_index: int | None = None,
 ):
     """导入明日方舟抽卡记录"""
-    selected = await check_user_character(user_session.user_id, user_session, session, role_index=role_index)
+    selected = await check_user_character(
+        user_session.user_id, user_session, session, app_code="arknights", role_index=role_index
+    )
     if selected is None:
         return
     _user, character = selected

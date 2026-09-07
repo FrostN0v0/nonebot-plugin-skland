@@ -13,19 +13,16 @@ from nonebot_plugin_alconna.builtins.extensions import ReplyRecordExtension
 from ..model import SkUser
 from ..api import SklandAPI
 from ..config import config
-from .card import check_user_character
+from ..exception import SklandException
+from .selection import check_user_character
 from ..schemas import CRED, Topics, RogueData
+from ..services.auth import refresh_credentials
 from ..render import render_rogue_card, render_rogue_info
-from ..utils import (
-    send_reaction,
-    get_rogue_background_image,
-    refresh_cred_token_if_needed,
-    refresh_access_token_if_needed,
-)
+from ..utils.background import get_rogue_background_image
+from ..utils.message import send_reaction, send_request_error
 
 
-@refresh_cred_token_if_needed
-@refresh_access_token_if_needed
+@refresh_credentials
 async def _get_rogue_data(user: SkUser, uid: str, topic_id: str):
     return await SklandAPI.get_rogue(
         CRED(cred=user.cred, token=user.cred_token, userId=user.skland_user_id),
@@ -50,7 +47,7 @@ async def rogue_handler(
     else:
         target_id = user_session.user_id
 
-    selected = await check_user_character(target_id, user_session, session, role_index=role_index)
+    selected = await check_user_character(target_id, user_session, session, app_code="arknights", role_index=role_index)
     if selected is None:
         return
     user, character = selected
@@ -61,7 +58,12 @@ async def rogue_handler(
     send_reaction(user_session, "processing")
 
     topic_id = Topics(str(result.query("rogue.topic.topic_name"))).topic_id if result.find("rogue.topic") else ""
-    rogue = await _get_rogue_data(user, str(character.uid), topic_id)
+    try:
+        rogue = await _get_rogue_data(user, str(character.uid), topic_id)
+    except SklandException as error:
+        await session.commit()
+        await send_request_error(error)
+        return
     await session.commit()
     if not rogue:
         return
@@ -101,7 +103,9 @@ async def rginfo_handler(
         rogue_data = type_validate_json(RogueData, UniMessage.load(data).extract_plain_text())
 
     if role_index is not None:
-        selected = await check_user_character(owner_id, user_session, session, role_index=role_index)
+        selected = await check_user_character(
+            owner_id, user_session, session, app_code="arknights", role_index=role_index
+        )
         if selected is None:
             return
         user, character = selected
@@ -109,7 +113,12 @@ async def rginfo_handler(
             await session.rollback()
             await UniMessage("账号身份尚未同步,请先执行 sk char update").send(at_sender=True)
             return
-        rogue_data = await _get_rogue_data(user, character.uid, rogue_data.topic if rogue_data is not None else "")
+        try:
+            rogue_data = await _get_rogue_data(user, character.uid, rogue_data.topic if rogue_data is not None else "")
+        except SklandException as error:
+            await session.commit()
+            await send_request_error(error)
+            return
         await session.commit()
         if rogue_data is None:
             return

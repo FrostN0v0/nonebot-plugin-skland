@@ -51,7 +51,7 @@ async def _seed_sign_roles(session, owner_id: int):
 
 
 def test_sign_formatters_preserve_duplicate_titles_and_errors(app):
-    from nonebot_plugin_skland.utils import format_sign_result, format_endfield_sign_result
+    from nonebot_plugin_skland.services.sign import format_sign_result, format_endfield_sign_result
 
     ark_data = [
         {
@@ -99,6 +99,7 @@ def test_sign_formatters_preserve_duplicate_titles_and_errors(app):
 async def test_personal_sign_all_uses_each_roles_account_credentials(app, mocker):
     from nonebot_plugin_orm import get_session
 
+    from nonebot_plugin_skland.api import SklandAPI
     import nonebot_plugin_skland.commands.arksign as arksign
     import nonebot_plugin_skland.commands.endfield.sign as efsign
     from nonebot_plugin_skland.schemas import ArkSignResponse, EndfieldSignResponse
@@ -119,8 +120,8 @@ async def test_personal_sign_all_uses_each_roles_account_credentials(app, mocker
             ef_calls.append((cred.cred, cred.token, role_id, server_id))
             return EndfieldSignResponse(ts="", awardIds=[], resourceInfoMap={}, tomorrowAwardIds=[])
 
-        mocker.patch.object(arksign.SklandAPI, "ark_sign", new=ark_sign)
-        mocker.patch.object(efsign.SklandAPI, "endfield_sign", new=ef_sign)
+        mocker.patch.object(SklandAPI, "ark_sign", new=ark_sign)
+        mocker.patch.object(SklandAPI, "endfield_sign", new=ef_sign)
         mocker.patch.object(arksign, "send_reaction")
         mocker.patch.object(efsign, "send_reaction")
         mocker.patch.object(arksign.UniMessage, "send", new=mocker.AsyncMock())
@@ -144,16 +145,18 @@ async def test_scheduled_sign_cache_uses_ordered_identity_entries(app, mocker, t
     from nonebot_plugin_orm import get_session
 
     import nonebot_plugin_skland.tasks as tasks
+    from nonebot_plugin_skland.api import SklandAPI
+    import nonebot_plugin_skland.services.sign as signing
     from nonebot_plugin_skland.schemas import ArkSignResponse, EndfieldSignResponse
 
     async with get_session() as session:
         await _seed_sign_roles(session, 70)
 
-    mocker.patch.object(tasks, "CACHE_DIR", tmp_path)
-    mocker.patch.object(tasks, "_ark_sign_in", new=mocker.AsyncMock(return_value=ArkSignResponse(awards=[])))
+    mocker.patch.object(signing, "CACHE_DIR", tmp_path)
+    mocker.patch.object(SklandAPI, "ark_sign", new=mocker.AsyncMock(return_value=ArkSignResponse(awards=[])))
     mocker.patch.object(
-        tasks,
-        "_endfield_sign_in",
+        SklandAPI,
+        "endfield_sign",
         new=mocker.AsyncMock(
             return_value=EndfieldSignResponse(ts="", awardIds=[], resourceInfoMap={}, tomorrowAwardIds=[])
         ),
@@ -178,10 +181,11 @@ async def test_scheduled_sign_cache_uses_ordered_identity_entries(app, mocker, t
 async def test_sign_selection_feedback_survives_expired_user_session(app, mocker, make_user_session, game, selection):
     from nonebot_plugin_orm import get_session
 
+    from nonebot_plugin_skland.api import SklandAPI
     from nonebot_plugin_skland.model import Character
     import nonebot_plugin_skland.commands.arksign as arksign
-    import nonebot_plugin_skland.commands.char as char_command
     import nonebot_plugin_skland.commands.endfield.sign as efsign
+    import nonebot_plugin_skland.commands.selection as selection_command
 
     command, handler, all_path, api_name = (
         (arksign, arksign.arksign_sign_handler, "arksign.sign.all", "ark_sign")
@@ -207,9 +211,9 @@ async def test_sign_selection_feedback_survives_expired_user_session(app, mocker
             assert inspect(user_session.user).expired
             messages.append(message.extract_plain_text().strip())
 
-        mocker.patch.object(char_command, "render_bound_roles_card", new=render)
+        mocker.patch.object(selection_command, "render_bound_roles_card", new=render)
         mocker.patch.object(command.UniMessage, "send", new=send)
-        sign = mocker.patch.object(command.SklandAPI, api_name, new=mocker.AsyncMock())
+        sign = mocker.patch.object(SklandAPI, api_name, new=mocker.AsyncMock())
 
         role_index = None if selection == "empty_all" else 999
         result = SimpleNamespace(find=lambda path: path == all_path if selection == "empty_all" else False)
@@ -233,6 +237,7 @@ async def test_sign_selection_uses_owning_account_without_changing_defaults(
 ):
     from nonebot_plugin_orm import get_session
 
+    from nonebot_plugin_skland.api import SklandAPI
     import nonebot_plugin_skland.commands.arksign as arksign
     import nonebot_plugin_skland.commands.endfield.sign as efsign
     from nonebot_plugin_skland.schemas import ArkSignResponse, EndfieldSignResponse
@@ -259,14 +264,14 @@ async def test_sign_selection_uses_owning_account_without_changing_defaults(
                 calls.append((cred.cred, cred.token, uid, channel_master_id))
                 return ArkSignResponse(awards=[])
 
-            mocker.patch.object(command.SklandAPI, "ark_sign", new=ark_sign)
+            mocker.patch.object(SklandAPI, "ark_sign", new=ark_sign)
         else:
 
             async def ef_sign(cred, role_id, *, server_id):
                 calls.append((cred.cred, cred.token, role_id, server_id))
                 return EndfieldSignResponse(ts="", awardIds=[], resourceInfoMap={}, tomorrowAwardIds=[])
 
-            mocker.patch.object(command.SklandAPI, "endfield_sign", new=ef_sign)
+            mocker.patch.object(SklandAPI, "endfield_sign", new=ef_sign)
 
         mocker.patch.object(command, "send_reaction")
         mocker.patch.object(command.UniMessage, "send", new=mocker.AsyncMock())
@@ -285,6 +290,7 @@ async def test_sign_selection_uses_owning_account_without_changing_defaults(
 async def test_role_index_and_all_are_rejected_without_side_effects(app, mocker, make_user_session, game, operation):
     from nonebot_plugin_orm import get_session
 
+    from nonebot_plugin_skland.api import SklandAPI
     import nonebot_plugin_skland.commands.arksign as arksign
     import nonebot_plugin_skland.commands.endfield.sign as efsign
 
@@ -304,7 +310,7 @@ async def test_role_index_and_all_are_rejected_without_side_effects(app, mocker,
 
         mocker.patch.object(command.UniMessage, "send", new=send)
         reaction = mocker.patch.object(command, "send_reaction")
-        sign = mocker.patch.object(command.SklandAPI, api_name, new=mocker.AsyncMock())
+        sign = mocker.patch.object(SklandAPI, api_name, new=mocker.AsyncMock())
 
         if operation == "sign":
             await handler(user_session, session, 2, SimpleNamespace(find=lambda path: path == all_path))
@@ -328,6 +334,7 @@ async def test_sign_status_filters_role_and_owner_without_changing_defaults(
 ):
     from nonebot_plugin_orm import get_session
 
+    import nonebot_plugin_skland.services.sign as signing
     import nonebot_plugin_skland.commands.arksign as arksign
     import nonebot_plugin_skland.commands.endfield.sign as efsign
     from nonebot_plugin_skland.db_handler import get_user_characters, get_default_character, set_default_character
@@ -358,7 +365,7 @@ async def test_sign_status_filters_role_and_owner_without_changing_defaults(
         if scope == "missing_selected":
             entries.pop(1)
         (tmp_path / cache_name).write_text(json.dumps({"data": entries}), encoding="utf-8")
-        mocker.patch.object(command, "CACHE_DIR", tmp_path)
+        mocker.patch.object(signing, "CACHE_DIR", tmp_path)
         mocker.patch.object(command, "send_reaction")
         user_session = await make_user_session(session, 150)
         user_session.session.scope = "Console"
@@ -386,3 +393,57 @@ async def test_sign_status_filters_role_and_owner_without_changing_defaults(
         assert ("cached-1" in messages[0]) == (scope in ("selected", "personal", "global"))
         assert ("other-owner" in messages[0]) == (scope == "global")
         assert (await get_default_character(150, game, session)).id == default_id
+
+
+@pytest.mark.parametrize("game", ["arknights", "endfield"])
+@pytest.mark.asyncio
+async def test_global_sign_records_failures_and_presents_after_commit(app, mocker, make_user_session, tmp_path, game):
+    from nonebot_plugin_orm import get_session
+
+    from nonebot_plugin_skland.api import SklandAPI
+    import nonebot_plugin_skland.services.sign as signing
+    import nonebot_plugin_skland.commands.arksign as arksign
+    import nonebot_plugin_skland.commands.endfield.sign as efsign
+    from nonebot_plugin_skland.exception import RequestException
+    from nonebot_plugin_skland.schemas import ArkSignResponse, EndfieldSignResponse
+
+    command, handler, api_name, prefix = (
+        (arksign, arksign.arksign_all_handler, "ark_sign", "ark")
+        if game == "arknights"
+        else (efsign, efsign.ef_sign_all_handler, "endfield_sign", "ef")
+    )
+    response = (
+        ArkSignResponse(awards=[])
+        if game == "arknights"
+        else EndfieldSignResponse(ts="", awardIds=[], resourceInfoMap={}, tomorrowAwardIds=[])
+    )
+    requests = mocker.patch.object(
+        SklandAPI, api_name, new=mocker.AsyncMock(side_effect=[RequestException("offline"), response])
+    )
+    mocker.patch.object(signing, "CACHE_DIR", tmp_path)
+    mocker.patch.object(command, "send_reaction")
+
+    async with get_session() as session:
+        await _seed_sign_roles(session, 170)
+        user_session = await make_user_session(session, 170)
+        user_session.session.scope = "Console"
+        messages = []
+
+        async def send(message, **_kwargs):
+            assert not session.in_transaction()
+            assert inspect(user_session.user).expired
+            messages.append(message.extract_plain_text())
+
+        mocker.patch.object(command.UniMessage, "send", new=send)
+        await handler(user_session, session, mocker.Mock(), is_superuser=True)
+
+    cache = signing.read_sign_cache(game)
+    assert cache is not None
+    assert [entry["role_id"] for entry in cache["data"]] == [f"{prefix}-a", f"{prefix}-b"]
+    assert cache["data"][0]["result"] == "接口请求失败,offline"
+    assert isinstance(cache["data"][1]["result"], dict)
+    assert requests.await_count == 2
+    assert len(messages) == 1
+    assert "offline" in messages[0]
+    assert f"{prefix}-a" in messages[0]
+    assert f"{prefix}-b" in messages[0]

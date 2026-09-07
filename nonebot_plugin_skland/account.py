@@ -1,16 +1,22 @@
 import asyncio
-from typing import cast
+from typing import Literal, cast
 from dataclasses import dataclass
 from contextlib import asynccontextmanager
 from collections.abc import Mapping, Collection, AsyncIterator
 
 from sqlalchemy import select
 from nonebot.compat import model_dump
+from sqlalchemy.exc import IntegrityError
 from nonebot_plugin_orm import async_scoped_session
 
+from .api import SklandAPI
+from .player_data import ark_card_data
 from .model import SkUser, Character, CharacterDefault
+from .services.auth import CredentialState, refresh_credentials
+from .exception import SklandException, AccountOperationInProgress
 from .db_handler import get_account, get_accounts, get_user_characters, set_default_character, get_account_characters
 from .schemas import (
+    CRED,
     BoundRoleKey,
     BoundRolesCard,
     BoundRolesPlan,
@@ -27,10 +33,6 @@ GAME_NAMES = {
     "endfield": "明日方舟：终末地",
 }
 _GAME_ORDER = {"arknights": 0, "endfield": 1}
-
-
-class AccountOperationInProgress(RuntimeError):
-    pass
 
 
 @dataclass(slots=True)
@@ -66,7 +68,7 @@ async def exclusive_account_operation(owner_id: int) -> AsyncIterator[None]:
 
 def _persistent_role_snapshot(character: Character) -> BindingRoleSnapshot:
     return BindingRoleSnapshot(
-        app_code=cast("str", character.app_code),
+        app_code=cast("Literal['arknights', 'endfield']", character.app_code),
         app_name=GAME_NAMES[character.app_code],
         nickname=character.nickname,
         binding_uid=character.uid,
@@ -334,7 +336,7 @@ async def build_bound_roles_plan(
 
 async def apply_planned_defaults(
     owner_id: int,
-    planned_defaults: Mapping[str, BoundRoleKey],
+    planned_defaults: Mapping[Literal["arknights", "endfield"], BoundRoleKey],
     session: async_scoped_session,
 ) -> None:
     await session.flush()
@@ -376,3 +378,61 @@ async def apply_planned_defaults(
         if character is None:
             raise ValueError("planned default role was not persisted")
         await set_default_character(owner_id, app_code, character.id, session)
+
+
+@dataclass(frozen=True, slots=True)
+class AccountSyncResult:
+    success: bool
+    removed_default_games: frozenset[str] = frozenset()
+    error: str | None = None
+
+
+@refresh_credentials
+async def _fetch_account_snapshot(credentials: CredentialState, skland_user_id: str | None) -> BindingAccountSnapshot:
+    cred = CRED(cred=credentials.cred, token=credentials.cred_token)
+    apps = await SklandAPI.get_binding(cred)
+    resolved_user_id = skland_user_id or await SklandAPI.get_user_ID(cred)
+    return BindingAccountSnapshot.from_apps(resolved_user_id, apps)
+
+
+async def sync_account(account_id: int, session: async_scoped_session) -> AccountSyncResult:
+    """Refresh one account outside a transaction and atomically reconcile its roles."""
+    account = await session.get(SkUser, account_id)
+    if account is None:
+        await session.rollback()
+        return AccountSyncResult(False, error="账号已不存在")
+    owner_id = account.owner_id
+    original_skland_user_id = account.skland_user_id
+    credentials = CredentialState(account.access_token, account.cred, account.cred_token)
+    await session.rollback()
+
+    try:
+        snapshot = await _fetch_account_snapshot(credentials, original_skland_user_id)
+    except SklandException as error:
+        return AccountSyncResult(False, error=f"接口请求失败,{error.args[0]}")
+
+    try:
+        projected_plan = await build_bound_roles_plan(
+            owner_id,
+            session,
+            mode="overview",
+            pending_snapshot=snapshot,
+            pending_account_id=account_id,
+            account_identity_overrides={account_id: snapshot.skland_user_id},
+        )
+        current = await session.get(SkUser, account_id)
+        if current is None or current.owner_id != owner_id or current.skland_user_id != original_skland_user_id:
+            raise ValueError("account changed during synchronization")
+        current.access_token = credentials.access_token
+        current.cred = credentials.cred
+        current.cred_token = credentials.cred_token
+        current.skland_user_id = snapshot.skland_user_id
+        removed_defaults = await reconcile_account_characters(current, snapshot, session)
+        await apply_planned_defaults(owner_id, projected_plan.planned_defaults, session)
+        await session.commit()
+    except (IntegrityError, ValueError) as error:
+        await session.rollback()
+        return AccountSyncResult(False, error=str(error))
+
+    await ark_card_data.invalidate_account(account_id)
+    return AccountSyncResult(True, frozenset(removed_defaults))

@@ -12,10 +12,3 @@ class Award(BaseModel):
 
 class ArkSignResponse(BaseModel):
     awards: list[Award]
-
-
-class ArkSignResult(BaseModel):
-    success_count: int
-    failed_count: int
-    results: list[tuple[str, str]]
-    summary: str

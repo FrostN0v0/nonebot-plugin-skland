@@ -1,23 +1,20 @@
 """Skland account and default-role management commands."""
 
-from dataclasses import dataclass
+from typing import cast
 from collections import defaultdict
 
-from nonebot import logger
 from sqlalchemy.exc import IntegrityError
 from nonebot_plugin_user import UserSession
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_alconna import Arparma, UniMessage
 
-from ..model import SkUser
-from ..api import SklandAPI
-from ..player_data import ark_card_data
-from ..render import render_bound_roles_card
-from ..schemas import CRED, BindingAccountSnapshot
-from ..utils import (
-    send_reaction,
-    refresh_cred_token_with_error_return,
-    refresh_access_token_with_error_return,
+from ..utils.message import send_reaction
+from .selection import send_bound_roles_overview
+from ..exception import AccountOperationInProgress
+from ..account import (
+    GAME_NAMES,
+    sync_account,
+    exclusive_account_operation,
 )
 from ..db_handler import (
     get_accounts,
@@ -26,14 +23,6 @@ from ..db_handler import (
     set_default_character,
     get_character_by_index,
 )
-from ..account import (
-    GAME_NAMES,
-    AccountOperationInProgress,
-    apply_planned_defaults,
-    build_bound_roles_plan,
-    exclusive_account_operation,
-    reconcile_account_characters,
-)
 
 _GAME_ALIASES = {
     "ark": "arknights",
@@ -41,99 +30,6 @@ _GAME_ALIASES = {
     "ef": "endfield",
     "endfield": "endfield",
 }
-
-
-@dataclass(frozen=True, slots=True)
-class _SyncResult:
-    success: bool
-    removed_default_games: frozenset[str] = frozenset()
-    error: str | None = None
-
-
-@refresh_cred_token_with_error_return
-@refresh_access_token_with_error_return
-async def _fetch_account_snapshot(account: SkUser) -> BindingAccountSnapshot:
-    cred = CRED(cred=account.cred, token=account.cred_token)
-    apps = await SklandAPI.get_binding(cred)
-    skland_user_id = account.skland_user_id or await SklandAPI.get_user_ID(cred)
-    return BindingAccountSnapshot.from_apps(skland_user_id, apps)
-
-
-async def _sync_account(account_id: int, session: async_scoped_session) -> _SyncResult:
-    account = await session.get(SkUser, account_id)
-    if account is None:
-        await session.rollback()
-        return _SyncResult(False, error="账号已不存在")
-    owner_id = account.owner_id
-    original_skland_user_id = account.skland_user_id
-    detached_account = SkUser(
-        id=account.id,
-        owner_id=account.owner_id,
-        access_token=account.access_token,
-        cred=account.cred,
-        cred_token=account.cred_token,
-        skland_user_id=account.skland_user_id,
-    )
-    await session.rollback()
-
-    snapshot = await _fetch_account_snapshot(detached_account)
-    if isinstance(snapshot, str):
-        return _SyncResult(False, error=snapshot)
-
-    try:
-        projected_plan = await build_bound_roles_plan(
-            owner_id,
-            session,
-            mode="overview",
-            pending_snapshot=snapshot,
-            pending_account_id=account_id,
-            account_identity_overrides={account_id: snapshot.skland_user_id},
-        )
-        current = await session.get(SkUser, account_id)
-        if current is None or current.owner_id != owner_id or current.skland_user_id != original_skland_user_id:
-            raise ValueError("account changed during synchronization")
-        current.access_token = detached_account.access_token
-        current.cred = detached_account.cred
-        current.cred_token = detached_account.cred_token
-        current.skland_user_id = snapshot.skland_user_id
-        removed_defaults = await reconcile_account_characters(current, snapshot, session)
-        await apply_planned_defaults(owner_id, projected_plan.planned_defaults, session)
-        await session.commit()
-    except (IntegrityError, ValueError) as error:
-        await session.rollback()
-        return _SyncResult(False, error=str(error))
-
-    await ark_card_data.invalidate_account(account_id)
-    return _SyncResult(True, frozenset(removed_defaults))
-
-
-async def send_bound_roles_overview(
-    owner_id: int,
-    user_session: UserSession,
-    session: async_scoped_session,
-    *,
-    text: str | None = None,
-) -> bool:
-    try:
-        plan = await build_bound_roles_plan(owner_id, session, mode="overview")
-    finally:
-        await session.rollback()
-    if not plan.card.accounts:
-        await UniMessage(text or "你还没有绑定森空岛账号").send(at_sender=True)
-        return False
-    try:
-        image = await render_bound_roles_card(plan.card)
-    except Exception:
-        logger.exception("Failed to render the bound-role overview")
-        await UniMessage(text or "角色列表渲染失败").send(at_sender=True)
-        return False
-    instruction = (
-        "临时选角: 查询、签到、状态及抽卡导入命令可追加 -r <序号>\n"
-        "切换默认角色: sk char set ark <序号> / sk char set ef <序号>"
-    )
-    message_text = f"{text}\n{instruction}" if text else instruction
-    await UniMessage.image(raw=image).text(f"\n{message_text}").send(reply_to=True, at_sender=True)
-    return True
 
 
 async def _handle_set_default(
@@ -199,7 +95,7 @@ async def _handle_update(
     fail_count = 0
     removed_default_games: set[str] = set()
     for account_id in account_ids:
-        result = await _sync_account(account_id, session)
+        result = await sync_account(account_id, session)
         if result.success:
             success_count += 1
             removed_default_games.update(result.removed_default_games)
@@ -226,7 +122,7 @@ async def _handle_update_all(session: async_scoped_session) -> None:
         try:
             async with exclusive_account_operation(owner_id):
                 for account_id in account_ids:
-                    result = await _sync_account(account_id, session)
+                    result = await sync_account(account_id, session)
                     if result.success:
                         success_count += 1
                     else:
@@ -261,7 +157,7 @@ async def char_handler(
 
     if result.find("char.set"):
         game = str(result.query("char.set.game"))
-        index = int(result.query("char.set.index"))
+        index = cast("int", result.query("char.set.index"))
         try:
             async with exclusive_account_operation(user_session.user_id):
                 await _handle_set_default(

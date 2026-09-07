@@ -49,6 +49,7 @@ async def test_binding_confirmation_projects_default_and_writes_after_confirm(ap
     from nonebot_plugin_orm import get_session
 
     import nonebot_plugin_skland.commands.bind as bind
+    from nonebot_plugin_skland.services import binding
     from nonebot_plugin_skland.model import SkUser, Character, CharacterDefault
 
     rendered_plans = []
@@ -68,11 +69,11 @@ async def test_binding_confirmation_projects_default_and_writes_after_confirm(ap
         mocker.patch.object(bind, "prompt_until", new=confirm)
         mocker.patch.object(bind, "send_reaction")
         mocker.patch.object(bind.UniMessage, "send", new=mocker.AsyncMock(return_value=SimpleNamespace()))
-        invalidate = mocker.patch.object(bind.ark_card_data, "invalidate_account", new=mocker.AsyncMock())
+        invalidate = mocker.patch.object(binding.ark_card_data, "invalidate_account", new=mocker.AsyncMock())
 
         await bind._confirm_account_binding(
             owner_id=1,
-            pending=bind.PendingCredential(
+            pending=binding.PendingCredential(
                 access_token="access",
                 cred="cred",
                 cred_token="token",
@@ -95,22 +96,24 @@ async def test_binding_confirmation_projects_default_and_writes_after_confirm(ap
         invalidate.assert_awaited_once_with(accounts[0].id)
 
 
+@pytest.mark.parametrize("reply", [_Reply("取消"), None], ids=["cancel", "timeout"])
 @pytest.mark.asyncio
-async def test_binding_cancel_and_empty_new_account_write_nothing(app, mocker):
+async def test_binding_cancel_and_empty_new_account_write_nothing(app, mocker, reply):
     from nonebot_plugin_orm import get_session
 
     from nonebot_plugin_skland.model import SkUser
     import nonebot_plugin_skland.commands.bind as bind
+    from nonebot_plugin_skland.services import binding
     from nonebot_plugin_skland.schemas import BindingAccountSnapshot
 
     mocker.patch.object(bind, "render_bound_roles_card", new=mocker.AsyncMock(return_value=b"card"))
-    prompt = mocker.patch.object(bind, "prompt_until", new=mocker.AsyncMock(return_value=_Reply("取消")))
+    prompt = mocker.patch.object(bind, "prompt_until", new=mocker.AsyncMock(return_value=reply))
     mocker.patch.object(bind.UniMessage, "send", new=mocker.AsyncMock(return_value=SimpleNamespace()))
 
     async with get_session() as session:
         await bind._confirm_account_binding(
             owner_id=2,
-            pending=bind.PendingCredential("access", "cred", "token", "remote-2"),
+            pending=binding.PendingCredential("access", "cred", "token", "remote-2"),
             snapshot=_snapshot("remote-2"),
             mode="add",
             user_session=_user_session(2),
@@ -121,7 +124,7 @@ async def test_binding_cancel_and_empty_new_account_write_nothing(app, mocker):
         prompt.reset_mock()
         await bind._confirm_account_binding(
             owner_id=3,
-            pending=bind.PendingCredential("access", "cred", "token", "remote-3"),
+            pending=binding.PendingCredential("access", "cred", "token", "remote-3"),
             snapshot=BindingAccountSnapshot(skland_user_id="remote-3", roles=[]),
             mode="add",
             user_session=_user_session(3),
@@ -137,6 +140,7 @@ async def test_cred_only_update_preserves_access_token(app, mocker):
 
     from nonebot_plugin_skland.model import SkUser
     import nonebot_plugin_skland.commands.bind as bind
+    from nonebot_plugin_skland.services import binding
     from nonebot_plugin_skland.account import (
         apply_planned_defaults,
         build_bound_roles_plan,
@@ -146,7 +150,7 @@ async def test_cred_only_update_preserves_access_token(app, mocker):
     mocker.patch.object(bind, "render_bound_roles_card", new=mocker.AsyncMock(return_value=b"card"))
     mocker.patch.object(bind, "prompt_until", new=mocker.AsyncMock(return_value=_Reply("确认")))
     mocker.patch.object(bind.UniMessage, "send", new=mocker.AsyncMock(return_value=SimpleNamespace()))
-    mocker.patch.object(bind.ark_card_data, "invalidate_account", new=mocker.AsyncMock())
+    mocker.patch.object(binding.ark_card_data, "invalidate_account", new=mocker.AsyncMock())
 
     async with get_session() as session:
         account = SkUser(
@@ -173,7 +177,7 @@ async def test_cred_only_update_preserves_access_token(app, mocker):
 
         await bind._confirm_account_binding(
             owner_id=4,
-            pending=bind.PendingCredential(None, "new-cred", "new-token", "remote-4"),
+            pending=binding.PendingCredential(None, "new-cred", "new-token", "remote-4"),
             snapshot=snapshot,
             mode="update",
             user_session=_user_session(4),
@@ -192,6 +196,7 @@ async def test_binding_revalidates_state_after_waiter(app, mocker):
 
     from nonebot_plugin_skland.model import SkUser
     import nonebot_plugin_skland.commands.bind as bind
+    from nonebot_plugin_skland.services import binding
 
     mocker.patch.object(bind, "render_bound_roles_card", new=mocker.AsyncMock(return_value=b"card"))
     mocker.patch.object(bind.UniMessage, "send", new=mocker.AsyncMock(return_value=SimpleNamespace()))
@@ -215,7 +220,7 @@ async def test_binding_revalidates_state_after_waiter(app, mocker):
         mocker.patch.object(bind, "prompt_until", new=mutate_before_confirm)
         await bind._confirm_account_binding(
             owner_id=5,
-            pending=bind.PendingCredential("access", "cred", "token", "remote-5"),
+            pending=binding.PendingCredential("access", "cred", "token", "remote-5"),
             snapshot=_snapshot("remote-5"),
             mode="add",
             user_session=_user_session(5),
@@ -227,25 +232,36 @@ async def test_binding_revalidates_state_after_waiter(app, mocker):
 
 
 @pytest.mark.asyncio
-async def test_manual_bind_fetches_binding_once_and_delegates_confirmation(app, mocker):
-    import nonebot_plugin_skland.commands.bind as bind
+async def test_binding_candidate_fetches_roles_without_transaction_or_writes(app, mocker):
+    from nonebot_plugin_orm import get_session
 
-    pending = bind.PendingCredential("access", "cred", "token", "remote")
-    mocker.patch.object(bind, "_resolve_pending_credential", new=mocker.AsyncMock(return_value=pending))
-    get_binding = mocker.patch.object(bind.SklandAPI, "get_binding", new=mocker.AsyncMock(return_value=[]))
-    confirm = mocker.patch.object(bind, "_confirm_account_binding", new=mocker.AsyncMock())
+    from nonebot_plugin_skland.model import SkUser
+    from nonebot_plugin_skland.schemas import CRED
+    from nonebot_plugin_skland.services import binding
 
-    await bind.bind_handler(
-        token=SimpleNamespace(available=True, result="x"),
-        result=SimpleNamespace(find=lambda _path: False),
-        user_session=_user_session(6),
-        msg_target=SimpleNamespace(private=True),
-        session=SimpleNamespace(),
+    grant = mocker.patch.object(binding.SklandLoginAPI, "get_grant_code", new=mocker.AsyncMock(return_value="grant"))
+    mocker.patch.object(
+        binding.SklandLoginAPI,
+        "get_cred",
+        new=mocker.AsyncMock(return_value=CRED(cred="cred", token="token", userId="remote")),
     )
+    identity = mocker.patch.object(binding.SklandAPI, "get_user_ID", new=mocker.AsyncMock())
 
-    get_binding.assert_awaited_once()
-    confirm.assert_awaited_once()
-    assert confirm.await_args.kwargs["mode"] == "add"
+    async with get_session() as session:
+        await session.scalars(select(SkUser))
+
+        async def fetch_roles(_credential):
+            assert session.in_transaction() is False
+            return []
+
+        roles = mocker.patch.object(binding.SklandAPI, "get_binding", new=mocker.AsyncMock(side_effect=fetch_roles))
+        pending, snapshot = await binding.prepare_binding_candidate("a" * 24, session)
+
+        assert pending.skland_user_id == snapshot.skland_user_id == "remote"
+        assert list(await session.scalars(select(SkUser))) == []
+        grant.assert_awaited_once_with("a" * 24, 0)
+        roles.assert_awaited_once()
+        identity.assert_not_awaited()
 
 
 @pytest.mark.parametrize(
@@ -260,6 +276,7 @@ async def test_unbind_waiters_run_without_transactions_and_delete_selected_accou
 
     from nonebot_plugin_skland.model import SkUser
     import nonebot_plugin_skland.commands.bind as bind
+    from nonebot_plugin_skland.services import binding
 
     async with get_session() as session:
         first = SkUser(
@@ -301,7 +318,7 @@ async def test_unbind_waiters_run_without_transactions_and_delete_selected_accou
         waiter = mocker.patch.object(bind, "prompt_until", new=mocker.AsyncMock(side_effect=prompt))
         mocker.patch.object(bind, "send_reaction")
         mocker.patch.object(bind.UniMessage, "send", new=mocker.AsyncMock(return_value=SimpleNamespace()))
-        invalidate = mocker.patch.object(bind.ark_card_data, "invalidate_account", new=mocker.AsyncMock())
+        invalidate = mocker.patch.object(binding.ark_card_data, "invalidate_account", new=mocker.AsyncMock())
 
         await bind.unbind_handler(user_session, session)
 
@@ -319,3 +336,42 @@ async def test_unbind_waiters_run_without_transactions_and_delete_selected_accou
             expected_invalidations.append(mocker.call(second_id))
         invalidate.assert_has_awaits(expected_invalidations, any_order=True)
         assert invalidate.await_count == len(expected_invalidations)
+
+
+@pytest.mark.asyncio
+async def test_unbind_revalidates_identity_before_deleting(app, mocker):
+    from nonebot_plugin_orm import get_session
+
+    from nonebot_plugin_skland.model import SkUser
+    from nonebot_plugin_skland.services import binding
+    from nonebot_plugin_skland.exception import BindingStateChangedError
+
+    invalidate = mocker.patch.object(binding.ark_card_data, "invalidate_account", new=mocker.AsyncMock())
+    async with get_session() as session:
+        account = SkUser(
+            owner_id=8,
+            access_token="access",
+            cred="cred",
+            cred_token="token",
+            skland_user_id="before",
+        )
+        session.add(account)
+        await session.flush()
+        account_id = account.id
+        await session.commit()
+
+        prepared = await binding.prepare_account_unbind(8, {account_id}, session)
+        assert session.in_transaction() is False
+        account = await session.get(SkUser, account_id)
+        account.skland_user_id = "after"
+        await session.commit()
+
+        with pytest.raises(BindingStateChangedError) as caught:
+            await binding.commit_account_unbind(prepared, session)
+
+        assert session.in_transaction() is False
+        assert caught.value.plan is not None
+        preserved = await session.get(SkUser, account_id)
+        assert preserved is not None
+        assert preserved.skland_user_id == "after"
+        invalidate.assert_not_awaited()

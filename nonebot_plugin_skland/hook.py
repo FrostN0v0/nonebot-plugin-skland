@@ -3,7 +3,7 @@ from nonebot_plugin_alconna import command_manager
 
 from .config import CACHE_DIR, config
 from .exception import RequestException
-from .utils import download_img_resource
+from .download import download_img_resource
 from .data_source import gacha_table_data, ef_gacha_pool_data
 
 driver = get_driver()

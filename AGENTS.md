@@ -46,11 +46,21 @@ nonebot_plugin_skland/
 ├── data_source.py       # 游戏数据下载、干员目录构建与本地元数据缓存
 ├── player_data.py       # 玩家实时数据账号级短期缓存：ArkCard TTL/LRU/single-flight
 ├── image_cache.py       # 方舟半身图浏览器响应缓存与显式资源就绪等待
-├── download.py          # GitHub 资源下载器与版本检查
+├── download.py          # GitHub downloads, versions, and resource update orchestration
 ├── render.py            # HTML 模板渲染为图片的函数
 ├── filters.py           # Jinja2 过滤器与可复用图片资源 URL 函数
-├── utils.py             # Token 刷新装饰器、背景图、抽卡/签到格式化与资源下载等工具
-├── exception.py         # LoginException / RequestException / UnauthorizedException
+├── exception.py         # Shared API and account-operation errors
+├── services/
+│   ├── __init__.py      # Package boundary without implicit exports
+│   ├── auth.py          # Credential refresh policy and detached credential state
+│   ├── binding.py       # Binding preparation and atomic confirmed account mutations
+│   ├── gacha.py         # History fetching, grouping, and Heybox conversion
+│   └── sign.py          # Signing, ordered cache persistence, filtering, and formatting
+├── utils/
+│   ├── __init__.py      # Package boundary without implicit exports
+│   ├── background.py    # Configured background selection
+│   ├── message.py       # Command reactions and API error feedback
+│   └── qrcode.py        # Safe avatar fetching and pixel-preserving QR cards
 ├── api/
 │   ├── __init__.py      # API 模块导出
 │   ├── request.py       # SklandAPI：森空岛/抽卡/终末地接口与签名逻辑
@@ -63,6 +73,7 @@ nonebot_plugin_skland/
 │   ├── box.py           # 方舟干员查询、自然筛选与分页发送
 │   ├── card.py          # 明日方舟角色卡片查询
 │   ├── char.py          # 多账号角色总览、默认角色切换与逐账号同步
+│   ├── selection.py     # Shared game-aware role selection and overview feedback
 │   ├── gacha.py         # 明日方舟抽卡记录查询、分页、导入小黑盒记录
 │   ├── rogue.py         # 肉鸽战绩查询与单局详情
 │   ├── sync.py          # 资源与数据同步命令
@@ -70,17 +81,18 @@ nonebot_plugin_skland/
 │       ├── __init__.py  # 终末地 handler 导出
 │       ├── card.py      # 终末地角色卡片
 │       ├── sign.py      # 终末地签到与签到状态
-│       ├── gacha.py     # 终末地抽卡记录查询/更新/分页渲染
-│       └── utils.py     # 终末地命令辅助函数
+│       └── gacha.py     # Endfield gacha history update and paginated rendering
 ├── schemas/
 │   ├── __init__.py      # 对外集中导出 Pydantic 模型
 │   ├── binding.py       # 森空岛 wire model、确认快照与绑定角色卡 DTO
 │   ├── cred.py          # CRED 凭证模型
+│   ├── sign.py          # Shared SignResult and sign-cache contracts
 │   ├── arknights/
 │   │   ├── card.py      # ArkCard 角色卡片结构
-│   │   ├── sign.py      # ArkSignResponse / ArkSignResult
+│   │   ├── sign.py      # Arknights sign API response
 │   │   ├── game_data.py # 抽卡详情、官方干员目录与 PRTS 元数据快照结构
-│   │   ├── operators.py # 干员自然筛选、卡片视图与组合模型
+│   │   ├── operator_query.py # Natural filters, aliases, and query validation
+│   │   ├── operators.py # Operator card/module projections and roster ordering
 │   │   ├── gacha/       # 明日方舟抽卡基础、卡池、统计模型
 │   │   ├── rogue/       # 肉鸽基础数据、生涯统计、历史记录模型
 │   │   └── models/      # 角色卡片的状态、干员、基建、招募、活动、皮肤等详细模型
@@ -119,6 +131,8 @@ nonebot_plugin_skland/
 - `pyproject.toml`：依赖、NoneBot 插件配置、Ruff/Pyright/Pytest/Bumpversion 配置。
 - `package.json`：Tailwind CSS 编译脚本。
 - `tailwind.css`：Tailwind 输入 CSS。
+
+业务用例集中在 `services/`，图片和消息工具集中在 `utils/`，不将拆分结果平铺到包根目录。两者的 `__init__.py` 不聚合导出；调用方直接导入对应子模块，不保留旧路径兼容转发。
 
 ## 命令系统
 
@@ -243,7 +257,7 @@ class Config(BaseModel):
 - `ark_sign()`：明日方舟签到。
 - `get_rogue()`：明日方舟肉鸽数据。
 - `get_gacha_categories()` / `get_gacha_history()`：明日方舟抽卡类别与记录。
-- `endfield_card()`：终末地角色卡片数据。
+- `endfield_card(cred, *, user_id, role_id, server_id)`：终末地角色卡片数据；API 层只接收标量身份，不依赖 ORM `Character`。
 - `endfield_sign()`：终末地签到。
 - `get_ef_gacha_history()`：终末地角色池/武器池抽卡记录。
 - `get_ef_gacha_content()`：终末地卡池 UP 内容。
@@ -252,27 +266,23 @@ class Config(BaseModel):
 
 ### Token 自动刷新
 
-`utils.py` 提供四个装饰器：
+`services/auth.py` 的 `refresh_credentials` 统一执行凭证刷新；`CredentialState` 用于不持有数据库事务的账号同步。该模块不发送消息，也不使用 `None` 或错误字符串表示接口失败。
 
-- `refresh_access_token_if_needed`
-- `refresh_cred_token_if_needed`
-- `refresh_access_token_with_error_return`
-- `refresh_cred_token_with_error_return`
-
-命令 handler 通常使用前两者，在接口异常时通过消息反馈；定时任务使用 `*_with_error_return`，避免定时任务中直接发送消息。
-
-刷新逻辑：
-
-- `UnauthorizedException` 通常表示 `cred_token` 失效，使用 `SklandLoginAPI.refresh_token(user.cred)` 刷新。
-- `LoginException` 通常表示 `cred` 失效，若有 `access_token`，通过 grant code 重新获取 cred。
+- `UnauthorizedException` 触发一次 `cred_token` 刷新；重试若遇到 `LoginException`，允许再用保存的 token 刷新一次 cred。
+- `LoginException` 触发一次 cred 刷新；缺少 `access_token` 时立即抛错，不请求 grant code。
+- 请求错误、刷新错误和最终重试失败直接向调用方传播，不无限重试。
+- 交互命令通过 `utils/message.py` 反馈错误；批量签到在 `services/sign.py` 中将角色失败转换为缓存记录，账号同步返回 `AccountSyncResult`。
+- `player_data.get_ark_card()` 的刷新边界保留在每个调用者上下文，位于 single-flight 之外；并发等待者分别保存自己的刷新结果。
 
 
 ### 账号绑定与管理
 
 - 同一 NoneBot 用户可绑定多个森空岛账号；token/cred 仅允许私聊，二维码入口保持群聊可用。
 - token、cred 和扫码所得凭证都先调用一次 binding API，渲染确认后的完整账号角色卡；只有命令发起者回复“确认”后才原子写入。
+- `services/binding.py` 负责凭证和身份准备、确认快照复核及绑定/解绑的原子提交；`commands/bind.py` 只编排展示、waiter、扫码轮询与撤回。工作状态使用内部 dataclass，跨模块业务异常位于 `exception.py`。
+- `account.sync_account()` 使用普通凭证快照执行 API 请求，再重新读取账号并事务性同步角色/默认映射；不构造未持久化的 `SkUser` 充当临时凭证对象。
 - `skland char` 返回全部账号和角色；`skland char set <game> <index>` 按游戏独立序号切换插件默认角色，所有业务功能使用该角色所属账号的凭证。
-- 角色卡片、两游戏抽卡查询/更新、抽卡导入、干员查询、肉鸽及详情、两游戏个人签到及状态共 12 个入口统一支持 `-r` / `--role`。`matcher._role_option()` 为每个作用域构建独立选项，命令分发传入 `role_index`；各 handler 共用两游戏的 `check_user_character()`，使用角色所属账号、不写 `CharacterDefault`、不要求已有默认角色，也不能临时选择他人的角色。`get_character_by_index()` 与 `char set` 共用 `get_user_characters()` 排序，无效序号不回退默认。
+- 角色卡片、两游戏抽卡查询/更新、抽卡导入、干员查询、肉鸽及详情、两游戏个人签到及状态共 12 个入口统一支持 `-r` / `--role`。`matcher._role_option()` 为每个作用域构建独立选项，命令分发传入 `role_index`；各 handler 共用 `commands/selection.py` 的 `check_user_character(app_code=...)`，使用角色所属账号、不写 `CharacterDefault`、不要求已有默认角色，也不能临时选择他人的角色。`get_character_by_index()` 与 `char set` 共用 `get_user_characters()` 排序，无效序号不回退默认。
 - `skland box -r` 统一用于角色序号，原星级短选项改为 `-ra`；`--rarity`、`rarity` 和自然筛选词继续保留。所有旧示例和调用必须同步迁移，不能根据值猜测 `-r` 是星级还是角色。
 - 签到状态不带选角参数时保留本人全部角色结果；显式选角时按 owner 和角色主键共同过滤缓存，防止跨账号、跨用户混入。`--all` 为超管全体状态，与选角互斥；全体签到提交后展示状态时不读取已过期的 `UserSession.user`。
 - 肉鸽详情不带选角参数时使用引用图片的缓存数据；显式选角时获取所选角色的新数据，引用图片只提供主题，无引用时使用角色当前主题。肉鸽 API 读取后在渲染前提交凭证刷新；线索、背景等暗语继续沿用原卡片携带的数据。
@@ -283,7 +293,7 @@ class Config(BaseModel):
 - `BoundRoleCardItem.server_label` 按方舟渠道 ID 将 `1` / `2` 显示为“官服” / “bilibili服”，覆盖旧迁移将编号存入 `server_name` 的记录；终末地接口区服名 `China` 仍显示为“国服”。未知渠道沿用原区服名，不修改数据库、API 请求和角色身份匹配使用的原始名称或服务器 ID。
 - `skland unbind` 先选择账号序号或“全部”，再二次确认；删除当前默认角色后清空默认，不自动切换到其他账号。
 - `UserSession.user_id` 会读取 `User.id` ORM 属性；解绑及角色选择流程必须在 `rollback()` / `commit()` 前保存普通整数身份，后续确认、错误反馈与提交后总览不得重新读取已过期的用户 ORM 属性。渲染和 waiter 期间不持有数据库事务。
-- 二维码卡继续使用安全头像下载、原生黑白点阵、M 级纠错和 4 模块静区，并在约 100 秒后撤回；扫码者身份不能由插件验证，最终绑定以命令发起者确认的角色卡为准。
+- `utils/qrcode.py` 保留安全头像下载、原生黑白点阵、M 级纠错和 4 模块静区；命令约 100 秒后撤回二维码。扫码者身份不能由插件验证，最终绑定以命令发起者确认的角色卡为准。
 
 ### 玩家角色卡短期缓存
 
@@ -307,14 +317,14 @@ class Config(BaseModel):
   - 启动或同步数据时尝试覆盖下载；下载失败且本地有旧文件时使用本地缓存。
   - 提供 `get_pool(pool_id)` 为终末地抽卡渲染补充 UP 信息。
 
-`hook.py` 启动时会加载 `gacha_table_data` 和 `ef_gacha_pool_data`。若 `check_res_update=True`，还会调用 `download_img_resource()` 检查并下载图片资源。
+`hook.py` 启动时会加载 `gacha_table_data` 和 `ef_gacha_pool_data`。若 `check_res_update=True`，还会调用 `download.download_img_resource()` 检查并下载图片资源。下载计数和开始时间属于单次 `download_all()` 调用，不共享类级统计状态；全局并发上限与资源版本/覆盖规则保持原样。
 
 ### 抽卡记录
 
 明日方舟：
 
-- `commands/gacha.py` 从接口拉取抽卡记录，或通过 `import_heybox_gacha_data()` 导入小黑盒导出数据。
-- `utils.group_gacha_records()` 按卡池与时间戳分组，并补充 UP 干员、开放时间、卡池规则类型。
+- `commands/gacha.py` 编排查询与持久化，`services/gacha.py` 负责分页读取、分组及小黑盒导入转换。
+- `services.gacha.group_gacha_records()` 按卡池与时间戳分组，并补充 UP 干员、开放时间、卡池规则类型。
 - `render.render_gacha_history()` 使用 `gacha.html.jinja2` 渲染。
 
 ### 方舟干员
@@ -322,8 +332,8 @@ class Config(BaseModel):
 - 唯一用户快捷入口为 `方舟干员`，映射到 `skland box`；`fuzzy=True` 允许追加参数，`compact=False` 强制筛选词之间使用空格。启动加载旧快捷指令缓存后会删除历史的 `干员盒` 和 `图鉴` 入口。
 - `matcher.py` 使用 `MultiVar(str, "*")` 接收任意数量的自然筛选词；QQ 号或 @ 目标位于筛选词之前，裸数字不作为星级或潜能。
 - `commands/box.py` 将自然筛选词和高级 Options 一次性交给 `OperatorRosterQuery.from_input()`，不维护两套筛选路径；结果按 `roster_render_max` 分块并发渲染，QQClient 使用合并转发，其他平台逐图发送。
-- `schemas/arknights/operators.py` 在同一模型中解析持有状态、星级、职业、分支、部署位置、性别、势力、种族、潜能、名称和排序。相同集合维度合并为 OR，不同维度为 AND；冲突的持有状态、排序和名称直接报错，无法识别的连写词提示使用空格。
-- `OperatorRosterQuery`、`OperatorCard`、`OperatorModule`、`OperatorRoster` 负责玩家数据合并和排序；API 中存在但本地目录尚未收录的持有干员通过 fallback 条目保留。
+- `schemas/arknights/operator_query.py` 统一解析持有状态、星级、职业、分支、部署位置、性别、势力、种族、潜能、名称和排序。相同集合维度合并为 OR，不同维度为 AND；冲突的持有状态、排序和名称直接报错，无法识别的连写词提示使用空格。
+- `schemas/arknights/operators.py` 的 `OperatorCard`、`OperatorModule`、`OperatorRoster` 负责玩家数据合并和排序，单向依赖查询模型；API 中存在但本地目录尚未收录的持有干员通过 fallback 条目保留。
 - `Character.potential_level` 将 API 的 `potentialRank` 0-5 转为用户可见的潜能 1-6。练度排序依次比较精英阶段、等级、专精总和、专三数量、已解锁模组最高/总等级、技能等级和信赖，不包含潜能。
 - 实装排序使用官方目录 `sort_id`，获取排序使用 `gainTime`；`all` 使用获取或练度排序时先排列已拥有干员，再将未拥有干员按实装顺序放在末尾。`unowned` 不允许潜能、获取或练度条件。
 - `schemas/arknights/game_data.py` 从官方数据构造稳定目录，并以 PRTS 快照补充职业分支中文名、性别和种族；阿米娅各职业形态保持独立身份。
@@ -336,8 +346,8 @@ class Config(BaseModel):
 
 - `commands/endfield/gacha.py` 中 `EF_CHAR_POOL_TYPES` 包含 `STANDARD`、`SPECIAL`、`BEGINNER`、`JOINT`；武器池单独使用 `WEAPON`。
 - `skland efgacha` 默认只从数据库缓存读取；首次使用或需要同步时使用 `-u` 拉取接口数据并去重保存。
-- `utils.get_all_ef_gacha_records()` 会并发分页获取终末地抽卡记录。
-- `utils.group_ef_gacha_records()` 将记录分为 `beginner_pools`、`standard_pools`、`special_pools`、`joint_pools`、`weapon_pools`。
+- `services.gacha.get_all_ef_gacha_records()` 会并发分页获取终末地抽卡记录。
+- `services.gacha.group_ef_gacha_records()` 将记录分为 `beginner_pools`、`standard_pools`、`special_pools`、`joint_pools`、`weapon_pools`。
 - `EfGroupedGachaRecord` 负责各类统计：总抽数、六星平均抽数、保底、UP/歪卡、武库配额、可见卡池切片。
 - `render.render_ef_gacha_history()` 根据是否存在联合寻访动态调整视口宽度；`-b` / `-l` 对各类别分别切片。
 
@@ -358,6 +368,8 @@ class Config(BaseModel):
 
 模板位于 `resources/templates/`，过滤器位于 `filters.py`。Tailwind 输出 CSS 为 `nonebot_plugin_skland/resources/templates/index.css`。
 
+`ArkCard.recruit_complete_time` 直接依赖 `filters.format_timestamp`，schema 不反向导入 `render.py`。背景选择位于 `utils/background.py`，不混入渲染入口。
+
 账号角色卡的纹理、阴影和字体样式集中于 `tailwind.css` 的 `bound-roles-*` 类，仅作用于本模板；沿用 706px 视口、1.5 倍 PNG 和全局截图超时，不额外请求角色详情或远程图片。
 
 ### 定时任务
@@ -377,6 +389,8 @@ async def run_daily_efsign(): ...
 
 - `sign_result.json`
 - `endfield_sign_result.json`
+
+两项定时任务和签到命令共用 `services/sign.py` 的执行、缓存读写、owner/角色过滤及格式化；`schemas/sign.py` 提供 `SignCacheEntry`、`SignCache`、`SignResult`。结果文件名和有序列表 JSON 结构不变；事务提交与消息发送仍由调用方负责。
 
 ## 开发规范
 
@@ -414,6 +428,8 @@ uv run pytest -s tests/test_skland_api.py
 - `tests/conftest.py` 使用 nonebug 初始化 NoneBot，并加载 `pyproject.toml` 中配置的插件。
 - 数据库测试使用内存 SQLite：`sqlite+aiosqlite://`。
 - `make_user_session` fixture 将真实 `UserSession.user` 加入命令使用的同一个 SQLAlchemy session；解绑、缺少默认角色和签到选择失败的回归测试覆盖事务结束后用户 ORM 属性过期的行为，不能只用普通整数模拟 `user_id`。
+- `tests/test_auth.py` 覆盖有界重试、缺少 token 时零刷新请求及刷新失败传播；`tests/test_player_data.py` 覆盖真实缓存中并发等待者分别刷新凭证与成功结果合并。
+- `tests/test_download.py` 覆盖并发下载统计/计时隔离、已有文件跳过、部分失败聚合及版本/强制覆盖行为；并发统计用例隔离 Rich 的终端 Live 显示限制。
 - `tests/test_ef_gacha_joint_pool.py` 覆盖终末地联合寻访分类、统计与模板渲染相关行为。
 - `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、JPEG/PNG 参数、分页发送与渲染参数。
 - `tests/test_image_cache.py` 覆盖配置开关、单次模板生成、浏览器半身图响应落盘、本地复用、显式字体/图片就绪、等待超时、未知 URL 跳过与失败响应忽略。

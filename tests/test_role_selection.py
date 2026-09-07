@@ -95,8 +95,8 @@ def test_update_flags_keep_their_existing_meaning(app):
 async def test_role_commands_reject_invalid_index_without_data_access(app, mocker, make_user_session, command):
     from nonebot import get_adapter
     from nonebot_plugin_user import UserSession
-    from nonebot_plugin_alconna import UniMessage
     from nonebot.internal.params import DependencyCache
+    from nonebot_plugin_alconna import Image, UniMessage
     from nonebot_plugin_alconna.model import CommandResult
     from nonebot_plugin_alconna.consts import ALCONNA_RESULT, ALCONNA_EXTENSION
     from nonebot.adapters.onebot.v11 import Bot, Adapter, Message, PrivateMessageEvent
@@ -104,9 +104,9 @@ async def test_role_commands_reject_invalid_index_without_data_access(app, mocke
 
     import nonebot_plugin_skland.commands.card as ark_card
     import nonebot_plugin_skland.commands.box as box_command
-    import nonebot_plugin_skland.commands.char as char_command
     from nonebot_plugin_skland.model import SkUser, Character
     import nonebot_plugin_skland.commands.gacha as gacha_command
+    import nonebot_plugin_skland.commands.selection as selection
     import nonebot_plugin_skland.commands.endfield.card as ef_card
     from nonebot_plugin_skland.api import SklandAPI, SklandLoginAPI
     from nonebot_plugin_skland.matcher import skland, skland_command
@@ -135,12 +135,10 @@ async def test_role_commands_reject_invalid_index_without_data_access(app, mocke
 
         async def send(message, **kwargs):
             assert not session.in_transaction()
-            messages.append(message.extract_plain_text())
+            messages.append(message)
 
         mocker.patch.object(UniMessage, "send", new=send)
-        overview = mocker.patch.object(
-            char_command, "render_bound_roles_card", new=mocker.AsyncMock(return_value=b"image")
-        )
+        mocker.patch.object(selection, "render_bound_roles_card", new=mocker.AsyncMock(return_value=b"image"))
         ark_api = mocker.patch.object(ark_card, "get_ark_card", new=mocker.AsyncMock())
         ef_api = mocker.patch.object(ef_card.SklandAPI, "endfield_card", new=mocker.AsyncMock())
         remote_calls = [
@@ -193,8 +191,8 @@ async def test_role_commands_reject_invalid_index_without_data_access(app, mocke
                 scoped_session.registry.clear()
 
         assert len(messages) == 1
-        assert "sk char" in messages[0]
-        overview.assert_awaited_once()
+        assert "sk char" in messages[0].extract_plain_text()
+        assert messages[0][Image][0].raw == b"image"
         for remote_call in remote_calls:
             remote_call.assert_not_awaited()
         ark_api.assert_not_awaited()

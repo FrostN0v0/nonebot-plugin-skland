@@ -46,12 +46,14 @@ __plugin_meta__ = PluginMetadata(
 __plugin_meta__.extra.update(extra_data)
 
 
-@skland.assign("$main")
-async def _(session: async_scoped_session, user_session: UserSession, target: Match[At | int]):
+@skland.assign("role", or_not=True)
+async def _(session: async_scoped_session, user_session: UserSession, target: Match[At | int], result: Arparma):
     """角色卡片查询"""
     from .commands.card import card_handler
 
-    await card_handler(session, user_session, target)
+    if result.subcommands:
+        await skland.finish("该位置不支持 --role，请在角色查询或个人签到命令后使用该参数")
+    await card_handler(session, user_session, target, role_index=result.query("role.role_index"))
 
 
 @skland.assign("bind")
@@ -91,13 +93,12 @@ async def _(
 async def _(
     user_session: UserSession,
     session: async_scoped_session,
-    uid: Match[str],
     result: Arparma,
 ):
     """明日方舟森空岛签到"""
     from .commands.arksign import arksign_sign_handler
 
-    await arksign_sign_handler(user_session, session, uid, result)
+    await arksign_sign_handler(user_session, session, result.query("arksign.sign.role.role_index"), result)
 
 
 @skland.assign("arksign.status")
@@ -206,13 +207,12 @@ async def _(url: Match[str], user_session: UserSession, session: async_scoped_se
 async def _(
     user_session: UserSession,
     session: async_scoped_session,
-    uid: Match[str],
     result: Arparma,
 ):
     """终末地森空岛签到"""
     from .commands.endfield import ef_sign_handler
 
-    await ef_sign_handler(user_session, session, uid, result)
+    await ef_sign_handler(user_session, session, result.query("efsign.sign.role.role_index"), result)
 
 
 @skland.assign("efsign.status")
@@ -254,7 +254,9 @@ async def _(
 
     show_all = result.find("efcard.all")
     is_simple = result.find("efcard.simple")
-    await efcard_handler(user_session, session, target, show_all, is_simple)
+    await efcard_handler(
+        user_session, session, target, show_all, is_simple, role_index=result.query("efcard.role.role_index")
+    )
 
 
 @skland.assign("efgacha")

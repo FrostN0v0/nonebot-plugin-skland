@@ -22,6 +22,11 @@ alc_config.namespaces["skland"] = ns
 skland_command = Alconna(
     "skland",
     Args["target?#目标", At | int],
+    Option(
+        "-r|--role",
+        Args["role_index", int, Field(completion=lambda: "请输入 sk char 中的方舟角色序号")],
+        help_text="临时查询指定序号的角色，不修改默认角色",
+    ),
     Subcommand(
         "-b|--bind|bind",
         Args["token", str, Field(completion=lambda: "请输入 token 或 cred 绑定森空岛账号")],
@@ -35,9 +40,9 @@ skland_command = Alconna(
         Subcommand(
             "sign",
             Option(
-                "-u|--uid|uid",
-                Args["uid", str, Field(completion=lambda: "请输入指定绑定角色uid")],
-                help_text="指定个人绑定的角色uid进行签到",
+                "-r|--role",
+                Args["role_index", int, Field(completion=lambda: "请输入 sk char 中的方舟角色序号")],
+                help_text="按角色序号签到，不修改默认角色；不可与 --all 同用",
             ),
             Option("--all", help_text="签到所有个人绑定的角色"),
             help_text="个人绑定角色签到",
@@ -55,9 +60,9 @@ skland_command = Alconna(
         Subcommand(
             "sign",
             Option(
-                "-u|--uid|uid",
-                Args["uid", str, Field(completion=lambda: "请输入指定绑定角色uid")],
-                help_text="指定个人绑定的角色uid进行签到",
+                "-r|--role",
+                Args["role_index", int, Field(completion=lambda: "请输入 sk char 中的终末地角色序号")],
+                help_text="按角色序号签到，不修改默认角色；不可与 --all 同用",
             ),
             Option("--all", help_text="签到所有个人绑定的角色"),
             help_text="个人绑定角色签到",
@@ -129,6 +134,11 @@ skland_command = Alconna(
     Subcommand(
         "efcard",
         Args["target?#目标", At | int],
+        Option(
+            "-r|--role",
+            Args["role_index", int, Field(completion=lambda: "请输入 sk char 中的终末地角色序号")],
+            help_text="临时查询指定序号的角色，不修改默认角色",
+        ),
         Option("-a|--all|all", help_text="展示所有角色"),
         Option("-s|--simple|simple", help_text="使用简化背景"),
         help_text="终末地角色面板查询",

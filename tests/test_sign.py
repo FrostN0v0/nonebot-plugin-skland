@@ -2,7 +2,7 @@ import json
 from types import SimpleNamespace
 
 import pytest
-from sqlalchemy import delete, update, inspect
+from sqlalchemy import delete, inspect
 
 
 async def _seed_sign_roles(session, owner_id: int):
@@ -24,7 +24,7 @@ async def _seed_sign_roles(session, owner_id: int):
             [
                 Character(
                     account_id=account.id,
-                    uid=f"ark-{suffix}",
+                    uid="ark-shared",
                     role_id=f"ark-{suffix}",
                     app_code="arknights",
                     channel_master_id=suffix,
@@ -35,7 +35,7 @@ async def _seed_sign_roles(session, owner_id: int):
                 ),
                 Character(
                     account_id=account.id,
-                    uid=f"ef-parent-{suffix}",
+                    uid="ef-shared",
                     role_id=f"ef-{suffix}",
                     app_code="endfield",
                     channel_master_id=suffix,
@@ -106,7 +106,6 @@ async def test_personal_sign_all_uses_each_roles_account_credentials(app, mocker
     async with get_session() as session:
         await _seed_sign_roles(session, 60)
         user_session = SimpleNamespace(user_id=60, platform="Console")
-        match = SimpleNamespace(available=False)
         ark_result = SimpleNamespace(find=lambda path: path == "arksign.sign.all")
         ef_result = SimpleNamespace(find=lambda path: path == "efsign.sign.all")
         ark_calls = []
@@ -125,13 +124,14 @@ async def test_personal_sign_all_uses_each_roles_account_credentials(app, mocker
         mocker.patch.object(arksign, "send_reaction")
         mocker.patch.object(efsign, "send_reaction")
         mocker.patch.object(arksign.UniMessage, "send", new=mocker.AsyncMock())
+        mocker.patch.object(efsign.UniMessage, "send", new=mocker.AsyncMock())
 
-        await arksign.arksign_sign_handler(user_session, session, match, ark_result)
-        await efsign.ef_sign_handler(user_session, session, match, ef_result)
+        await arksign.arksign_sign_handler(user_session, session, None, ark_result)
+        await efsign.ef_sign_handler(user_session, session, None, ef_result)
 
         assert ark_calls == [
-            ("cred-a", "token-a", "ark-a", "a"),
-            ("cred-b", "token-b", "ark-b", "b"),
+            ("cred-a", "token-a", "ark-shared", "a"),
+            ("cred-b", "token-b", "ark-shared", "b"),
         ]
         assert ef_calls == [
             ("cred-a", "token-a", "ef-a", "a"),
@@ -173,7 +173,7 @@ async def test_scheduled_sign_cache_uses_ordered_identity_entries(app, mocker, t
 
 
 @pytest.mark.parametrize("game", ["arknights", "endfield"])
-@pytest.mark.parametrize("selection", ["missing", "ambiguous", "empty_all"])
+@pytest.mark.parametrize("selection", ["invalid_index", "empty_all"])
 @pytest.mark.asyncio
 async def test_sign_selection_feedback_survives_expired_user_session(app, mocker, make_user_session, game, selection):
     from nonebot_plugin_orm import get_session
@@ -190,9 +190,7 @@ async def test_sign_selection_feedback_survives_expired_user_session(app, mocker
     )
     async with get_session() as session:
         await _seed_sign_roles(session, 90)
-        if selection == "ambiguous":
-            await session.execute(update(Character).where(Character.app_code == game).values(role_id="shared"))
-        elif selection == "empty_all":
+        if selection == "empty_all":
             await session.execute(delete(Character).where(Character.app_code == game))
         user_session = await make_user_session(session, 90)
         rendered_cards = []
@@ -213,20 +211,110 @@ async def test_sign_selection_feedback_survives_expired_user_session(app, mocker
         mocker.patch.object(command.UniMessage, "send", new=send)
         sign = mocker.patch.object(command.SklandAPI, api_name, new=mocker.AsyncMock())
 
-        await handler(
-            user_session,
-            session,
-            SimpleNamespace(available=selection != "empty_all", result="shared"),
-            SimpleNamespace(find=lambda path: path == all_path),
-        )
+        role_index = None if selection == "empty_all" else 999
+        result = SimpleNamespace(find=lambda path: path == all_path if selection == "empty_all" else False)
+        await handler(user_session, session, role_index, result)
 
         assert session.in_transaction() is False
         assert len(rendered_cards) == 1
         assert len(messages) == 1
-        expected = {
-            "missing": "\u672a\u627e\u5230\u8be5\u89d2\u8272\u6807\u8bc6",
-            "ambiguous": "\u89d2\u8272\u6807\u8bc6\u4e0d\u552f\u4e00",
-            "empty_all": "\u5f53\u524d\u6ca1\u6709\u53ef\u7b7e\u5230",
-        }
-        assert messages[0].startswith(expected[selection])
+        assert messages[0]
+        sign.assert_not_awaited()
+
+
+@pytest.mark.parametrize("game", ["arknights", "endfield"])
+@pytest.mark.parametrize(
+    ("default_index", "role_index", "expected_suffix"),
+    [(1, 2, "b"), (None, 2, "b"), (1, None, "a")],
+)
+@pytest.mark.asyncio
+async def test_sign_selection_uses_owning_account_without_changing_defaults(
+    app, mocker, make_user_session, game, default_index, role_index, expected_suffix
+):
+    from nonebot_plugin_orm import get_session
+
+    import nonebot_plugin_skland.commands.arksign as arksign
+    import nonebot_plugin_skland.commands.endfield.sign as efsign
+    from nonebot_plugin_skland.schemas import ArkSignResponse, EndfieldSignResponse
+    from nonebot_plugin_skland.db_handler import get_user_characters, get_default_character, set_default_character
+
+    command, handler = (
+        (arksign, arksign.arksign_sign_handler) if game == "arknights" else (efsign, efsign.ef_sign_handler)
+    )
+    async with get_session() as session:
+        await _seed_sign_roles(session, 100)
+        expected_defaults = {}
+        for app_code in ("arknights", "endfield"):
+            characters = await get_user_characters(100, app_code, session)
+            expected_defaults[app_code] = characters[default_index - 1].id if default_index is not None else None
+            if default_index is not None:
+                await set_default_character(100, app_code, expected_defaults[app_code], session)
+        await session.commit()
+        user_session = await make_user_session(session, 100)
+        calls = []
+
+        if game == "arknights":
+
+            async def ark_sign(cred, uid, *, channel_master_id):
+                calls.append((cred.cred, cred.token, uid, channel_master_id))
+                return ArkSignResponse(awards=[])
+
+            mocker.patch.object(command.SklandAPI, "ark_sign", new=ark_sign)
+        else:
+
+            async def ef_sign(cred, role_id, *, server_id):
+                calls.append((cred.cred, cred.token, role_id, server_id))
+                return EndfieldSignResponse(ts="", awardIds=[], resourceInfoMap={}, tomorrowAwardIds=[])
+
+            mocker.patch.object(command.SklandAPI, "endfield_sign", new=ef_sign)
+
+        mocker.patch.object(command, "send_reaction")
+        mocker.patch.object(command.UniMessage, "send", new=mocker.AsyncMock())
+        await handler(user_session, session, role_index, SimpleNamespace(find=lambda _path: False))
+
+        expected_role = "ark-shared" if game == "arknights" else f"ef-{expected_suffix}"
+        assert calls == [(f"cred-{expected_suffix}", f"token-{expected_suffix}", expected_role, expected_suffix)]
+        for app_code, character_id in expected_defaults.items():
+            current_default = await get_default_character(100, app_code, session)
+            assert (current_default.id if current_default else None) == character_id
+
+
+@pytest.mark.parametrize("game", ["arknights", "endfield"])
+@pytest.mark.asyncio
+async def test_role_index_and_all_are_rejected_without_side_effects(app, mocker, make_user_session, game):
+    from nonebot_plugin_orm import get_session
+
+    import nonebot_plugin_skland.commands.arksign as arksign
+    import nonebot_plugin_skland.commands.endfield.sign as efsign
+
+    command, handler, all_path, api_name = (
+        (arksign, arksign.arksign_sign_handler, "arksign.sign.all", "ark_sign")
+        if game == "arknights"
+        else (efsign, efsign.ef_sign_handler, "efsign.sign.all", "endfield_sign")
+    )
+    async with get_session() as session:
+        await _seed_sign_roles(session, 130)
+        user_session = await make_user_session(session, 130)
+        messages = []
+
+        async def send(message, **_kwargs):
+            assert session.in_transaction() is False
+            messages.append(message.extract_plain_text())
+
+        mocker.patch.object(command.UniMessage, "send", new=send)
+        reaction = mocker.patch.object(command, "send_reaction")
+        sign = mocker.patch.object(command.SklandAPI, api_name, new=mocker.AsyncMock())
+
+        await handler(
+            user_session,
+            session,
+            2,
+            SimpleNamespace(find=lambda path: path == all_path),
+        )
+
+        assert session.in_transaction() is False
+        assert len(messages) == 1
+        assert "--role" in messages[0]
+        assert "--all" in messages[0]
+        reaction.assert_not_called()
         sign.assert_not_awaited()

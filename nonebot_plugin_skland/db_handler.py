@@ -74,24 +74,16 @@ async def get_default_character(
     )
 
 
-async def get_characters_by_role_id(
+async def get_character_by_index(
     owner_id: int,
     app_code: str,
-    role_id: str,
+    index: int,
     session: async_scoped_session,
-) -> list[Character]:
-    characters = await session.scalars(
-        select(Character)
-        .join(Character.account)
-        .where(
-            SkUser.owner_id == owner_id,
-            Character.app_code == app_code,
-            Character.role_id == role_id,
-        )
-        .options(joinedload(Character.account))
-        .order_by(SkUser.id, Character.channel_master_id, Character.role_id)
-    )
-    return list(characters)
+) -> Character | None:
+    if index < 1:
+        return None
+    characters = await get_user_characters(owner_id, app_code, session)
+    return characters[index - 1] if index <= len(characters) else None
 
 
 async def set_default_character(

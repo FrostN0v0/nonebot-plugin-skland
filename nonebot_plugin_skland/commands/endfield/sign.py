@@ -9,7 +9,7 @@ from nonebot.compat import model_dump
 from nonebot.permission import SuperUser
 from nonebot_plugin_user import UserSession
 from nonebot_plugin_orm import async_scoped_session
-from nonebot_plugin_alconna import Match, Arparma, CustomNode, UniMessage
+from nonebot_plugin_alconna import Arparma, CustomNode, UniMessage
 
 from ...api import SklandAPI
 from ...config import CACHE_DIR
@@ -22,7 +22,6 @@ from ...db_handler import (
     get_user_characters,
     select_all_accounts,
     get_account_characters,
-    get_characters_by_role_id,
 )
 from ...utils import (
     send_reaction,
@@ -41,28 +40,16 @@ def _role_title(character: Character) -> str:
 async def _select_characters(
     user_session: UserSession,
     session: async_scoped_session,
-    uid: Match[str],
+    role_index: int | None,
     result: Arparma,
 ) -> list[Character] | None:
     owner_id = user_session.user_id
-    if uid.available:
-        characters = await get_characters_by_role_id(
-            owner_id,
-            "endfield",
-            uid.result,
-            session,
-        )
-        if len(characters) != 1:
-            await session.rollback()
-            await send_bound_roles_overview(
-                owner_id,
-                user_session,
-                session,
-                text="未找到该角色标识" if not characters else "角色标识不唯一",
-            )
-            return None
-        return characters
-    if result.find("efsign.sign.all"):
+    show_all = result.find("efsign.sign.all")
+    if role_index is not None and show_all:
+        await session.rollback()
+        await UniMessage("角色序号 (--role) 与全体签到 (--all) 不能同时使用").send(at_sender=True)
+        return None
+    if show_all:
         characters = await get_user_characters(owner_id, "endfield", session)
         if not characters:
             await session.rollback()
@@ -74,14 +61,19 @@ async def _select_characters(
             )
             return None
         return characters
-    selected = await check_user_character(owner_id, user_session, session)
+    selected = await check_user_character(
+        owner_id,
+        user_session,
+        session,
+        role_index=role_index,
+    )
     return [selected[1]] if selected is not None else None
 
 
 async def ef_sign_handler(
     user_session: UserSession,
     session: async_scoped_session,
-    uid: Match[str],
+    role_index: int | None,
     result: Arparma,
 ) -> None:
     """Sign selected Endfield roles."""
@@ -96,7 +88,7 @@ async def ef_sign_handler(
             server_id=character.channel_master_id,
         )
 
-    characters = await _select_characters(user_session, session, uid, result)
+    characters = await _select_characters(user_session, session, role_index, result)
     if not characters:
         return
     send_reaction(user_session, "processing")

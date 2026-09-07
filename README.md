@@ -211,7 +211,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 
 账号角色卡采用统一的档案式布局，展示昵称、玩家 UID、区服名称、选择序号和默认/绑定状态。方舟显示角色 UID，终末地显示游戏内玩家 UID；森空岛账号标识、终末地绑定 UID、服务器内部编号和等级不在卡片中展示。
 
-**快捷指令：** `森空岛绑定` `扫码绑定` `森空岛解绑` `角色更新` `全体角色更新`
+**快捷指令：** `森空岛绑定` `扫码绑定` `森空岛解绑` `森空岛角色` `切换方舟角色 <序号>` `切换终末地角色 <序号>` `角色更新` `全体角色更新`
 
 </details>
 
@@ -221,10 +221,15 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | 指令            | 权限 | 说明                   |
 | --------------- | ---- | ---------------------- |
 | `skland`        | 所有 | 查询默认角色信息卡片   |
+| `skland --role <序号>` | 所有 | 临时查询自己的指定方舟角色，不切换默认 |
 | `skland @某人`  | 所有 | 查询指定用户的角色信息 |
 | `skland <QQ号>` | 所有 | 查询指定QQ号的角色信息 |
 
 默认角色由插件按游戏独立管理，不再跟随森空岛账号的默认设置。本人尚未选择默认角色时，相关命令会返回最新账号角色卡片并提示使用 `skland char set`。
+
+`--role` 使用最新 `skland char` 卡片中对应游戏的角色序号，不是账号序号或玩家 UID；无需预先设置默认角色，只对本次命令生效。它只允许选择自己的绑定角色，序号无效时会提示重新查看卡片，不会回退到默认角色。裸数字仍表示 QQ 目标，不能用 `skland 2` 代替 `skland --role 2`。
+
+四个临时选角入口均支持 `-r` 作为 `--role` 的短选项：`sk -r 2`、`sk efcard -r 2`、`sk arksign sign -r 2`、`sk efsign sign -r 2`。`sk box -r` 仍表示稀有度筛选。
 
 </details>
 
@@ -236,7 +241,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | 指令                           | 权限     | 说明                      |
 | ------------------------------ | -------- | ------------------------- |
 | `skland arksign sign --all`    | 所有     | 签到所有绑定角色          |
-| `skland arksign sign -u <uid>` | 所有     | 指定 UID 角色签到         |
+| `skland arksign sign --role <序号>` | 所有 | 按方舟角色序号签到，不切换默认 |
 | `skland arksign status`        | 所有     | 查询个人角色签到状态      |
 | `skland arksign all`           | 超级用户 | 签到所有绑定到 bot 的角色 |
 | `skland arksign status --all`  | 超级用户 | 查询所有角色的签到状态    |
@@ -248,18 +253,21 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | 指令                          | 权限     | 说明                      |
 | ----------------------------- | -------- | ------------------------- |
 | `skland efsign sign --all`    | 所有     | 签到所有绑定角色          |
-| `skland efsign sign -u <uid>` | 所有     | 指定 UID 角色签到         |
+| `skland efsign sign --role <序号>` | 所有 | 按终末地角色序号签到，不切换默认 |
 | `skland efsign status`        | 所有     | 查询个人角色签到状态      |
 | `skland efsign all`           | 超级用户 | 签到所有绑定到 bot 的角色 |
 | `skland efsign status --all`  | 超级用户 | 查询所有角色的签到状态    |
 
 **快捷指令：** `终末地签到` `终末地签到详情` `终末地全体签到` `终末地全体签到详情`
 
+两游戏的 `sign` 不带选项时签到默认角色。`-r` / `--role` 与 `--all` 不能同时使用；原 `-u` / `--uid` / `uid` 指定 UID 签到入口已移除。绑定、角色同步和抽卡更新等命令中表示“更新”的 `-u` 不受影响。
+
 #### 终末地角色卡片
 
 | 指令                  | 权限 | 说明                         |
 | --------------------- | ---- | ---------------------------- |
 | `skland efcard`       | 所有 | 查询终末地角色信息卡片       |
+| `skland efcard --role <序号>` | 所有 | 临时查询自己的指定终末地角色，不切换默认 |
 | `skland efcard @某人` | 所有 | 查询指定用户的终末地角色信息 |
 | `skland efcard -a`    | 所有 | 展示所有角色                 |
 | `skland efcard -s`    | 所有 | 使用简化背景                 |
@@ -425,6 +433,9 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `终末地签到详情`     | `skland efsign status`        | 终末地签到状态     |
 | `终末地全体签到`     | `skland efsign all`           | 终末地全部签到     |
 | `终末地全体签到详情` | `skland efsign status --all`  | 终末地全部签到状态 |
+| `森空岛角色`         | `skland char`                | 查看全部绑定账号和角色 |
+| `切换方舟角色 <序号>` | `skland char set ark <序号>` | 切换方舟默认角色       |
+| `切换终末地角色 <序号>` | `skland char set ef <序号>` | 切换终末地默认角色     |
 | `角色更新`           | `skland char update`          | 逐账号同步角色       |
 | `全体角色更新`       | `skland char update --all`    | 逐账号同步所有角色   |
 | `资源更新`           | `skland sync`                 | 更新资源文件       |
@@ -441,6 +452,8 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `终末地抽卡记录`     | `skland efgacha`              | 终末地抽卡记录     |
 | `终末地抽卡更新`     | `skland efgacha -u`           | 拉取最新抽卡数据   |
 | `方舟干员`           | `skland box`                  | 中文筛选词查询干员 |
+
+角色序号按游戏分别计算，以最新 `森空岛角色` 卡片为准；例如 `切换方舟角色 2` 只切换方舟默认角色，不影响终末地。快捷指令和序号之间保留空格，是否需要 `/` 等命令前缀由 Bot 配置决定。
 
 </details>
 

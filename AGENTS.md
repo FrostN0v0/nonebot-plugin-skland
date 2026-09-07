@@ -127,8 +127,8 @@ nonebot_plugin_skland/
 主命令：
 
 ```text
-skland [target]
-sk [target]              # Alconna 别名
+skland [target] [-r|--role <index>]
+sk [target] [-r|--role <index>]    # Alconna alias
 ```
 
 主要子命令：
@@ -137,10 +137,10 @@ sk [target]              # Alconna 别名
 skland bind <token|cred> [-u]
 skland qrcode
 skland unbind
-skland arksign sign [--all] [-u <uid>]
+skland arksign sign [--all | -r|--role <index>]
 skland arksign status [--all]
 skland arksign all
-skland efsign sign [--all] [-u <uid>]
+skland efsign sign [--all | -r|--role <index>]
 skland efsign status [--all]
 skland efsign all
 skland char
@@ -152,11 +152,13 @@ skland rginfo <id> [-f]
 skland gacha [target] [-b <begin>] [-l <limit>]
 skland import <url>
 skland box [target] [filters ...] [-o <owned|unowned|all>] [-r <rarity>] [-p <profession>] [-b <branch>] [--position <position>] [--gender <gender>] [-f <faction>] [--race <race>] [--potential <potential>] [-s <release|acquired|training>] [-n <name>]
-skland efcard [target] [-a] [-s]
+skland efcard [target] [-r|--role <index>] [-a] [-s]
 skland efgacha [target] [-u] [-b <begin>] [-l <limit>]
 ```
 
-内置快捷指令在 `hook.py` 启动时注册，并通过 `nonebot_plugin_alconna.command_manager` 持久化到插件缓存目录的 `shortcut.db`。当前包括：森空岛绑定、扫码绑定、森空岛解绑、明日方舟签到、签到详情、全体签到、全体签到详情、各肉鸽主题、角色更新、全体角色更新、资源更新、战绩详情、收藏战绩详情、方舟抽卡记录、导入抽卡记录、方舟干员、终末地签到、终末地签到详情、终末地全体签到、终末地全体签到详情、`ef|zmd`、终末地抽卡记录、终末地抽卡更新。
+内置快捷指令在 `hook.py` 启动时注册，并通过 `nonebot_plugin_alconna.command_manager` 持久化到插件缓存目录的 `shortcut.db`。当前包括：森空岛绑定、扫码绑定、森空岛解绑、森空岛角色、切换方舟角色、切换终末地角色、明日方舟签到、签到详情、全体签到、全体签到详情、各肉鸽主题、角色更新、全体角色更新、资源更新、战绩详情、收藏战绩详情、方舟抽卡记录、导入抽卡记录、方舟干员、终末地签到、终末地签到详情、终末地全体签到、终末地全体签到详情、`ef|zmd`、终末地抽卡记录、终末地抽卡更新。
+
+`森空岛角色` 精确匹配 `skland char`；`切换方舟角色 <index>` / `切换终末地角色 <index>` 分别映射到 `skland char set ark <index>` / `skland char set ef <index>`，使用 `fuzzy=True` 接收序号、`compact=False` 要求空格分隔，并沿用 Bot 的命令前缀。内置快捷指令在加载缓存后注册。
 
 ## 核心实现说明
 
@@ -268,6 +270,9 @@ class Config(BaseModel):
 - 同一 NoneBot 用户可绑定多个森空岛账号；token/cred 仅允许私聊，二维码入口保持群聊可用。
 - token、cred 和扫码所得凭证都先调用一次 binding API，渲染确认后的完整账号角色卡；只有命令发起者回复“确认”后才原子写入。
 - `skland char` 返回全部账号和角色；`skland char set <game> <index>` 按游戏独立序号切换插件默认角色，所有业务功能使用该角色所属账号的凭证。
+- `skland --role <index>`、`skland efcard --role <index>` 和两游戏的 `sign --role <index>` 使用最新角色卡的分游戏序号临时选择自己的角色，不写入 `CharacterDefault`，也不要求已设置默认角色。`get_character_by_index()` 与 `char set` 共用 `get_user_characters()` 的排序；无效序号不回退默认，错误提示渲染前结束读事务，不能临时选择其他用户的角色。
+- 四个临时选角入口均支持 `-r` 作为 `--role` 的别名，解析结果仍使用 `role.role_index`，业务 handler 不区分长短选项。`skland box -r` 保持稀有度语义，现有签到快捷指令继续签到全部个人角色。
+- 个人签到的 `-u` / `--uid` / `uid` 选角入口已移除；`--role` 与 `--all` 同时出现时拒绝执行。绑定、同步和抽卡中表示更新的 `-u` 维持原义。主卡片 handler 使用选项感知的分发，根 `--role` 与不支持的子命令组合会明确拒绝，避免误触发双 handler。
 - 账号角色卡使用本地灰阶纹理、游戏字标与档案式布局；身份资料仅展示昵称、玩家 UID 和区服名称，保留账号/角色选择序号与默认/操作状态，不展示账号尾号、终末地绑定 UID、服务器内部编号或等级。
 - `BoundRoleCardItem.player_uid` 对方舟返回 `binding_uid`，对终末地返回 `game_role_id`；内部字段继续保留用于身份识别与确认校验。模板显式开启 Jinja autoescape，避免依赖 htmlrender 默认不转义的环境。
 - `BoundRoleCardItem.server_label` 仅将终末地接口区服名 `China` 显示为“国服”；其他游戏和未知区服名保持原样，不修改用于 API 请求和角色身份匹配的原始名称或服务器 ID。
@@ -408,11 +413,12 @@ uv run pytest -s tests/test_skland_api.py
 - `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、JPEG/PNG 参数、分页发送与渲染参数。
 - `tests/test_image_cache.py` 覆盖配置开关、单次模板生成、浏览器半身图响应落盘、本地复用、显式字体/图片就绪、等待超时、未知 URL 跳过与失败响应忽略。
 - `tests/test_qrcode.py` 覆盖头像 URL 限制、图片下载校验、无头像降级、二维码原始像素保持、群聊发起者标记及扫码绑定流程。
-- `tests/test_account_management.py` 覆盖多账号所有权、分游戏默认角色、角色同步、账号操作互斥，以及未设置默认角色时本人提示卡与目标用户隐私边界。
+- `tests/test_account_management.py` 覆盖多账号所有权、分游戏默认角色、角色同步、账号操作互斥、临时选角与角色卡序号一致、默认映射不变，以及缺少默认角色和跨用户临时选角时的隐私/事务边界。
 - `tests/test_bound_roles.py` 覆盖 binding API 规范化、角色卡投影、序号、默认徽标、两游戏玩家 UID 选择、内部 ID 隐藏、昵称转义、四种展示模式及空态/不可用角色。
 - `tests/test_multi_account_migration.py` 覆盖旧结构升级、数据保护检查、生成主键和不可表示数据的 downgrade 拒绝。
 - `tests/test_bind.py` 覆盖 token/cred 确认式新增/更新、取消/超时零写入、确认期间状态变化，以及真实 UserSession 下选择性/全量解绑的双 waiter 和提交后反馈。
-- `tests/test_sign.py` 覆盖多账号同名角色、角色所属凭证、签到缓存 list 结构，以及真实 UserSession 下角色标识不存在/不唯一和全角色列表为空时的提示。
+- `tests/test_sign.py` 覆盖多账号同名/同 UID 角色、角色所属凭证、签到缓存 list 结构、序号选角和默认不变，以及真实 UserSession 下无效序号、空角色列表和 `--role`/`--all` 冲突的处理。
+- `tests/test_role_selection.py` 覆盖四个临时选角入口的 `-r` / `--role` 命令语法、旧 UID 语法拒绝、更新开关保留，以及根/终末地角色卡短选项的实际 matcher 分发。
 - `tests/test_skland_api.py` 会调用真实接口；单独运行时使用 `uv run pytest -s tests/test_skland_api.py`，其中 `-s` 用于显示终端二维码输出；凭证优先级为：
   1. `tests/cred_cache.json`
   2. 环境变量 `SKLAND_TOKEN` 或 `SKLAND_CRED`
@@ -615,9 +621,9 @@ nb orm upgrade
 ## 语言与编码风格
 
 - 解释、讨论、分析、总结：使用 **简体中文**。
-- 所有代码、注释、标识符（变量名、函数名、类型名等），以及 Markdown 代码块内的内容：全部使用 **English**，不得出现中文字符。
+- 变量名、函数名、类型名等代码标识符使用 **English**；中文用户文案、模板文字及对应测试期望直接写汉字，不使用 Unicode 转义或数字 HTML 实体代替中文。注释遵循所在文件的风格，优先保证可读性。
 - 提交信息请按照当前 repo 的历史提交习惯，采用 gitmoji 规范
-- Markdown 文档中：正文说明使用中文，代码块内全部内容使用 English。
+- Markdown 文档正文使用中文；代码块内的标识符使用 English，中文文案和命令示例可直接使用汉字。
 - 命名与格式：
   - Python：遵循 PEP 8；
   - 其他语言遵循对应社区主流风格。

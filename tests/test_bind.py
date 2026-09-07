@@ -250,7 +250,7 @@ async def test_manual_bind_fetches_binding_once_and_delegates_confirmation(app, 
 
 @pytest.mark.parametrize(
     ("selection", "remaining_remote_ids"),
-    [("1", ["remote-b"]), ("\u5168\u90e8", [])],
+    [("1", ["remote-b"]), ("全部", [])],
 )
 @pytest.mark.asyncio
 async def test_unbind_waiters_run_without_transactions_and_delete_selected_account(
@@ -290,7 +290,7 @@ async def test_unbind_waiters_run_without_transactions_and_delete_selected_accou
             rendered_modes.append(card.mode)
             return b"card"
 
-        replies = iter([_Reply(selection), _Reply("\u786e\u8ba4")])
+        replies = iter([_Reply(selection), _Reply("确认")])
 
         async def prompt(*_args, **_kwargs):
             assert session.in_transaction() is False

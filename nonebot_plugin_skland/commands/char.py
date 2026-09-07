@@ -21,10 +21,10 @@ from ..utils import (
 )
 from ..db_handler import (
     get_accounts,
-    get_user_characters,
     select_all_accounts,
     get_default_character,
     set_default_character,
+    get_character_by_index,
 )
 from ..account import (
     GAME_NAMES,
@@ -127,7 +127,10 @@ async def send_bound_roles_overview(
         logger.exception("Failed to render the bound-role overview")
         await UniMessage(text or "角色列表渲染失败").send(at_sender=True)
         return False
-    instruction = "切换默认角色: sk char set ark <序号> / sk char set ef <序号>"
+    instruction = (
+        "临时查询: sk --role <序号> / sk efcard --role <序号>\n"
+        "切换默认角色: sk char set ark <序号> / sk char set ef <序号>"
+    )
     message_text = f"{text}\n{instruction}" if text else instruction
     await UniMessage.image(raw=image).text(f"\n{message_text}").send(reply_to=True, at_sender=True)
     return True
@@ -141,8 +144,8 @@ async def _handle_set_default(
     session: async_scoped_session,
 ) -> None:
     app_code = _GAME_ALIASES[game]
-    characters = await get_user_characters(owner_id, app_code, session)
-    if index < 1 or index > len(characters):
+    target = await get_character_by_index(owner_id, app_code, index, session)
+    if target is None:
         await session.rollback()
         await send_bound_roles_overview(
             owner_id,
@@ -151,7 +154,6 @@ async def _handle_set_default(
             text="角色序号无效,请以最新 sk char 卡片为准",
         )
         return
-    target = characters[index - 1]
     current = await get_default_character(owner_id, app_code, session)
     if current is not None and current.id == target.id:
         await session.rollback()

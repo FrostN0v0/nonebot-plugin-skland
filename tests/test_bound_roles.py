@@ -185,7 +185,7 @@ def test_bound_role_card_item_player_uid_uses_public_identifier_per_game(app):
 
 @pytest.mark.parametrize(
     ("app_code", "server_name", "expected"),
-    [("endfield", "China", "\u56fd\u670d"), ("endfield", "Asia", "Asia"), ("arknights", "China", "China")],
+    [("endfield", "China", "国服"), ("endfield", "Asia", "Asia"), ("arknights", "China", "China")],
 )
 def test_bound_role_server_label_preserves_raw_identity(app, app_code, server_name, expected):
     from nonebot_plugin_skland.schemas import BoundRoleCardItem
@@ -302,7 +302,7 @@ async def test_bound_roles_template_escapes_public_role_data_and_supports_all_mo
         "ef-role-a",
         "ef-role-b",
     )
-    public_server_names = ("\u5b98\u670d", "B\u670d", "\u56fd\u670d", "\u54e8\u7ad9\u4e59")
+    public_server_names = ("官服", "B服", "国服", "哨站乙")
     hidden_values = (
         "remote-account-two-long",
         "••••long",

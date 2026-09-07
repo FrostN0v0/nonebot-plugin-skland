@@ -40,6 +40,15 @@ async def startup():
     skland.shortcut("萨米肉鸽", {"command": "skland rogue --topic 萨米", "fuzzy": True, "prefix": True})
     skland.shortcut("水月肉鸽", {"command": "skland rogue --topic 水月", "fuzzy": True, "prefix": True})
     skland.shortcut("傀影肉鸽", {"command": "skland rogue --topic 傀影", "fuzzy": True, "prefix": True})
+    skland.shortcut("森空岛角色", {"command": "skland char", "fuzzy": False, "prefix": True})
+    skland.shortcut(
+        "切换方舟角色",
+        {"command": "skland char set ark", "fuzzy": True, "prefix": True, "compact": False},
+    )
+    skland.shortcut(
+        "切换终末地角色",
+        {"command": "skland char set ef", "fuzzy": True, "prefix": True, "compact": False},
+    )
     skland.shortcut("角色更新", {"command": "skland char update", "fuzzy": False, "prefix": True})
     skland.shortcut("全体角色更新", {"command": "skland char update --all", "fuzzy": False, "prefix": True})
     skland.shortcut("资源更新", {"command": "skland sync", "fuzzy": True, "prefix": True})

@@ -54,9 +54,12 @@ extra_data = {
             "detail_des": (
                 "- **查询明日方舟角色信息**\n\n"
                 "```bash\n"
-                "skland @某人 or 平台ID(QQ号)\n"
+                "skland\n"
+                "skland -r <index>\n"
+                "skland <target>\n"
                 "```\n\n"
-                "查询插件中选择的明日方舟默认角色，并使用该角色所属森空岛账号的凭证访问接口。"
+                "默认查询插件中选择的明日方舟角色；`-r` / `--role` 按最新 `sk char` 的方舟角色序号临时查询自己的角色，"
+                "不会修改默认角色。始终使用选中角色所属森空岛账号的凭证访问接口。"
             ),
         },
         {
@@ -67,15 +70,15 @@ extra_data = {
             "detail_des": (
                 "- **明日方舟签到**\n\n"
                 "```bash\n"
-                "skland arksign sign -all\n"
+                "skland arksign sign --all\n"
                 "```\n\n"
                 " **快捷指令** ：`明日方舟签到`\n\n"
                 "签到绑定森空岛账号下的所有明日方舟角色。\n\n"
-                "- **指定UID角色签到**\n\n"
+                "- **按角色序号签到**\n\n"
                 "```bash\n"
-                "skland arksign sign -u <uid>\n"
+                "skland arksign sign -r <index>\n"
                 "```\n\n"
-                "可以签到绑定的指定UID角色。\n\n"
+                "`-r` / `--role` 按方舟角色序号签到，不改默认；不可与 `--all` 同用。\n\n"
                 "> **注意：** 一般不需要进行手动签到，插件会在每天的00:15以后自动签到。"
             ),
         },
@@ -133,11 +136,11 @@ extra_data = {
                 "```\n\n"
                 " **快捷指令** ：`终末地签到`\n\n"
                 "签到绑定森空岛账号下的所有终末地角色。\n\n"
-                "- **指定UID角色签到**\n\n"
+                "- **按角色序号签到**\n\n"
                 "```bash\n"
-                "skland efsign sign -u <uid>\n"
+                "skland efsign sign -r <index>\n"
                 "```\n\n"
-                "可以签到绑定的指定UID角色。\n\n"
+                "`-r` / `--role` 按终末地角色序号签到，不改默认；不可与 `--all` 同用。\n\n"
                 "> **注意：** 一般不需要进行手动签到，插件会在每天的00:20以后自动签到。"
             ),
         },
@@ -192,10 +195,12 @@ extra_data = {
                 "- **终末地角色卡片**\n\n"
                 "```bash\n"
                 "skland efcard [@某人 | QQ号]\n"
+                "skland efcard -r <index>\n"
                 "```\n\n"
                 " **快捷指令** ：`ef`\n\n"
                 "查询终末地角色信息卡片。\n\n"
                 "**可选参数：**\n"
+                "- `-r <序号>` / `--role <序号>`：按终末地角色序号临时查询自己，不改默认\n"
                 "- `-a` / `--all`：展示所有角色（默认按森空岛配置过滤）\n"
                 "- `-s` / `--simple`：使用简化背景\n"
             ),
@@ -330,7 +335,7 @@ extra_data = {
         {
             "func": "账号角色管理",
             "trigger_method": "**已绑定用户**",
-            "trigger_condition": "`skland char` | **角色更新** | `skland char update`",
+            "trigger_condition": "**森空岛角色** | **切换方舟角色** | **切换终末地角色** | `sk char` | **角色更新**",
             "brief_des": "查看全部账号角色、切换默认角色并同步角色。",
             "detail_des": (
                 "- **账号角色管理**\n\n"
@@ -340,8 +345,10 @@ extra_data = {
                 "skland char set ef <index>\n"
                 "skland char update\n"
                 "```\n\n"
+                " **快捷指令** ：`森空岛角色`、`切换方舟角色 <序号>`、`切换终末地角色 <序号>`。\n\n"
                 "`skland char` 返回全部森空岛账号及其角色卡片；明日方舟和终末地分别维护一个插件默认角色。\n"
                 "角色序号按游戏独立生成，以最新卡片为准。`角色更新` 快捷指令对应 `skland char update`。"
+                "\n临时查询使用 `sk -r <序号>` 或 `sk efcard -r <序号>`，无需先切换默认角色。"
             ),
         },
         {

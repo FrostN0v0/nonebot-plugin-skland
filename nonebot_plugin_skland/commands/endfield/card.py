@@ -18,6 +18,8 @@ async def efcard_handler(
     target: Match[At | int],
     show_all: bool = False,
     is_simple: bool = False,
+    *,
+    role_index: int | None = None,
 ):
     """终末地森空岛角色卡片"""
 
@@ -31,7 +33,7 @@ async def efcard_handler(
         target_id = (await get_user(user_session.platform, str(target_platform_id))).id
     else:
         target_id = user_session.user_id
-    selected = await check_user_character(target_id, user_session, session)
+    selected = await check_user_character(target_id, user_session, session, role_index=role_index)
     if selected is None:
         return
     user, ef_characters = selected

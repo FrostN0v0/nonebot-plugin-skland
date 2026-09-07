@@ -1,43 +1,43 @@
 {% autoescape true %}
 {% set titles = {
-  'overview': '\u89d2\u8272\u6863\u6848',
-  'bind_confirmation': '\u786e\u8ba4\u7ed1\u5b9a\u89d2\u8272',
-  'unbind_selection': '\u9009\u62e9\u89e3\u7ed1\u8d26\u53f7',
-  'unbind_confirmation': '\u89e3\u7ed1\u786e\u8ba4'
+  'overview': '角色档案',
+  'bind_confirmation': '确认绑定角色',
+  'unbind_selection': '选择解绑账号',
+  'unbind_confirmation': '解绑确认'
 } %}
 {% set subtitles = {
-  'overview': '\u5f53\u524d\u4f7f\u7528\u89d2\u8272\u4e0e\u7ed1\u5b9a\u4fe1\u606f',
-  'bind_confirmation': '\u8bf7\u6838\u5bf9\u5f85\u7ed1\u5b9a\u6216\u66f4\u65b0\u7684\u8d26\u53f7\u4e0e\u89d2\u8272',
-  'unbind_selection': '\u6839\u636e\u89d2\u8272\u4fe1\u606f\u9009\u62e9\u8981\u89e3\u7ed1\u7684\u8d26\u53f7',
-  'unbind_confirmation': '\u8bf7\u6838\u5bf9\u5f85\u79fb\u9664\u7684\u8d26\u53f7\u4e0e\u6e38\u620f\u89d2\u8272'
+  'overview': '当前使用角色与绑定信息',
+  'bind_confirmation': '请核对待绑定或更新的账号与角色',
+  'unbind_selection': '根据角色信息选择要解绑的账号',
+  'unbind_confirmation': '请核对待移除的账号与游戏角色'
 } %}
 {% set games = [
-  {'code': 'arknights', 'title': '\u660e\u65e5\u65b9\u821f', 'wordmark': '../images/ark_card/raft_dec_text_01.png'},
-  {'code': 'endfield', 'title': '\u660e\u65e5\u65b9\u821f\uff1a\u7ec8\u672b\u5730', 'wordmark': '../images/endfield/name_title.png'}
+  {'code': 'arknights', 'title': '明日方舟', 'wordmark': '../images/ark_card/raft_dec_text_01.png'},
+  {'code': 'endfield', 'title': '明日方舟：终末地', 'wordmark': '../images/endfield/name_title.png'}
 ] %}
 {% macro role_row(role, game) %}
 <div class="relative flex min-w-0 gap-4 py-4">
   <div class="flex w-11 shrink-0 flex-col items-center border-r border-[#080808]/10 pr-3">
-    <span class="font-[Akrobat] text-[30px] leading-8 {% if role.is_available %}text-[#080808]/75{% else %}text-[#080808]/35{% endif %}">{{ '%02d' | format(role.index) if role.index is not none else '\u2014' }}</span>
+    <span class="font-[Akrobat] text-[30px] leading-8 {% if role.is_available %}text-[#080808]/75{% else %}text-[#080808]/35{% endif %}">{{ '%02d' | format(role.index) if role.index is not none else '—' }}</span>
     {% if role.index is not none %}
-    <span class="mt-1 text-[10px] tracking-wider text-[#080808]/60">&#24207;&#21495;</span>
+    <span class="mt-1 text-[10px] tracking-wider text-[#080808]/60">序号</span>
     {% endif %}
   </div>
   <div class="min-w-0 flex-1">
     <div class="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
       <h3 class="min-w-0 break-all text-[22px] leading-7 font-bold tracking-[0.025em] {% if role.is_available %}text-[#080808]/90{% else %}text-[#080808]/55{% endif %}">{{ role.nickname }}</h3>
       {% if role.is_local_default %}
-      <span class="inline-flex shrink-0 items-center border-l-2 px-2 py-0.5 text-[11px] font-bold {% if game.code == 'arknights' %}border-[#23BAFC] bg-[#23BAFC]/15 text-[#16445B]{% else %}border-[#9A9400] bg-[#E3D600]/25 text-[#4D4B12]{% endif %}">&#25554;&#20214;&#40664;&#35748;</span>
+      <span class="inline-flex shrink-0 items-center border-l-2 px-2 py-0.5 text-[11px] font-bold {% if game.code == 'arknights' %}border-[#23BAFC] bg-[#23BAFC]/15 text-[#16445B]{% else %}border-[#9A9400] bg-[#E3D600]/25 text-[#4D4B12]{% endif %}">插件默认</span>
       {% endif %}
       {% if not role.is_available %}
       <span class="border-l-2 border-[#D0685E] bg-[#D0685E]/10 px-2 py-0.5 text-[11px] font-bold text-[#944940]">{{ role.unavailable_reason }}</span>
       {% endif %}
     </div>
     <div class="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-[#080808]/65">
-      <span class="shrink-0 text-[10px] text-[#080808]/50">&#21306;&#26381;</span>
+      <span class="shrink-0 text-[10px] text-[#080808]/50">区服</span>
       <span class="min-w-0 break-all">{{ role.server_label }}</span>
       {% if role.is_skland_default %}
-      <span class="ml-auto flex shrink-0 items-center gap-1.5 text-[11px] text-[#080808]/65"><span class="size-1 rotate-45 border border-[#080808]/50"></span>&#26862;&#31354;&#23707;&#40664;&#35748;</span>
+      <span class="ml-auto flex shrink-0 items-center gap-1.5 text-[11px] text-[#080808]/65"><span class="size-1 rotate-45 border border-[#080808]/50"></span>森空岛默认</span>
       {% endif %}
     </div>
     <div class="mt-3 flex min-w-0 gap-3 border-t border-[#080808]/10 pt-2.5 font-[Bender] text-[13px] leading-4">
@@ -63,13 +63,13 @@
     <div class="bound-roles-hatch pointer-events-none absolute -top-8 right-[-35px] h-[200px] w-[170px] -rotate-[14deg] opacity-25"></div>
     <div class="relative z-10 flex items-start justify-between gap-4">
       <div class="min-w-0">
-        <div class="flex items-center gap-2 text-[11px] tracking-widest text-white/65"><span class="h-1.5 w-1.5 bg-[#23BAFC]"></span>&#26862;&#31354;&#23707;</div>
+        <div class="flex items-center gap-2 text-[11px] tracking-widest text-white/65"><span class="h-1.5 w-1.5 bg-[#23BAFC]"></span>森空岛</div>
         <h1 class="mt-2.5 text-[32px] leading-10 font-bold tracking-[0.1em]">{{ titles[props.mode] }}</h1>
         <p class="mt-2 text-[12px] tracking-wide text-white/65">{{ subtitles[props.mode] }}</p>
       </div>
       <div class="relative mt-1 flex shrink-0 items-center gap-4 border-l border-white/15 pl-5">
-        <div class="text-right"><div class="font-[Akrobat] text-[40px] leading-10 text-white/90">{{ '%02d' | format(props.accounts | length) }}</div><div class="mt-1 text-[11px] tracking-widest text-white/65">&#36134;&#21495;</div></div>
-        <div class="text-right"><div class="font-[Akrobat] text-[40px] leading-10 text-white/90">{{ '%02d' | format(props.accounts | map(attribute='roles') | map('length') | sum) }}</div><div class="mt-1 text-[11px] tracking-widest text-white/65">&#35282;&#33394;</div></div>
+        <div class="text-right"><div class="font-[Akrobat] text-[40px] leading-10 text-white/90">{{ '%02d' | format(props.accounts | length) }}</div><div class="mt-1 text-[11px] tracking-widest text-white/65">账号</div></div>
+        <div class="text-right"><div class="font-[Akrobat] text-[40px] leading-10 text-white/90">{{ '%02d' | format(props.accounts | map(attribute='roles') | map('length') | sum) }}</div><div class="mt-1 text-[11px] tracking-widest text-white/65">角色</div></div>
       </div>
     </div>
   </header>
@@ -80,15 +80,15 @@
     {% for account in props.accounts %}
     <article class="bound-roles-account overflow-hidden rounded-[4px] border {% if account.state == 'pending_unbind' %}border-[#D0685E]/85{% else %}border-white/35{% endif %}">
       <header class="relative flex min-h-[48px] items-center justify-between gap-3 px-4 py-2 text-white {% if account.state == 'pending_unbind' %}bg-[#423437]{% else %}bg-[#272E32]/95{% endif %}">
-        <div class="flex items-center gap-3"><span class="text-[11px] tracking-widest text-white/65">&#36134;&#21495;</span><span class="font-[Akrobat] text-[26px] leading-7">{{ '%02d' | format(account.index) }}</span></div>
+        <div class="flex items-center gap-3"><span class="text-[11px] tracking-widest text-white/65">账号</span><span class="font-[Akrobat] text-[26px] leading-7">{{ '%02d' | format(account.index) }}</span></div>
         {% if account.state == 'pending_unbind' %}
-        <span class="flex items-center gap-2 text-[11px] font-bold text-[#FFAFA3]"><span class="h-3 w-0.5 bg-[#E48274]"></span>&#24453;&#35299;&#32465;</span>
+        <span class="flex items-center gap-2 text-[11px] font-bold text-[#FFAFA3]"><span class="h-3 w-0.5 bg-[#E48274]"></span>待解绑</span>
         {% elif account.state == 'pending_bind' %}
-        <span class="flex items-center gap-2 text-[11px] font-bold text-[#67D0FF]"><span class="h-3 w-0.5 bg-[#23BAFC]"></span>&#24453;&#32465;&#23450;</span>
+        <span class="flex items-center gap-2 text-[11px] font-bold text-[#67D0FF]"><span class="h-3 w-0.5 bg-[#23BAFC]"></span>待绑定</span>
         {% elif account.state == 'pending_update' %}
-        <span class="flex items-center gap-2 text-[11px] font-bold text-[#E9CF63]"><span class="h-3 w-0.5 bg-[#E9CF63]"></span>&#24453;&#26356;&#26032;</span>
+        <span class="flex items-center gap-2 text-[11px] font-bold text-[#E9CF63]"><span class="h-3 w-0.5 bg-[#E9CF63]"></span>待更新</span>
         {% else %}
-        <span class="flex items-center gap-2 text-[10px] tracking-wider text-white/60"><span class="h-1 w-1 bg-white/40"></span>&#24050;&#32465;&#23450;</span>
+        <span class="flex items-center gap-2 text-[10px] tracking-wider text-white/60"><span class="h-1 w-1 bg-white/40"></span>已绑定</span>
         {% endif %}
       </header>
       <div class="divide-y divide-[#080808]/10 bg-[#F4F5EF]/75 px-4">
@@ -105,7 +105,7 @@
           </div>
         </section>
         {% else %}
-        <div class="flex items-center justify-between gap-3 py-3 text-[11px] tracking-wide text-[#080808]/60"><span>{{ game.title }}</span><span>&#26242;&#26080;&#35282;&#33394;</span></div>
+        <div class="flex items-center justify-between gap-3 py-3 text-[11px] tracking-wide text-[#080808]/60"><span>{{ game.title }}</span><span>暂无角色</span></div>
         {% endif %}
         {% endfor %}
       </div>
@@ -116,30 +116,30 @@
   <section class="mx-[30px] mt-5 border-t border-[#080808]/20 pt-3.5">
     {% if props.mode == 'unbind_confirmation' %}
     <div class="flex items-start gap-3 border-l-2 border-[#BD665B] pl-3">
-      <div class="flex-1"><div class="text-[12px] font-bold text-[#793F38]">&#30830;&#35748;&#21518;&#23558;&#21024;&#38500;&#25152;&#36873;&#36134;&#21495;&#30340;&#35282;&#33394;&#19982;&#25277;&#21345;&#35760;&#24405;</div><div class="mt-1.5 text-[11px] text-[#080808]/65">&#22238;&#22797;&#12300;&#30830;&#35748;&#12301;&#32487;&#32493;&#65292;&#20854;&#20182;&#22238;&#22797;&#23558;&#21462;&#28040;&#26412;&#27425;&#25805;&#20316;</div></div>
-      <span class="shrink-0 text-[12px] text-[#793F38]">30 &#31186;</span>
+      <div class="flex-1"><div class="text-[12px] font-bold text-[#793F38]">确认后将删除所选账号的角色与抽卡记录</div><div class="mt-1.5 text-[11px] text-[#080808]/65">回复「确认」继续，其他回复将取消本次操作</div></div>
+      <span class="shrink-0 text-[12px] text-[#793F38]">30 秒</span>
     </div>
     {% elif props.mode == 'unbind_selection' %}
-    <div class="flex items-center justify-between gap-3 text-[12px] text-[#080808]/75"><span>&#35831;&#22238;&#22797;&#36134;&#21495;&#24207;&#21495;&#65292;&#25110;&#22238;&#22797;&#12300;&#20840;&#37096;&#12301;&#12300;&#21462;&#28040;&#12301;</span><span class="shrink-0">60 &#31186;</span></div>
+    <div class="flex items-center justify-between gap-3 text-[12px] text-[#080808]/75"><span>请回复账号序号，或回复「全部」「取消」</span><span class="shrink-0">60 秒</span></div>
     {% elif props.mode == 'bind_confirmation' %}
     {% set new_accounts = props.accounts | selectattr('state', 'equalto', 'pending_bind') | list %}
     {% if new_accounts and not (new_accounts[0].roles | selectattr('is_available') | list) %}
-    <div class="border-l-2 border-[#D0685E] pl-3 text-[12px] text-[#793F38]">&#26242;&#26080;&#21487;&#32465;&#23450;&#30340;&#35282;&#33394;&#65292;&#19981;&#20250;&#20445;&#23384;&#36134;&#21495;</div>
+    <div class="border-l-2 border-[#D0685E] pl-3 text-[12px] text-[#793F38]">暂无可绑定的角色，不会保存账号</div>
     {% else %}
-    <div class="flex items-center justify-between gap-3 border-l-2 border-[#23BAFC] pl-3 text-[12px] text-[#080808]/75"><span>&#26680;&#23545;&#35282;&#33394;&#20449;&#24687;&#21518;&#65292;&#22238;&#22797;&#12300;&#30830;&#35748;&#12301;&#20445;&#23384;&#65292;&#25110;&#12300;&#21462;&#28040;&#12301;&#25918;&#24323;</span><span class="shrink-0">60 &#31186;</span></div>
+    <div class="flex items-center justify-between gap-3 border-l-2 border-[#23BAFC] pl-3 text-[12px] text-[#080808]/75"><span>核对角色信息后，回复「确认」保存，或「取消」放弃</span><span class="shrink-0">60 秒</span></div>
     {% endif %}
     {% else %}
     <div class="flex items-start gap-4 text-[#080808]/85">
-      <span class="mt-0.5 shrink-0 text-[12px] font-bold">&#20999;&#25442;&#40664;&#35748;&#35282;&#33394;</span>
-      <div class="flex-1 space-y-1.5 text-[13px] leading-4"><div class="flex items-center gap-2"><span class="h-1.5 w-1.5 bg-[#23BAFC]"></span><span class="font-[Bender]">sk char set ark</span> &lt;&#24207;&#21495;&gt;</div><div class="flex items-center gap-2"><span class="h-1.5 w-1.5 bg-[#B4AC00]"></span><span class="font-[Bender]">sk char set ef</span> &lt;&#24207;&#21495;&gt;</div></div>
-      <span class="text-[11px] text-[#080808]/80">&#35282;&#33394;&#24207;&#21495;&#25353;&#28216;&#25103;&#20998;&#21035;&#35745;&#31639;</span>
+      <span class="mt-0.5 shrink-0 text-[12px] font-bold">切换默认角色</span>
+      <div class="flex-1 space-y-1.5 text-[13px] leading-4"><div class="flex items-center gap-2"><span class="h-1.5 w-1.5 bg-[#23BAFC]"></span><span class="font-[Bender]">sk char set ark</span> &lt;序号&gt;</div><div class="flex items-center gap-2"><span class="h-1.5 w-1.5 bg-[#B4AC00]"></span><span class="font-[Bender]">sk char set ef</span> &lt;序号&gt;</div></div>
+      <span class="text-[11px] text-[#080808]/80">角色序号按游戏分别计算</span>
     </div>
     {% endif %}
   </section>
   {% else %}
   <section class="mx-[30px] mt-6 rounded-[4px] bg-[#F4F5EF]/75 px-5 py-14 text-center">
-    <h2 class="text-[20px] font-bold text-[#080808]/75">&#23578;&#26410;&#32465;&#23450;&#26862;&#31354;&#23707;&#36134;&#21495;</h2>
-    <p class="mt-3 text-[12px] text-[#080808]/65">&#20351;&#29992; <span class="font-[Bender]">sk bind</span> &#25110; <span class="font-[Bender]">sk qrcode</span> &#32465;&#23450;&#36134;&#21495;</p>
+    <h2 class="text-[20px] font-bold text-[#080808]/75">尚未绑定森空岛账号</h2>
+    <p class="mt-3 text-[12px] text-[#080808]/65">使用 <span class="font-[Bender]">sk bind</span> 或 <span class="font-[Bender]">sk qrcode</span> 绑定账号</p>
   </section>
   {% endif %}
   <footer class="px-[30px] pt-6 pb-5 text-center font-[Bender] text-[11px] tracking-wider text-[#080808]/70">Generated by nonebot-plugin-skland</footer>

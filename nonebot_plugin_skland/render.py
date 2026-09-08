@@ -12,6 +12,7 @@ from .schemas import (
     RogueData,
     PlayerBase,
     EndfieldCard,
+    BoundRolesCard,
     OperatorRoster,
     GroupedGachaRecord,
     EfGroupedGachaRecord,
@@ -58,6 +59,21 @@ async def render_operator_roster(
         readiness="resources",
         type=config.roster_render_format,
         quality=config.roster_jpeg_quality if config.roster_render_format == "jpeg" else None,
+    )
+
+
+async def render_bound_roles_card(props: BoundRolesCard) -> bytes:
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="bound_roles.html.jinja2",
+        templates={"props": props},
+        pages={
+            "viewport": {"width": 706, "height": 1},
+            "base_url": f"file://{TEMPLATES_DIR}",
+        },
+        device_scale_factor=1.5,
+        screenshot_timeout=config.render_timeout,
+        type="png",
     )
 
 

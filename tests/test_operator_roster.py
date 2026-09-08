@@ -703,7 +703,7 @@ def test_box_command_parses_natural_and_advanced_filters(app, operator_catalog):
     }
 
     advanced = skland_command.parse(
-        "/skland box -o all -r 4-6 -p 近卫,医疗 -b 收割者 --position 近战位 "
+        "/skland box -o all -ra 4-6 -p 近卫,医疗 -b 收割者 --position 近战位 "
         "--gender 女 -f 炎 --race 萨卡兹 --potential 5,6 -s training -n 阿米娅"
     )
     assert advanced.matched
@@ -721,6 +721,26 @@ def test_box_command_parses_natural_and_advanced_filters(app, operator_catalog):
         "sort": "training",
         "name": "阿米娅",
     }
+
+    overview = skland_command.parse("/skland char")
+    assert overview.matched
+    assert overview.find("char")
+
+    set_ark = skland_command.parse("/skland char set ark 2")
+    assert set_ark.matched
+    assert set_ark.all_matched_args == {"game": "ark", "index": 2}
+
+    set_endfield = skland_command.parse("/skland char set endfield 1")
+    assert set_endfield.matched
+    assert set_endfield.all_matched_args == {"game": "endfield", "index": 1}
+
+    update_all = skland_command.parse("/skland char update --all")
+    assert update_all.matched
+    assert update_all.find("char.update.all")
+
+    unbind = skland_command.parse("/skland unbind")
+    assert unbind.matched
+    assert unbind.find("unbind")
 
     skland.shortcut(
         "方舟干员",

@@ -10,28 +10,20 @@ from nonebot_plugin_argot import Text, Argot, Image, ArgotEvent, on_argot
 
 from ..schemas import Clue
 from ..config import config
-from ..model import SkUser, Character
 from ..player_data import get_ark_card
+from ..exception import SklandException
+from .selection import check_user_character
+from ..utils.background import get_background_image
 from ..render import render_ark_card, render_clue_board
-from ..utils import send_reaction, get_background_image
-from ..db_handler import get_default_arknights_character
-
-
-async def check_user_character(user_id: int, session: async_scoped_session) -> tuple[SkUser, Character]:
-    """检查用户和角色绑定状态"""
-    user = await session.get(SkUser, user_id)
-    if not user:
-        await UniMessage("未绑定 skland 账号").finish(at_sender=True)
-    char = await get_default_arknights_character(user, session)
-    if not char:
-        await UniMessage("未绑定 arknights 账号").finish(at_sender=True)
-    return user, char
+from ..utils.message import send_reaction, send_request_error
 
 
 async def card_handler(
     session: async_scoped_session,
     user_session: UserSession,
     target: Match[At | int],
+    *,
+    role_index: int | None = None,
 ):
     """角色卡片查询"""
 
@@ -41,10 +33,18 @@ async def card_handler(
     else:
         target_id = user_session.user_id
 
-    user, ark_characters = await check_user_character(target_id, session)
+    selected = await check_user_character(target_id, user_session, session, app_code="arknights", role_index=role_index)
+    if selected is None:
+        return
+    user, ark_character = selected
     send_reaction(user_session, "processing")
 
-    info = await get_ark_card(user, ark_characters)
+    try:
+        info = await get_ark_card(user, ark_character)
+    except SklandException as error:
+        await session.commit()
+        await send_request_error(error)
+        return
     await session.commit()
     if not info:
         return

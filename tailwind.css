@@ -179,6 +179,27 @@
 
 }
 
+@layer components {
+  .bound-roles-dossier {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    background-color: #c7c9c8;
+    background-image: linear-gradient(180deg, rgb(221 223 221 / 40%), rgb(221 223 221 / 18%)),
+      url("../images/background/endfield/simple/simple_bg.png");
+    background-size: 100% 100%;
+  }
+  .bound-roles-header {
+    background-image: linear-gradient(115deg, rgb(24 29 32 / 97%), rgb(33 40 44 / 86%)),
+      url("../images/background/endfield/simple/simple_bg_top.png");
+    background-size: cover;
+  }
+  .bound-roles-account {
+    box-shadow: 0 2px 2px rgb(0 0 0 / 4%), 0 7px 18px rgb(0 0 0 / 10%);
+  }
+  .bound-roles-hatch {
+    background: repeating-linear-gradient(120deg, transparent 0 9px, rgb(255 255 255 / 14%) 9px 11px);
+  }
+}
+
 @font-face {
   font-family: "Akrobat";
   src: url("../fonts/Akrobat-Bold.otf") format("opentype");

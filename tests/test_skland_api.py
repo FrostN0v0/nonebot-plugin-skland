@@ -293,7 +293,6 @@ class TestRealAPI:
     async def test_endfield_card(self, cred, binding):
         """获取终末地角色卡片（需要已绑定终末地角色）"""
         from nonebot_plugin_skland.api import SklandAPI
-        from nonebot_plugin_skland.model import Character
 
         ef_apps = [app for app in binding if app.appCode == "endfield"]
         if not ef_apps or not ef_apps[0].bindingList:
@@ -304,16 +303,12 @@ class TestRealAPI:
         if not role:
             pytest.skip("终末地角色无 role 信息")
 
-        # 构造 Character 对象供 endfield_card 使用
-        char = Character(
-            id=0,
-            uid=char_info.uid,
+        card = await SklandAPI.endfield_card(
+            cred,
+            user_id=cred.userId,
             role_id=role.roleId,
-            nickname=role.nickname,
-            app_code="endfield",
-            channel_master_id=role.serverId,
+            server_id=role.serverId,
         )
-        card = await SklandAPI.endfield_card(cred, cred.userId, char)
         assert card is not None, "返回的终末地卡片数据不应为空"
         logger.success(f"获取到终末地角色卡片，roleId={role.roleId}")
 

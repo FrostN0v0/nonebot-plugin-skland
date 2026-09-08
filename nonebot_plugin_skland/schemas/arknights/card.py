@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from nonebot.compat import model_validator
 
 from .models.base import BaseCount
-from ...filters import ark_uniequip_icon_url
+from ...filters import format_timestamp, ark_uniequip_icon_url
 from .models import (
     Skin,
     Medal,
@@ -48,8 +48,6 @@ class ArkCard(BaseModel):
 
     @property
     def recruit_complete_time(self) -> str:
-        from ...render import format_timestamp
-
         finish_ts = max([recruit.finishTs for recruit in self.recruit])
         if finish_ts == -1:
             return "招募已全部完成"

@@ -48,14 +48,49 @@ async def app(app: App, tmp_path: Path, mocker: MockerFixture):
     await init_orm()
     yield app
 
-    from nonebot_plugin_skland.model import SkUser, Character, GachaRecord
+    from nonebot_plugin_skland.model import SkUser, Character, GachaRecord, CharacterDefault
 
-    # 清理数据
     async with get_session() as session, session.begin():
-        await session.execute(delete(SkUser))
-        await session.execute(delete(Character))
+        await session.execute(delete(CharacterDefault))
         await session.execute(delete(GachaRecord))
+        await session.execute(delete(Character))
+        await session.execute(delete(SkUser))
 
     from nonebot_plugin_apscheduler import scheduler
 
     scheduler.remove_all_jobs()
+
+
+@pytest.fixture
+async def make_user_session(app):
+    from nonebot_plugin_orm import get_session
+    from nonebot_plugin_user import UserSession
+    from nonebot_plugin_user.models import User
+    from nonebot_plugin_uninfo import User as PlatformUser
+    from nonebot_plugin_uninfo import Scene, Session, SceneType
+
+    created_ids: list[int] = []
+
+    async def create(session, owner_id: int, *, private: bool = False) -> UserSession:
+        user = User(id=owner_id, name=f"test-user-{owner_id}")
+        session.add(user)
+        created_ids.append(owner_id)
+        await session.commit()
+        await session.refresh(user)
+        return UserSession(
+            user=user,
+            session=Session(
+                self_id="bot",
+                adapter="OneBot V11",
+                scope="QQClient",
+                scene=Scene(
+                    id=str(owner_id) if private else "group", type=SceneType.PRIVATE if private else SceneType.GROUP
+                ),
+                user=PlatformUser(id=str(owner_id)),
+            ),
+        )
+
+    yield create
+
+    async with get_session() as session, session.begin():
+        await session.execute(delete(User).where(User.id.in_(created_ids)))

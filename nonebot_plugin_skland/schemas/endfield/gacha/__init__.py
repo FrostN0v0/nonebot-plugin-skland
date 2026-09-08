@@ -1,5 +1,6 @@
 from .base import EfGachaInfo as EfGachaInfo
 from .base import EfGachaPull as EfGachaPull
+from .view import EfGachaView as EfGachaView
 from .base import EfGachaGroup as EfGachaGroup
 from .base import EfCharGachaInfo as EfCharGachaInfo
 from .base import EfGachaResponse as EfGachaResponse

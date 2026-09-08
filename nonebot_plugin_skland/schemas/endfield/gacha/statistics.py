@@ -66,17 +66,6 @@ class EfGroupedGachaRecord(BaseModel):
             reverse=True,
         )
 
-    @property
-    def max_category_pool_count(self) -> int:
-        """各类别卡池数量的最大值，用于分页计算"""
-        return max(
-            len(self.special_pools),
-            len(self.weapon_pools),
-            len(self.joint_pools),
-            len(self.standard_pools),
-            len(self.beginner_pools),
-        )
-
     def get_visible_pool_ids(self, begin: int | None = None, limit: int | None = None) -> set[str]:
         """根据 begin/limit 切片返回可见卡池的 pool_id 集合
 

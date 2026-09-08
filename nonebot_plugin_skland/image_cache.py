@@ -66,7 +66,7 @@ def _collect_missing_images() -> Iterator[set[PendingImage]]:
         _pending_images.reset(token)
 
 
-async def _wait_for_page_resources(page: Page, timeout: float | None) -> None:
+async def wait_for_page_resources(page: Page, timeout: float | None) -> None:
     waiter = page.evaluate(_RESOURCE_READY_SCRIPT)
     if timeout is None:
         await waiter
@@ -147,7 +147,7 @@ async def _html_to_pic_with_cache(
         await page.goto(template_path, wait_until="load")
         await page.set_content(html, wait_until="load" if readiness == "resources" else "networkidle")
         if readiness == "resources":
-            await _wait_for_page_resources(page, screenshot_timeout)
+            await wait_for_page_resources(page, screenshot_timeout)
         await page.wait_for_timeout(wait)
         screenshot = await page.screenshot(
             full_page=True,

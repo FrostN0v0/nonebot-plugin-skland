@@ -7,11 +7,13 @@ from collections import defaultdict
 from collections.abc import Sequence
 
 import httpx
+from nonebot_plugin_orm import async_scoped_session
 
-from ..api import SklandAPI
 from ..exception import RequestException
 from ..data_source import gacha_table_data
 from ..model import Character, GachaRecord
+from ..api import SklandAPI, SklandLoginAPI
+from ..db_handler import get_character_gacha_records
 from ..schemas import (
     GachaCate,
     GachaPool,
@@ -75,14 +77,14 @@ async def get_all_gacha_records(char: Character, cate: GachaCate, access_token: 
 
 @overload
 async def get_all_ef_gacha_records(
-    char: Character,
+    server_id: str,
     pool_type: EndfieldCharPoolType,
     role_token: str,
     concurrency: int = 8,
 ) -> Sequence[EfCharGachaInfo]: ...
 @overload
 async def get_all_ef_gacha_records(
-    char: Character,
+    server_id: str,
     pool_type: EndfieldWeaponPoolType,
     role_token: str,
     concurrency: int = 8,
@@ -90,7 +92,7 @@ async def get_all_ef_gacha_records(
 
 
 async def get_all_ef_gacha_records(
-    char: Character,
+    server_id: str,
     pool_type: EndfieldPoolType,
     role_token: str,
     concurrency: int = 8,
@@ -100,8 +102,8 @@ async def get_all_ef_gacha_records(
     自动处理分页，并发请求数据直到获取全部记录。
 
     Args:
-        char: 角色信息（包含 channel_master_id 作为 server_id）。
-        pool_type: 卡池类型（STANDARD / SPECIAL / BEGINNER / WEAPON）。
+        server_id: Endfield server ID.
+        pool_type: Character or weapon pool category, including joint pools.
         role_token: 角色令牌。
         concurrency: 并发请求数量，默认为 8。
 
@@ -111,7 +113,6 @@ async def get_all_ef_gacha_records(
     if concurrency <= 0:
         raise ValueError("concurrency must be greater than 0")
 
-    server_id = char.channel_master_id
     first_page = await SklandAPI.get_ef_gacha_history(pool_type, server_id, role_token)
     if not first_page.gacha_list:
         return []
@@ -144,6 +145,59 @@ async def get_all_ef_gacha_records(
 
     # sort by seq_id descending
     return sorted(itertools.chain(first_page.gacha_list, *results), key=lambda x: x.seq_id_int, reverse=True)
+
+
+async def sync_ef_gacha_records(
+    session: async_scoped_session,
+    *,
+    character_id: int,
+    uid: str,
+    server_id: str,
+    access_token: str,
+) -> tuple[EfGroupedGachaRecord, int]:
+    """Fetch complete categories and commit role-owned history before presentation."""
+    grant_code = await SklandLoginAPI.get_grant_code(access_token, 1)
+    role_token = await SklandLoginAPI.get_role_token_by_uid(uid, grant_code)
+    fetched: list[EfGachaInfo] = []
+    for pool_type in (
+        EndfieldPoolType.STANDARD,
+        EndfieldPoolType.SPECIAL,
+        EndfieldPoolType.BEGINNER,
+        EndfieldPoolType.JOINT,
+        EndfieldPoolType.WEAPON,
+    ):
+        fetched.extend(await get_all_ef_gacha_records(server_id, pool_type, role_token))
+
+    # No database writes occur until every category has been fetched successfully.
+    existing = await get_character_gacha_records(character_id, session)
+    seen = {(record.gacha_ts, record.pos) for record in existing}
+    added: list[GachaRecord] = []
+    for item in fetched:
+        identity = (item.gacha_ts_sec, item.seq_id_int)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        added.append(
+            GachaRecord(
+                character_id=character_id,
+                item_type=item.item_type,
+                pool_id=item.poolId,
+                pool_name=item.poolName,
+                char_id=item.item_id,
+                char_name=item.item_name,
+                rarity=item.rarity,
+                is_new=item.isNew,
+                is_free=item.is_free_pull,
+                gacha_ts=identity[0],
+                pos=identity[1],
+            )
+        )
+
+    # Build detached statistics while ORM records are still available.
+    grouped = group_ef_gacha_records(existing + added)
+    session.add_all(added)
+    await session.commit()
+    return grouped, len(added)
 
 
 def _get_up_chars(pool_id):

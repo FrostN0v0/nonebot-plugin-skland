@@ -211,18 +211,6 @@ def test_joint_current_pity_uses_latest_joint_pool(app):
     assert grouped.joint_six_avg == 1.5
 
 
-def test_joint_pool_type_is_fetched_during_update(app):
-    from nonebot_plugin_skland.commands.endfield.gacha import EF_CHAR_POOL_TYPES
-    from nonebot_plugin_skland.schemas.endfield.gacha.base import EndfieldPoolType
-
-    assert EF_CHAR_POOL_TYPES == [
-        EndfieldPoolType.STANDARD,
-        EndfieldPoolType.SPECIAL,
-        EndfieldPoolType.BEGINNER,
-        EndfieldPoolType.JOINT,
-    ]
-
-
 def test_joint_pool_does_not_show_spook_stats(app):
     from nonebot_plugin_skland.schemas.endfield.gacha.pool import EfGachaPoolInfo
     from nonebot_plugin_skland.schemas.endfield.gacha.base import EfGachaPull, EfGachaGroup
@@ -254,49 +242,3 @@ def test_joint_pool_does_not_show_spook_stats(app):
 
     assert joint_pool.show_spook_stats is False
     assert special_pool.show_spook_stats is True
-
-
-def test_ef_gacha_viewport_expands_when_joint_pools_exist(app):
-    from nonebot_plugin_skland.services.gacha import group_ef_gacha_records
-    from nonebot_plugin_skland.render import get_ef_gacha_min_width, get_ef_gacha_viewport_width
-
-    standard_grouped = group_ef_gacha_records([make_record(pool_id="standard", rarity=4)])
-    joint_grouped = group_ef_gacha_records([make_record()])
-
-    assert get_ef_gacha_min_width(standard_grouped) == 680
-    assert get_ef_gacha_min_width(joint_grouped) == 900
-    assert get_ef_gacha_viewport_width(standard_grouped) == get_ef_gacha_min_width(standard_grouped) + 120
-    assert get_ef_gacha_viewport_width(joint_grouped) == get_ef_gacha_min_width(joint_grouped) + 120
-
-
-def test_joint_pool_keeps_separate_column_with_dynamic_width(app):
-    from pathlib import Path
-
-    template_path = (
-        Path(__file__).resolve().parents[1]
-        / "nonebot_plugin_skland"
-        / "resources"
-        / "templates"
-        / "ef_gacha.html.jinja2"
-    )
-    template = template_path.read_text(encoding="utf-8")
-
-    assert 'ef_pool_column(record.joint_pools, "联合寻访", "#c084fc"' in template
-    assert "{{ ef_gacha_min_width }}px" in template
-
-
-def test_pool_header_renders_up_chars_as_avatars(app):
-    from pathlib import Path
-
-    template_path = (
-        Path(__file__).resolve().parents[1]
-        / "nonebot_plugin_skland"
-        / "resources"
-        / "templates"
-        / "ef_gacha_macros.html.jinja2"
-    )
-    template = template_path.read_text(encoding="utf-8")
-
-    assert "UP: {{ pool.up6_name }}" not in template
-    assert "{% for up_char_id in pool.up_six_chars %}" in template
-    assert "{{ up_char_id | ef_charId_to_avatarUrl }}" in template

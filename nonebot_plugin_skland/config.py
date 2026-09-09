@@ -56,12 +56,14 @@ class CustomSource(BaseModel):
 
 
 class ScopedConfig(BaseModel):
-    github_proxy_url: str = ""
+    github_proxy_url: str = "https://gh-proxy.com/"
     """GitHub 代理 URL"""
     github_token: str = ""
     """GitHub Token"""
     check_res_update: bool = False
     """启动时检查资源更新"""
+    auto_update_resources: bool = True
+    """每天 09:00 自动更新游戏数据资源。"""
     ark_portrait_cache_enabled: bool = False
     """Cache deterministic Arknights portrait images after first render."""
     background_source: Literal["default", "Lolicon", "random"] | CustomSource = "default"

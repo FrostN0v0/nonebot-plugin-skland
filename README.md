@@ -128,9 +128,10 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 |                配置项                | 必填  |   默认值    |                   说明                    |
 | :----------------------------------: | :---: | :---------: | :---------------------------------------: |
-|      `skland__github_proxy_url`      |  否   |    `""`     |              GitHub 代理 URL              |
+|      `skland__github_proxy_url`      |  否   | `"https://gh-proxy.com/"` | GitHub 代理前缀；显式设为空字符串则直连 |
 |        `skland__github_token`        |  否   |    `""`     |               GitHub Token                |
-|      `skland__check_res_update`      |  否   |   `False`   |         是否在启动时检查资源更新          |
+|      `skland__check_res_update`      |  否   |   `False`   |         是否在启动时检查图片资源更新          |
+|    `skland__auto_update_resources`   |  否   |   `True`    | 每天 09:00 自动更新游戏数据与卡池数据，不下载图片 |
 | `skland__ark_portrait_cache_enabled` |  否   |   `False`   |      是否按需缓存方舟干员半身图       |
 |     `skland__background_source`      |  否   | `"default"` |               背景图片来源                |
 | `skland__endfield_background_simple` |  否   |   `False`   |          终末地背景图片简化模式           |
@@ -146,7 +147,7 @@ _✨ 通过森空岛查询游戏数据 ✨_
 |    `skland__roster_jpeg_quality`    |  否   |    `90`     |        方舟干员 JPEG 质量（1-100）         |
 
 > [!TIP]
-> 以上配置项均~~没什么用~~按需填写，GitHub Token 用于解决 fetch_file_list 接口到达免费调用上限，但不会有那么频繁的更新频率，99.98%的概率是用不上的。~~只是因为我开发测试的时候上限了，所以有了这项~~,
+> 不配置 GitHub 代理时默认使用 [gh-proxy.com](https://gh-proxy.com/)，已有自定义配置不会被覆盖，显式空字符串表示直连。公共代理不保证长期可用；数据更新会在代理请求失败后尝试原站，并保留已有可用数据。GitHub Token 仅发送给官方 API，不发送给代理。
 >
 > 本插件所使用的`干员半身像`、`技能图标`等资源均优先调用本地，不存在时从网络请求。开启 `skland__ark_portrait_cache_enabled` 后，首次渲染仍直接使用远程方舟干员或皮肤半身图；Chromium 加载成功后会将该响应写入本地缓存，后续渲染优先读取本地。该过程不会额外请求图片或重新生成 HTML，接口直接返回的图片链接仍由浏览器访问。方舟干员页面会显式等待字体及全部图片完成加载和解码后截图，不再等待每页进入 `networkidle`；远程背景也会加入该等待。方舟干员默认输出 JPEG 90，可通过配置切回 PNG。全量资源更新仍为可选项。
 
@@ -395,7 +396,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `skland sync --force`  | 超级用户 | 强制更新，忽略版本检查 |
 | `skland sync --update` | 超级用户 | 覆盖已存在的文件       |
 
-**快捷指令：** `资源更新`
+**快捷指令：** `资源更新` → `skland sync --data`，仅更新数据；支持追加 `--force` 等参数，参数前需有空格。手动 `skland sync` 仍同时更新图片与数据。
 
 </details>
 
@@ -404,8 +405,11 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 >
 > - 可以组合使用选项，如 `skland sync --img --force --update`
 > - 图片资源包括干员立绘、技能图标等，数据资源包括卡池数据、角色数据等
-> - 默认跳过已存在的文件，使用 `--update` 可强制覆盖
-> - 本地资源优先，不存在时从网络获取，非必要无需更新
+> - 图片更新默认跳过已存在的文件，使用 `--update` 可覆盖图片；日常数据更新无需加这个选项。
+> - 每天 09:00 自动检查方舟游戏数据、PRTS 元数据与卡池详情、终末地卡池表，不涉及图片或玩家接口。沿用 APScheduler 配置的时区，默认 `Asia/Shanghai`；可通过 `skland__auto_update_resources=False` 关闭。
+> - 数据更新使用同一上游提交中的固定文件路径，不获取仓库文件树。方舟版本相同且本地完整时不下载六份表；终末地校验远端内容，等价数据不重写本地缓存。
+> - 数据校验通过后才替换文件与内存数据；下载或校验失败时保留旧数据并报告失败，PRTS 补充数据失败会保留旧缓存并记录警告。已有数据更新运行时，新的手动请求会提示稍后重试，定时任务则跳过。
+> - 交互终端中下载框原地刷新，下载结束、失败或取消后清除，仅保留普通结果日志；输出重定向到文件或非交互日志面板时不显示动态下载框。
 
 <details>
 <summary><b>🎨 暗语功能</b></summary>
@@ -445,7 +449,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `切换终末地角色 <序号>` | `skland char set ef <序号>` | 切换终末地默认角色     |
 | `角色更新`           | `skland char update`          | 逐账号同步角色       |
 | `全体角色更新`       | `skland char update --all`    | 逐账号同步所有角色   |
-| `资源更新`           | `skland sync`                 | 更新资源文件       |
+| `资源更新`           | `skland sync --data`          | 更新游戏与卡池数据，不下载图片 |
 | `树海肉鸽`           |`skland rogue --topic 黑流树海`| 黑流树海主题战绩   |
 | `界园肉鸽`           | `skland rogue --topic 界园`   | 界园主题战绩       |
 | `萨卡兹肉鸽`         | `skland rogue --topic 萨卡兹` | 萨卡兹主题战绩     |

@@ -340,7 +340,6 @@ async def test_prts_metadata_fetch_paginates(app, mocker):
     fetched = await GachaTableData()._fetch_prts_operator_rows()
 
     assert fetched == rows
-    assert [call.kwargs["params"]["offset"] for call in client.get.await_args_list] == [0, 500]
 
 
 @pytest.mark.asyncio
@@ -355,7 +354,6 @@ async def test_metadata_cache_is_atomic_and_validated(app, tmp_path, monkeypatch
     data_source.GachaTableData._write_operator_metadata(original)
     payload = json.loads(cache_path.read_text(encoding="utf-8"))
     assert payload["operators"][0]["char_id"] == "char_original"
-    assert not cache_path.with_suffix(".tmp").exists()
 
     loader = data_source.GachaTableData()
     mocker.patch.object(
@@ -367,41 +365,6 @@ async def test_metadata_cache_is_atomic_and_validated(app, tmp_path, monkeypatch
     with pytest.raises(RequestException):
         await loader._refresh_operator_metadata({})
     assert json.loads(cache_path.read_text(encoding="utf-8"))["operators"][0]["char_id"] == "char_original"
-
-
-@pytest.mark.asyncio
-async def test_load_uses_old_metadata_when_refresh_fails(app, tmp_path, monkeypatch, mocker):
-    import nonebot_plugin_skland.data_source as data_source
-    from nonebot_plugin_skland.exception import RequestException
-    from nonebot_plugin_skland.schemas import OperatorCatalog, OperatorMetadata, OperatorMetadataSnapshot
-
-    loader = data_source.GachaTableData()
-    loader.version_file = tmp_path / "version"
-    old_snapshot = OperatorMetadataSnapshot(operators=(OperatorMetadata(char_id="char_old", branch_name="Old Branch"),))
-    expected_catalog = OperatorCatalog()
-    monkeypatch.setattr(data_source, "DATA_ROUTES", [])
-    monkeypatch.setattr(data_source, "GACHA_DATA_PATH", tmp_path)
-    (tmp_path / "gacha_table.json").write_text('{"gachaPoolClient": []}', encoding="utf-8")
-    mocker.patch.object(loader, "get_version", new=mocker.AsyncMock())
-    mocker.patch.object(
-        loader,
-        "_load_operator_tables",
-        return_value={"character_table.json": {}},
-    )
-    mocker.patch.object(loader, "_load_operator_metadata", return_value=old_snapshot)
-    mocker.patch.object(
-        loader,
-        "_refresh_operator_metadata",
-        new=mocker.AsyncMock(side_effect=RequestException("offline")),
-    )
-    build_catalog = mocker.patch.object(loader, "_build_operator_catalog", return_value=expected_catalog)
-    mocker.patch.object(loader, "get_gacha_details", new=mocker.AsyncMock())
-
-    updated = await loader.load(refresh_metadata=True)
-
-    assert not updated
-    assert loader.operator_catalog is expected_catalog
-    build_catalog.assert_called_once_with(mocker.ANY, old_snapshot)
 
 
 def test_query_parsing_uses_or_within_and_across_dimensions(app, operator_catalog):

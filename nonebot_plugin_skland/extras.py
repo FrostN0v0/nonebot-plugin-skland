@@ -355,15 +355,17 @@ extra_data = {
         {
             "func": "资源更新",
             "trigger_method": "**超级用户**",
-            "trigger_condition": "**资源更新** | `skland sync`",
-            "brief_des": "更新游戏资源（图片和数据）。",
+            "trigger_condition": "**资源更新** | `skland sync --data`",
+            "brief_des": "检查并更新游戏数据与卡池数据，不下载图片。",
             "detail_des": (
                 "-  **资源更新**\n\n"
                 "```bash\n"
-                "skland sync\n"
+                "skland sync --data\n"
                 "```\n\n"
                 "**快捷指令** ：资源更新\n\n"
-                "同时更新游戏图片资源和数据资源。\n\n"
+                "快捷指令仅更新数据；手动 `skland sync` 仍同时更新图片与数据。\n"
+                "每天 09:00 自动检查数据，沿用 APScheduler 时区（默认 Asia/Shanghai）；"
+                "可设置 `skland__auto_update_resources=False` 关闭。\n\n"
                 "- **仅更新图片资源**\n\n"
                 "```bash\n"
                 "skland sync --img\n"
@@ -384,8 +386,8 @@ extra_data = {
                 "skland sync --update\n"
                 "```\n\n"
                 "更新图片资源时，覆盖已存在的图片文件。\n\n"
-                "> 资源渲染优先读取本地资源，本地资源不存在时才从网络下载\n"
-                "> 如果服务器网络资源不紧缺则无需下载一坨资源\n"
+                "> 数据按固定路径下载，不请求仓库文件树；下载或校验失败时保留旧数据。\n"
+                "> 图片资源更新仍为可选操作，不在每日数据更新范围内。\n"
                 "> 可以组合使用选项，例如 `skland sync --img --force --update`"
             ),
         },

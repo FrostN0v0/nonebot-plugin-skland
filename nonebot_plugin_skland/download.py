@@ -336,7 +336,7 @@ class GameResourceDownloader:
 
     @classmethod
     async def get_version(cls) -> str:
-        """获取最新版本"""
+        """获取最新"""
         from .config import config
 
         url = config.github_proxy_url + cls.VERSION_URL if config.github_proxy_url else cls.VERSION_URL
@@ -517,7 +517,7 @@ async def download_img_resource(force: bool, update: bool) -> DownloadResult:
     version_file = CACHE_DIR.joinpath("version")
     local_version = version_file.read_text(encoding="utf-8") if version_file.exists() else None
     if local_version == origin_version and not force:
-        logger.info("游戏图片资源已是最新版本")
+        logger.info("游戏图片资源已是最新")
         return DownloadResult(version=None, success_count=0, failed_count=0)
 
     logger.info(f"检测到新版本 {origin_version}，开始下载游戏资源")

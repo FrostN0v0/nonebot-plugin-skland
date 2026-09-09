@@ -42,7 +42,7 @@ async def sync_handler(
                     update=update_existing,
                 )
                 if download_result.version is None:
-                    messages.append("📦 图片资源已是最新版本")
+                    messages.append("📦 图片资源已是最新")
                 else:
                     update_mode = "（覆盖更新）" if update_existing else ""
                     stats = f"成功: {download_result.success_count}个"

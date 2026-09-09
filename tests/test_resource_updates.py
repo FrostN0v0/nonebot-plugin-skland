@@ -112,10 +112,10 @@ async def test_game_failure_does_not_block_other_game(app, resource_loaders, fai
     assert completed == (["ef"] if failed_game == "ark" else ["ark"])
     failure = result.messages[0 if failed_game == "ark" else 1]
     success = result.messages[1 if failed_game == "ark" else 0]
-    assert "失败" in failure
+    assert failure.startswith("❌ ")
     assert "上游不可用" in failure
     assert "已是最新" not in failure
-    assert "更新成功" in success
+    assert success.startswith("✅ ")
 
 
 @pytest.mark.asyncio
@@ -127,6 +127,33 @@ async def test_forced_unchanged_data_is_not_reported_as_updated(app, resource_lo
     assert not result.failed
     assert all("已是最新" in message for message in result.messages)
     assert all("更新成功" not in message for message in result.messages)
+
+
+@pytest.mark.parametrize("ark_changed", [True, False])
+@pytest.mark.asyncio
+async def test_manual_reply_retains_status_icons_and_endfield_pool_count(app, resource_loaders, mocker, ark_changed):
+    from nonebot_plugin_skland.commands import sync
+    from nonebot_plugin_skland.matcher import skland_command
+
+    ark, ef = resource_loaders
+    ark.load.return_value = ark_changed
+    ef.load.return_value = not ark_changed
+    ef.pool_table = {"first": {}, "second": {}}
+    sent = []
+
+    async def send(message, *args, **kwargs):
+        sent.append(str(message))
+
+    mocker.patch.object(sync.UniMessage, "send", new=send)
+    mocker.patch.object(sync, "send_reaction")
+    command = skland_command.parse("/skland sync --data")
+    await sync.sync_handler(SimpleNamespace(platform="Console"), command, is_superuser=True)
+
+    assert len(sent) == 1
+    ark_message, ef_message = sent[0].splitlines()
+    assert ark_message.startswith("✅ " if ark_changed else "📦 ")
+    assert ef_message.startswith("📦 " if ark_changed else "✅ ")
+    assert "共 2 个卡池" in ef_message
 
 
 @pytest.mark.asyncio

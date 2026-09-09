@@ -28,6 +28,10 @@ class AccountOperationInProgress(RuntimeError):
     """Another operation owns this user's account-management scope."""
 
 
+class ResourceUpdateInProgress(RuntimeError):
+    """Another startup, manual, or scheduled data update is active."""
+
+
 class AccountIdentityResolutionError(RuntimeError):
     """An existing account's remote identity could not be resolved."""
 

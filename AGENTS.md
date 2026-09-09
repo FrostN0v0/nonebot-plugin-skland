@@ -37,7 +37,7 @@ nonebot_plugin_skland/
 ├── __init__.py          # 插件元数据、依赖 require、命令处理器注册
 ├── matcher.py           # Alconna 命令树、别名 sk、Argot/ReplyRecord 扩展
 ├── hook.py              # 启动/关闭钩子：加载数据、注册/持久化快捷指令、可选资源检查
-├── tasks.py             # APScheduler 定时任务：每日明日方舟/终末地签到
+├── tasks.py             # APScheduler：每日签到与 09:00 数据资源更新
 ├── config.py            # Pydantic 配置、资源/缓存/数据目录常量
 ├── extras.py            # NoneBot 插件商店/帮助菜单 extra 数据
 ├── model.py             # nonebot-plugin-orm 模型：SkUser、Character、CharacterDefault、GachaRecord
@@ -46,7 +46,7 @@ nonebot_plugin_skland/
 ├── data_source.py       # 游戏数据下载、干员目录构建与本地元数据缓存
 ├── player_data.py       # 玩家实时数据账号级短期缓存：ArkCard TTL/LRU/single-flight
 ├── image_cache.py       # 方舟半身图浏览器响应缓存与显式资源就绪等待
-├── download.py          # GitHub downloads, versions, and resource update orchestration
+├── download.py          # 图片下载与数据专用 GitHub 客户端：提交定位、连接池及代理回退
 ├── render.py            # HTML 模板渲染为图片的函数
 ├── filters.py           # Jinja2 过滤器与可复用图片资源 URL 函数
 ├── exception.py         # Shared API and account-operation errors
@@ -55,6 +55,7 @@ nonebot_plugin_skland/
 │   ├── auth.py          # Credential refresh policy and detached credential state
 │   ├── binding.py       # Binding preparation and atomic confirmed account mutations
 │   ├── gacha.py         # History fetching, grouping, and Heybox conversion
+│   ├── resources.py     # 启动、手动、定时数据更新互斥与汇总反馈
 │   └── sign.py          # Signing, ordered cache persistence, filtering, and formatting
 ├── utils/
 │   ├── __init__.py      # Package boundary without implicit exports
@@ -191,9 +192,10 @@ class Config(BaseModel):
 
 `.env` 中使用 `skland__...` 形式配置。当前字段：
 
-- `github_proxy_url`: GitHub 代理 URL。
+- `github_proxy_url`: GitHub 代理前缀，默认 `https://gh-proxy.com/`；显式空字符串保持直连，自定义配置不被覆盖。
 - `github_token`: GitHub Token，用于缓解 GitHub API 限流。
 - `check_res_update`: 启动时是否检查并下载图片资源。
+- `auto_update_resources`: 是否每天 09:00 自动更新数据资源，默认开启；不包含图片。
 - `ark_portrait_cache_enabled`: 是否在首次渲染时按需缓存可拼链的方舟干员/皮肤半身图，默认关闭。
 - `background_source`: 明日方舟/终末地卡片背景来源，支持 `default` / `Lolicon` / `random` / `CustomSource`。
 - `endfield_background_simple`: 是否默认启用终末地角色卡片简化背景。
@@ -311,15 +313,26 @@ class Config(BaseModel):
 
 - `GachaTableData`
   - 管理明日方舟 `gacha_table.json`、`character_table.json`、`char_patch_table.json`、`uniequip_table.json`、`handbook_info_table.json`、`handbook_team_table.json`、PRTS 卡池详情与干员筛选元数据。
-  - 使用 `GameResourceDownloader.check_update()` 比较官方数据版本，并由官方表构造 `OperatorCatalog`。
-  - PRTS Cargo API 只补充职业分支中文名、性别和种族；分页结果经 Pydantic 校验后使用 `os.replace()` 原子更新 `operator_metadata.json`，失败时保留旧快照，无快照时使用官方档案降级。
-  - `load(force=False, refresh_metadata=False)` 会按需下载、更新版本文件并原子切换内存中的干员目录；`skland sync --data` 会显式刷新 PRTS 元数据。
+  - 使用数据专用 `GitHubDataClient` 获取一次上游提交 SHA，再直接下载该提交下六份已知路径 JSON；不获取 GitHub 文件树。远端和本地版本统一去除首尾空白，同版本且本地有效时不重复下载六份表。
+  - 下载结果先完成结构、模型和 `OperatorCatalog` 校验，再暂存、逐文件原子替换并在最后写入版本标记；全部成功后才切换内存数据。批次写入失败会在进程内回滚，不承诺多个路径在进程崩溃时仍具有事务原子性。
+  - PRTS Cargo API 只补充职业分支中文名、性别和种族；验证后原子保存 `operator_metadata.json`，失败保留旧快照，无快照时使用官方档案。PRTS 卡池详情另存 `DATA_DIR/gacha_details.json`，下载失败保留已验证的磁盘和内存缓存。
+  - `load(force=False, refresh_metadata=False, *, client=None)` 可借用共享客户端，返回是否实际持久化了变更。必需更新失败时先恢复可用冷缓存再抛出 `RequestException`，不能把缓存回退报告为“已是最新”。旧 `get_version`、`download_game_data`、`_update_version_file` 与 `origin_version` 路径已移除。
 - `EfGachaPoolTableData`
   - 从 `FrostN0v0/EndfieldGachaPoolTable` 拉取 `GachaPoolTable.json`。
-  - 启动或同步数据时尝试覆盖下载；下载失败且本地有旧文件时使用本地缓存。
+  - 通过相同客户端定位上游提交，直接获取该提交的卡池表；解析验证成功后才替换文件。同语义内容（包括强制检查）不重写缓存；失败保留可用旧数据并抛错。
   - 提供 `get_pool(pool_id)` 为终末地抽卡渲染补充 UP 信息。
 
-`hook.py` 启动时会加载 `gacha_table_data` 和 `ef_gacha_pool_data`。若 `check_res_update=True`，还会调用 `download.download_img_resource()` 检查并下载图片资源。下载计数和开始时间属于单次 `download_all()` 调用，不共享类级统计状态；全局并发上限与资源版本/覆盖规则保持原样。
+`services/resources.py` 的 `update_data_resources()` 为启动、手动及每日任务提供共用入口，一轮借用同一个 `GitHubDataClient`，分别处理两游戏失败并返回汇总。进程内已有更新时抛出 `ResourceUpdateInProgress`；命令提示稍后重试，定时任务跳过，不并发写同一组文件。`hook.py` 启动使用此入口加载两游戏数据，并在加载快捷指令缓存后将“资源更新”替换为 `skland sync --data`，使用 `compact=False` 要求参数前有空格。
+
+数据更新结果保留独立、带 `✅` 的 INFO 日志：干员筛选元数据包含条数，明日方舟游戏数据包含版本，终末地卡池数据包含卡池数；不能用英文 DEBUG 替代这些可见结果，也不合并成一条“启动数据资源更新”汇总。
+
+`GitHubDataClient` 默认经配置代理获取 GitHub 数据；原站回退、瞬时故障的有限重试和连接池限流属于单轮更新。失效代理不会让后续文件重复等待相同长超时，GitHub Token 仅传给直连官方 API。PRTS 地址不加 GitHub 代理。此客户端不使用 jsDelivr，也不需要额外镜像仓库或 CI。
+
+数据下载并发上限固定为内部常量 8，不提供用户配置。数据文件流式读取时复用现有 `DownloadProgress` 面板，显示文件名、下载量、速度及响应提供总长度时的百分比；下载开始和完成沿用现有日志风格。首次没有数据缓存是正常初始化，不记录警告；已有缓存无法解析或缺损时仍给出警告，真实下载失败继续报告失败并保留旧数据。
+
+下载框使用临时显示，仅在有实际下载任务时启动，最后一项结束或异常退出时立即清除并恢复光标。框活动期间默认 NoneBot 控制台日志经同一 Rich Console 输出，保留格式、等级和换行；结束后恢复普通控制台输出，不修改其他自定义或文件日志处理器。非交互终端与重定向输出仅输出普通日志，不产生下载边框和光标控制序列。默认控制台处理器被用户替换或已有其他 Live 窗口时，不接管自定义处理器，也不维持第二个下载框。
+
+若 `check_res_update=True`，启动仍调用 `download.download_img_resource()` 检查图片。手动 `skland sync` / `--img` 保持原有图片行为；图片 `download_all()` 的计数、版本/覆盖规则和并发上限不在本次数据更新改动范围内。
 
 ### 抽卡记录
 
@@ -382,7 +395,7 @@ class Config(BaseModel):
 
 ### 定时任务
 
-`tasks.py` 注册两个 cron 任务：
+`tasks.py` 注册三个 cron 任务：
 
 ```python
 @scheduler.scheduled_job("cron", hour=0, minute=15, id="daily_arksign")
@@ -391,14 +404,23 @@ async def run_daily_arksign(): ...
 
 @scheduler.scheduled_job("cron", hour=0, minute=20, id="daily_efsign")
 async def run_daily_efsign(): ...
+
+
+@scheduler.scheduled_job(
+    "cron", hour=9, minute=0, id="daily_resource_update",
+    max_instances=1, coalesce=True, misfire_grace_time=3600,
+)
+async def run_daily_resource_update(): ...
 ```
 
-结果分别写入插件缓存目录：
+两项签到任务的结果分别写入插件缓存目录：
 
 - `sign_result.json`
 - `endfield_sign_result.json`
 
-两项定时任务和签到命令共用 `services/sign.py` 的执行、缓存读写、owner/角色过滤及格式化；`schemas/sign.py` 提供 `SignCacheEntry`、`SignCache`、`SignResult`。结果文件名和有序列表 JSON 结构不变；事务提交与消息发送仍由调用方负责。
+两项签到任务和签到命令共用 `services/sign.py` 的执行、缓存读写、owner/角色过滤及格式化；`schemas/sign.py` 提供 `SignCacheEntry`、`SignCache`、`SignResult`。结果文件名和有序列表 JSON 结构不变；事务提交与消息发送仍由调用方负责。
+
+每日数据任务受 `auto_update_resources` 控制，沿用 APScheduler 时区（默认 `Asia/Shanghai`），只执行数据更新和汇总日志，不发送 Bot 消息、不下载图片、不访问玩家接口。它与启动、手动数据更新共用互斥入口，停机后不承诺补跑错过的日程。
 
 ## 开发规范
 
@@ -437,7 +459,9 @@ uv run pytest -s tests/test_skland_api.py
 - 数据库测试使用内存 SQLite：`sqlite+aiosqlite://`。
 - `make_user_session` fixture 将真实 `UserSession.user` 加入命令使用的同一个 SQLAlchemy session；解绑、缺少默认角色和签到选择失败的回归测试覆盖事务结束后用户 ORM 属性过期的行为，不能只用普通整数模拟 `user_id`。
 - `tests/test_auth.py` 覆盖有界重试、缺少 token 时零刷新请求及刷新失败传播；`tests/test_player_data.py` 覆盖真实缓存中并发等待者分别刷新凭证与成功结果合并。
-- `tests/test_download.py` 覆盖并发下载统计/计时隔离、已有文件跳过、部分失败聚合及版本/强制覆盖行为；并发统计用例隔离 Rich 的终端 Live 显示限制。
+- `tests/test_download.py` 覆盖原有图片下载统计/计时隔离、跳过与覆盖规则，以及数据客户端代理回退、凭证边界、错误响应校验、有限重试和并发限流；数据下载进度回归使用真实 Rich 输出，覆盖下载中进度可见、日志换行与重绘顺序、成功/失败/取消清理、非交互输出无框，以及保留文件日志和用户运行中修改的日志处理器。
+- `tests/test_data_source.py` 使用离线 HTTP 传输与真实 loader 验证同版本不下载、固定提交直接下载、完整批次校验、失败零版本推进、写入回滚、冷启动缓存可用、首次下载不误报警告、损坏缓存保留警告、PRTS 回退及终末地等价数据不重写。
+- `tests/test_resource_updates.py` 覆盖手动/定时互斥、独立游戏失败、取消释放、关闭任务、09:00 时区边界，以及旧快捷指令缓存迁移为数据更新。
 - `tests/test_ef_gacha_joint_pool.py` 覆盖终末地联合寻访分类与统计；`tests/test_ef_gacha_view.py` 覆盖免费/付费间隔隔离、多金事件完整性及分类切片不改变累计统计；`tests/test_ef_gacha_command.py` 覆盖默认同步、去重、先保存再渲染、显式缓存回退、失败零部分写入、选角身份及有序发送。
 - `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、JPEG/PNG 参数、分页发送与渲染参数。
 - `tests/test_image_cache.py` 覆盖配置开关、单次模板生成、浏览器半身图响应落盘、本地复用、显式字体/图片就绪、等待超时、未知 URL 跳过与失败响应忽略。

@@ -1,17 +1,23 @@
+import re
+import json
 import asyncio
 from pathlib import Path
 from itertools import islice
 from datetime import datetime
-from urllib.parse import quote
-from collections.abc import Iterable
+from typing import Any, TypeVar
+from typing_extensions import Self
+from urllib.parse import quote, urlsplit
+from collections.abc import Callable, Iterable
 
 from nonebot import logger
 from rich.text import Text
 from rich.panel import Panel
 from rich.table import Table
 from pydantic import BaseModel
+import nonebot.log as nonebot_log
+from rich.errors import LiveError
 from nonebot.compat import model_validator
-from httpx import Timeout, HTTPError, AsyncClient, TimeoutException
+from httpx import Limits, Timeout, HTTPError, AsyncClient, HTTPStatusError, TimeoutException
 from rich.progress import (
     Task,
     TaskID,
@@ -24,6 +30,138 @@ from rich.progress import (
 )
 
 from .exception import RequestException
+
+DataT = TypeVar("DataT")
+
+
+class GitHubDataClient:
+    """One data update's connection pool, bounded retries, and proxy fallback."""
+
+    def __init__(self) -> None:
+        from .config import config
+
+        prefix = config.github_proxy_url.strip()
+        self._proxy = f"{prefix.rstrip('/')}/" if prefix else ""
+        self._token = config.github_token.strip()
+        self._proxy_failed = False
+        concurrency = 8
+        self._semaphore = asyncio.Semaphore(concurrency)
+        self._progress = DownloadProgress()
+        self._client = AsyncClient(
+            timeout=Timeout(60.0, connect=10.0, pool=10.0),
+            limits=Limits(max_connections=concurrency, max_keepalive_connections=concurrency),
+            headers={"User-Agent": "nonebot-plugin-skland data updater", "Cache-Control": "no-cache"},
+            follow_redirects=True,
+        )
+
+    async def __aenter__(self) -> Self:
+        await self._client.__aenter__()
+        try:
+            self._progress.start()
+        except BaseException:
+            await self._client.aclose()
+            raise
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
+        try:
+            self._progress.stop()
+        finally:
+            await self._client.__aexit__(exc_type, exc_value, traceback)
+
+    @staticmethod
+    def _json_object(content: bytes) -> dict[str, Any]:
+        value = json.loads(content)
+        if not isinstance(value, dict) or not value:
+            raise ValueError("Expected a nonempty JSON object")
+        return value
+
+    async def _fetch(self, url: str, parse: Callable[[bytes], DataT], *, filename: str | None = None) -> DataT:
+        host = urlsplit(url).hostname
+        use_proxy = bool(self._proxy) and host in {"api.github.com", "raw.githubusercontent.com", "github.com"}
+        candidates = [(f"{self._proxy}{url}", True), (url, False)] if use_proxy else [(url, False)]
+        failure = "请求失败"
+        for candidate, proxied in candidates:
+            if proxied and self._proxy_failed:
+                continue
+            headers = {}
+            if not proxied and host == "api.github.com" and self._token:
+                headers["Authorization"] = f"Bearer {self._token}"
+            for attempt in range(2):
+                try:
+                    async with self._semaphore:
+                        if proxied and self._proxy_failed:
+                            break
+                        async with self._client.stream("GET", candidate, headers=headers) as response:
+                            response.raise_for_status()
+                            if filename is None:
+                                content = await response.aread()
+                            else:
+                                length = response.headers.get("Content-Length", "")
+                                total = int(length) if length.isdecimal() else None
+                                task_id = self._progress.add_task("Downloading", filename=filename, total=total)
+                                try:
+                                    chunks = []
+                                    async for chunk in response.aiter_bytes():
+                                        chunks.append(chunk)
+                                        self._progress.update(task_id, completed=response.num_bytes_downloaded)
+                                    content = b"".join(chunks)
+                                finally:
+                                    self._progress.remove_task(task_id)
+                            return parse(content)
+                except HTTPStatusError as error:
+                    status = error.response.status_code
+                    failure = f"HTTP {status}"
+                    transient = status in {408, 429} or status >= 500
+                except HTTPError as error:
+                    failure = type(error).__name__
+                    transient = True
+                except ValueError:
+                    failure = "返回的数据格式无效"
+                    transient = False
+                if proxied:
+                    # Do not repeat a dead gateway timeout for every file in this update.
+                    if transient or failure == "返回的数据格式无效":
+                        self._proxy_failed = True
+                    break
+                if not transient or attempt == 1:
+                    break
+                await asyncio.sleep(0.5)
+        raise RequestException(f"数据下载失败：{failure}")
+
+    async def resolve_commit(self, owner: str, repo: str, branch: str) -> str:
+        def parse(content: bytes) -> str:
+            data = self._json_object(content)
+            reference = data.get("object")
+            if not isinstance(reference, dict) or reference.get("type") != "commit":
+                raise ValueError("Expected a commit reference")
+            sha = reference.get("sha")
+            if not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{40}", sha) is None:
+                raise ValueError("Invalid commit SHA")
+            return sha
+
+        url = (
+            f"https://api.github.com/repos/{quote(owner, safe='')}/{quote(repo, safe='')}"
+            f"/git/ref/heads/{quote(branch, safe='')}"
+        )
+        return await self._fetch(url, parse)
+
+    async def get_text(self, url: str) -> str:
+        def parse(content: bytes) -> str:
+            value = content.decode("utf-8-sig").strip()
+            if not value or "<" in value or any(character.isspace() for character in value):
+                raise ValueError("Expected a version identifier")
+            return value
+
+        return await self._fetch(url, parse)
+
+    async def get_json(self, url: str) -> dict[str, Any]:
+        filename = urlsplit(url).path.rsplit("/", 1)[-1]
+        logger.info(f"正在下载: {filename}")
+        started_at = datetime.now()
+        result = await self._fetch(url, self._json_object, filename=filename)
+        logger.success(f"🎉 资源 {filename} 下载完成，成功 1 个，耗时 {datetime.now() - started_at}")
+        return result
 
 
 class File(BaseModel):
@@ -61,6 +199,96 @@ class DownloadProgress(Progress):
 
     MAX_VISIBLE_TASKS = 10
 
+    def __init__(self, *columns, **kwargs) -> None:
+        kwargs["transient"] = True
+        kwargs.setdefault("expand", True)
+        super().__init__(*columns, **kwargs)
+        self.disable = self.disable or not self.console.is_interactive
+        self._log_handler: int | None = None
+        self._log_stream = None
+
+    def _add_console_sink(self, sink, *, colorize: bool | None = None) -> int:
+        return logger.add(
+            sink,
+            level=0,
+            diagnose=False,
+            filter=nonebot_log.default_filter,
+            format=nonebot_log.default_format,
+            colorize=colorize,
+        )
+
+    def _write_log(self, message: str) -> None:
+        self.console.print(Text.from_ansi(message), highlight=False, soft_wrap=True)
+
+    def _restore_console_sink(self) -> None:
+        if self._log_stream is None:
+            return
+        restore = self._log_handler is None or nonebot_log.logger_id == self._log_handler
+        if self._log_handler is not None:
+            try:
+                logger.remove(self._log_handler)
+            except ValueError:
+                restore = False
+        if restore:
+            nonebot_log.logger_id = self._add_console_sink(self._log_stream)
+        self._log_handler = None
+        self._log_stream = None
+
+    def start(self) -> None:
+        if self.disable or self.live.is_started or not self.task_ids:
+            return
+        stream = self.console.file
+        try:
+            super().start()
+        except LiveError:
+            self.disable = True
+            return
+        # Only borrow NoneBot's default console sink; leave user/file sinks untouched.
+        try:
+            logger.remove(nonebot_log.logger_id)
+        except ValueError:
+            super().stop()
+            self.disable = True
+            return
+        self._log_stream = stream
+        try:
+            self._log_handler = self._add_console_sink(
+                self._write_log, colorize=self.console.is_terminal and not self.console.no_color
+            )
+            nonebot_log.logger_id = self._log_handler
+        except BaseException:
+            super().stop()
+            self._restore_console_sink()
+            raise
+
+    def stop(self) -> None:
+        if not self.live.is_started:
+            return
+        try:
+            super().stop()
+        finally:
+            self._restore_console_sink()
+
+    def add_task(
+        self,
+        description: str,
+        start: bool = True,
+        total: float | None = 100.0,
+        completed: int = 0,
+        visible: bool = True,
+        **fields: Any,
+    ) -> TaskID:
+        task_id = super().add_task(description, start, total, completed, visible, **fields)
+        self.start()
+        return task_id
+
+    def remove_task(self, task_id: TaskID) -> None:
+        super().remove_task(task_id)
+        if self.task_ids:
+            self.refresh()
+        else:
+            self.stop()
+
     def make_tasks_table(self, tasks: Iterable[Task]) -> Table:
         table = Table.grid(padding=(0, 1), expand=self.expand)
         tasks_table = Table.grid(padding=(0, 1), expand=self.expand)
@@ -70,7 +298,7 @@ class DownloadProgress(Progress):
         for task in visible_tasks:
             status = self.STATUS_FIN if task.finished else self.STATUS_DL
             itable = Table.grid(padding=(0, 1), expand=self.expand)
-            filename_column = Text(f"{task.fields['filename']}")
+            filename_column = Text(str(task.fields["filename"]), no_wrap=True, overflow="ellipsis")
             itable.add_row(
                 filename_column,
                 *(column(task) for column in [status, *self.STATUS_ROW]),
@@ -120,18 +348,6 @@ class GameResourceDownloader:
                 return origin_version
         except HTTPError as e:
             raise RequestException(f"检查更新失败: {type(e).__name__}: {e}")
-
-    @classmethod
-    async def check_update(cls, dir: Path) -> str | None:
-        """检查更新"""
-        origin_version = await cls.get_version()
-        version_file = dir.joinpath("version")
-        if not version_file.exists():
-            return origin_version
-        local_version = version_file.read_text(encoding="utf-8").strip()
-        if origin_version != local_version:
-            return origin_version
-        return None
 
     @classmethod
     def update_version_file(cls, version: str):

@@ -2,9 +2,9 @@ from nonebot import logger, get_driver
 from nonebot_plugin_alconna import command_manager
 
 from .config import CACHE_DIR, config
-from .exception import RequestException
 from .download import download_img_resource
-from .data_source import gacha_table_data, ef_gacha_pool_data
+from .services.resources import update_data_resources
+from .exception import RequestException, ResourceUpdateInProgress
 
 driver = get_driver()
 shortcut_cache = CACHE_DIR / "shortcut.db"
@@ -14,17 +14,11 @@ from .matcher import skland, skland_command
 @driver.on_startup
 async def startup():
     try:
-        await gacha_table_data.load()
-    except RequestException as e:
-        logger.error(f"检查卡池数据更新加载失败: {e}")
-    logger.debug("Skland gacha table data loaded")
-    try:
-        await ef_gacha_pool_data.load()
-    except RequestException as e:
-        logger.error(f"终末地卡池数据加载失败: {e}")
-    logger.debug("Endfield gacha pool table data loaded")
+        await update_data_resources(refresh_metadata=False)
+    except ResourceUpdateInProgress:
+        logger.info("跳过启动数据资源更新：已有更新正在进行")
     command_manager.load_cache(shortcut_cache, command=skland_command)
-    for obsolete_shortcut in ("干员盒", "图鉴", "终末地抽卡更新"):
+    for obsolete_shortcut in ("干员盒", "图鉴", "终末地抽卡更新", "资源更新"):
         skland_command.shortcut(obsolete_shortcut, delete=True)
     logger.debug("Skland shortcuts cache loaded")
     skland.shortcut("森空岛绑定", {"command": "skland bind", "fuzzy": True, "prefix": True})
@@ -57,7 +51,10 @@ async def startup():
     )
     skland.shortcut("角色更新", {"command": "skland char update", "fuzzy": False, "prefix": True})
     skland.shortcut("全体角色更新", {"command": "skland char update --all", "fuzzy": False, "prefix": True})
-    skland.shortcut("资源更新", {"command": "skland sync", "fuzzy": True, "prefix": True})
+    skland.shortcut(
+        "资源更新",
+        {"command": "skland sync --data", "fuzzy": True, "prefix": True, "compact": False},
+    )
     skland.shortcut("战绩详情", {"command": "skland rginfo", "fuzzy": True, "prefix": True})
     skland.shortcut("收藏战绩详情", {"command": "skland rginfo -f", "fuzzy": True, "prefix": True})
     skland.shortcut("方舟抽卡记录", {"command": "skland gacha -l 3", "fuzzy": True, "prefix": True})

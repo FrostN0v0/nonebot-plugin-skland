@@ -273,14 +273,14 @@ async def test_cached_template_waits_for_page_resources_when_requested(app, tmp_
 
 @pytest.mark.asyncio
 async def test_page_resource_wait_respects_timeout(app):
-    from nonebot_plugin_skland.image_cache import _wait_for_page_resources
+    from nonebot_plugin_skland.image_cache import wait_for_page_resources
 
     class SlowPage:
         async def evaluate(self, script: str) -> None:
             await asyncio.sleep(0.05)
 
     with pytest.raises(asyncio.TimeoutError):
-        await _wait_for_page_resources(SlowPage(), 1)
+        await wait_for_page_resources(SlowPage(), 1)
 
 
 def test_ark_portrait_cache_config(app):

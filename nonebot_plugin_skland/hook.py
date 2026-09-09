@@ -24,7 +24,7 @@ async def startup():
         logger.error(f"终末地卡池数据加载失败: {e}")
     logger.debug("Endfield gacha pool table data loaded")
     command_manager.load_cache(shortcut_cache, command=skland_command)
-    for obsolete_shortcut in ("干员盒", "图鉴"):
+    for obsolete_shortcut in ("干员盒", "图鉴", "终末地抽卡更新"):
         skland_command.shortcut(obsolete_shortcut, delete=True)
     logger.debug("Skland shortcuts cache loaded")
     skland.shortcut("森空岛绑定", {"command": "skland bind", "fuzzy": True, "prefix": True})
@@ -80,7 +80,6 @@ async def startup():
     skland.shortcut("终末地全体签到详情", {"command": "skland efsign status --all", "fuzzy": False, "prefix": True})
     skland.shortcut(r"(ef|zmd)", {"command": "skland efcard", "fuzzy": True, "prefix": True})
     skland.shortcut("终末地抽卡记录", {"command": "skland efgacha", "fuzzy": True, "prefix": True})
-    skland.shortcut("终末地抽卡更新", {"command": "skland efgacha -u", "fuzzy": True, "prefix": True})
 
     if config.check_res_update:
         try:

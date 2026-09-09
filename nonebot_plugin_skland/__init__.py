@@ -282,9 +282,8 @@ async def _(
     """查询终末地抽卡记录"""
     from .commands.endfield import ef_gacha_history_handler
 
-    update = result.find("efgacha.update")
     await ef_gacha_history_handler(
-        user_session, session, begin, limit, target, bot, update, role_index=result.query("efgacha.role.role_index")
+        user_session, session, begin, limit, target, bot, role_index=result.query("efgacha.role.role_index")
     )
 
 

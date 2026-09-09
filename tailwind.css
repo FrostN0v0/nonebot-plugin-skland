@@ -198,6 +198,12 @@
   .bound-roles-hatch {
     background: repeating-linear-gradient(120deg, transparent 0 9px, rgb(255 255 255 / 14%) 9px 11px);
   }
+  .ef-page { box-sizing: border-box; width: 800px; }
+  .ef-source { position: absolute; left: -10000px; top: 0; width: 248px; visibility: hidden; }
+  .ef-pool { min-width: 0; }
+  .ef-pool-part { min-width: 40px; height: 12px; text-align: right; white-space: nowrap; font-size: 9px; }
+  .ef-pool-empty { padding: 8px; color: rgb(8 8 8 / 55%); font-size: 10px; }
+  .ef-empty { grid-column: 1 / -1; padding: 24px; text-align: center; color: rgb(8 8 8 / 60%); font-size: 13px; }
 }
 
 @font-face {

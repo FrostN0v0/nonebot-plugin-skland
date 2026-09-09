@@ -102,7 +102,8 @@ nonebot_plugin_skland/
 │       └── gacha/
 │           ├── base.py       # EndfieldPoolType、角色/武器抽卡响应、Content API 模型
 │           ├── pool.py       # EfGachaPoolInfo、保底/歪卡/武库配额统计
-│           └── statistics.py # EfGroupedGachaRecord、分类统计、分页可见池计算
+│           ├── statistics.py # Cumulative category statistics and pool selection
+│           └── view.py       # Complete paid/free events projected before layout
 ├── migrations/          # nonebot-plugin-orm/Alembic 迁移脚本
 └── resources/
     ├── fonts/           # 渲染字体
@@ -117,6 +118,7 @@ nonebot_plugin_skland/
         ├── gacha_macros.html.jinja2
         ├── ef_gacha.html.jinja2
         ├── ef_gacha_macros.html.jinja2
+        ├── ef_gacha.js       # Fixed category columns and ordered event continuations
         ├── rogue.html.jinja2
         ├── rogue_info.html.jinja2
         ├── rogue_macros.html.jinja2
@@ -167,10 +169,10 @@ skland gacha [target] [-r|--role <index>] [-b <begin>] [-l <limit>]
 skland import <url> [-r|--role <index>]
 skland box [target] [filters ...] [-r|--role <index>] [-o <owned|unowned|all>] [-ra <rarity>] [-p <profession>] [-b <branch>] [--position <position>] [--gender <gender>] [-f <faction>] [--race <race>] [--potential <potential>] [-s <release|acquired|training>] [-n <name>]
 skland efcard [target] [-r|--role <index>] [-a] [-s]
-skland efgacha [target] [-r|--role <index>] [-u] [-b <begin>] [-l <limit>]
+skland efgacha [target] [-r|--role <index>] [-b <begin>] [-l <limit>]
 ```
 
-内置快捷指令在 `hook.py` 启动时注册，并通过 `nonebot_plugin_alconna.command_manager` 持久化到插件缓存目录的 `shortcut.db`。当前包括：森空岛绑定、扫码绑定、森空岛解绑、森空岛角色、切换方舟角色、切换终末地角色、明日方舟签到、签到详情、全体签到、全体签到详情、各肉鸽主题、角色更新、全体角色更新、资源更新、战绩详情、收藏战绩详情、方舟抽卡记录、导入抽卡记录、方舟干员、终末地签到、终末地签到详情、终末地全体签到、终末地全体签到详情、`ef|zmd`、终末地抽卡记录、终末地抽卡更新。
+内置快捷指令在 `hook.py` 启动时注册，并通过 `nonebot_plugin_alconna.command_manager` 持久化到插件缓存目录的 `shortcut.db`。当前包括：森空岛绑定、扫码绑定、森空岛解绑、森空岛角色、切换方舟角色、切换终末地角色、明日方舟签到、签到详情、全体签到、全体签到详情、各肉鸽主题、角色更新、全体角色更新、资源更新、战绩详情、收藏战绩详情、方舟抽卡记录、导入抽卡记录、方舟干员、终末地签到、终末地签到详情、终末地全体签到、终末地全体签到详情、`ef|zmd`、终末地抽卡记录。启动加载缓存后会清理旧的“终末地抽卡更新”入口。
 
 `森空岛角色` 精确匹配 `skland char`；`切换方舟角色 <index>` / `切换终末地角色 <index>` 分别映射到 `skland char set ark <index>` / `skland char set ef <index>`，使用 `fuzzy=True` 接收序号、`compact=False` 要求空格分隔，并沿用 Bot 的命令前缀。内置快捷指令在加载缓存后注册。
 
@@ -200,7 +202,7 @@ class Config(BaseModel):
 - `ark_card_cache_ttl`: 玩家角色卡内存缓存时间（秒），默认 120。
 - `ark_card_cache_max_entries`: 玩家角色卡内存缓存角色数量上限，默认 64。
 - `gacha_render_max`: 明日方舟抽卡记录单图渲染卡池上限。
-- `ef_gacha_render_max`: 终末地抽卡记录单图渲染各类别卡池上限。
+- `ef_gacha_render_max`: 每张终末地抽卡图片中各类别的不同卡池数量上限，默认 5 且必须为正；分页同时受实际内容高度约束。
 - `roster_render_max`: 方舟干员单图渲染数量上限，默认 16。
 - `render_timeout`: 所有模板传给 htmlrender 的截图超时时间（毫秒），默认 180000。
 - `roster_render_format`: 方舟干员图片格式，支持 `png` / `jpeg`，默认 `jpeg`。
@@ -344,16 +346,18 @@ class Config(BaseModel):
 
 终末地：
 
-- `commands/endfield/gacha.py` 中 `EF_CHAR_POOL_TYPES` 包含 `STANDARD`、`SPECIAL`、`BEGINNER`、`JOINT`；武器池单独使用 `WEAPON`。
-- `skland efgacha` 默认只从数据库缓存读取；首次使用或需要同步时使用 `-u` 拉取接口数据并去重保存。
-- `services.gacha.get_all_ef_gacha_records()` 会并发分页获取终末地抽卡记录。
+- `services.gacha.sync_ef_gacha_records()` 获取 `STANDARD`、`SPECIAL`、`BEGINNER`、`JOINT` 和 `WEAPON` 五类记录，全部获取成功后按现有角色身份去重（包括同批响应内重复项）并提交，再返回脱离 ORM 的统计数据。获取失败不保存不完整的新记录。
+- `skland efgacha` 和“终末地抽卡记录”统一完成获取、保存和展示，移除 `-u` 及旧更新快捷指令。缺少 token 或接口失败时，仅在已有本地记录的情况下回退，并明确标注本次未更新；错误反馈不包含可能携带凭证的原始请求 URL。
+- `commands/endfield/gacha.py` 在事务结束前保存普通角色/账号身份，渲染不再持有 ORM 角色。头像请求失败不阻断已保存历史的展示，刷新后的凭证在渲染前单独提交；全部图片发送成功后才标记完成。
+- `services.gacha.get_all_ef_gacha_records(server_id, ...)` 沿用并发分页，不依赖 ORM `Character`。
 - `services.gacha.group_ef_gacha_records()` 将记录分为 `beginner_pools`、`standard_pools`、`special_pools`、`joint_pools`、`weapon_pools`。
 - `EfGroupedGachaRecord` 负责各类统计：总抽数、六星平均抽数、保底、UP/歪卡、武库配额、可见卡池切片。
-- `render.render_ef_gacha_history()` 根据是否存在联合寻访动态调整视口宽度；`-b` / `-l` 对各类别分别切片。
+- `EfGachaView.from_record()` 保留完整累计统计，按各类别 `-b` / `-l` 选择池集合后，预先计算带五星汇总的付费六星事件与免费批次；免费抽不改变付费计数，多金分组和出货间隔不因分页重算。渲染只操作这些完整事件。
+- `render.render_ef_gacha_history(EfGachaView)` 返回有序 PNG 列表，固定 800px 三列：左列限定池，中列武器池，右列依次为新手、常驻、联合寻访。同类按最近抽卡时间倒序排列；每列只处理队首卡池，达到高度或该类别的每页池数上限时在下一页原列继续，不跨列补位，也不跳过较大的池先放后面的短池。短池保持完整，单池本身超长时才按完整事件续段；单页逻辑高度上限 1600px，累计统计仅首页展示。
 
 ### 渲染系统
 
-渲染入口在 `render.py`，都调用 `nonebot_plugin_htmlrender.template_to_pic()`。
+渲染入口在 `render.py`。一般模板沿用 `cached_template_to_pic()`；终末地抽卡使用 htmlrender 的模板生成和独立 Playwright 页面，复用 `image_cache.wait_for_page_resources()` 等待字体/图片，完成 DOM 高度排版后逐页截图，所有阶段沿用全局 `render_timeout`。
 
 主要函数：
 
@@ -362,7 +366,7 @@ class Config(BaseModel):
 - `render_operator_roster()`：方舟干员 Half 网格长图。
 - `render_ef_card()`：终末地角色卡片，支持 `show_all` 和 `simple` 背景。
 - `render_gacha_history()`：明日方舟抽卡记录。
-- `render_ef_gacha_history()`：终末地抽卡记录，支持分页切片与联合寻访宽度扩展。
+- `render_ef_gacha_history()`：终末地抽卡记录，返回固定三列、内容高度约束的多页 PNG。
 - `render_rogue_card()` / `render_rogue_info()`：肉鸽战绩总览 / 单局详情。
 - `render_clue_board()`：线索看板。
 
@@ -370,7 +374,11 @@ class Config(BaseModel):
 
 `ArkCard.recruit_complete_time` 直接依赖 `filters.format_timestamp`，schema 不反向导入 `render.py`。背景选择位于 `utils/background.py`，不混入渲染入口。
 
-账号角色卡的纹理、阴影和字体样式集中于 `tailwind.css` 的 `bound-roles-*` 类，仅作用于本模板；沿用 706px 视口、1.5 倍 PNG 和全局截图超时，不额外请求角色详情或远程图片。
+账号角色卡的纹理、阴影和字体样式集中于 `tailwind.css` 的 `bound-roles-*` 类，终末地抽卡复用相同主题类而不更改角色卡样式。账号角色卡仍沿用 706px 视口、1.5 倍 PNG 和全局截图超时，不额外请求角色详情或远程图片。
+
+终末地抽卡保留原有横幅、头像、进度条及统计元素，沿用角色卡的 `bound-roles-dossier` / `bound-roles-header` / `bound-roles-account` 纹理和灰阶面板，使用终末地字标与黄色强调色。局部几何样式仍在 `tailwind.css`，`resources/templates/ef_gacha.js` 只负责测量和分页，不计算业务统计。
+
+卡池卡片只显示池名，不重复显示分类标题；UP 头像、总抽数、六星/歪卡和垫抽合并为紧凑信息行，空间不足时允许换行。多金和免费批次沿用“十连 N 金”“免费10连”的用户术语，不显示 FREE 占位图或重复免费徽标；无横幅资源时只保留细色条，不预留空横幅区域。
 
 ### 定时任务
 
@@ -430,7 +438,7 @@ uv run pytest -s tests/test_skland_api.py
 - `make_user_session` fixture 将真实 `UserSession.user` 加入命令使用的同一个 SQLAlchemy session；解绑、缺少默认角色和签到选择失败的回归测试覆盖事务结束后用户 ORM 属性过期的行为，不能只用普通整数模拟 `user_id`。
 - `tests/test_auth.py` 覆盖有界重试、缺少 token 时零刷新请求及刷新失败传播；`tests/test_player_data.py` 覆盖真实缓存中并发等待者分别刷新凭证与成功结果合并。
 - `tests/test_download.py` 覆盖并发下载统计/计时隔离、已有文件跳过、部分失败聚合及版本/强制覆盖行为；并发统计用例隔离 Rich 的终端 Live 显示限制。
-- `tests/test_ef_gacha_joint_pool.py` 覆盖终末地联合寻访分类、统计与模板渲染相关行为。
+- `tests/test_ef_gacha_joint_pool.py` 覆盖终末地联合寻访分类与统计；`tests/test_ef_gacha_view.py` 覆盖免费/付费间隔隔离、多金事件完整性及分类切片不改变累计统计；`tests/test_ef_gacha_command.py` 覆盖默认同步、去重、先保存再渲染、显式缓存回退、失败零部分写入、选角身份及有序发送。
 - `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、JPEG/PNG 参数、分页发送与渲染参数。
 - `tests/test_image_cache.py` 覆盖配置开关、单次模板生成、浏览器半身图响应落盘、本地复用、显式字体/图片就绪、等待超时、未知 URL 跳过与失败响应忽略。
 - `tests/test_qrcode.py` 覆盖头像 URL 限制、图片下载校验、无头像降级、二维码原始像素保持、群聊发起者标记及扫码绑定流程。

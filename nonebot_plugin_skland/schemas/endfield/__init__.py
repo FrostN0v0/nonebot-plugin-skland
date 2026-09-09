@@ -1,6 +1,7 @@
 from .card import PlayerBase as PlayerBase
 from .gacha import EfGachaInfo as EfGachaInfo
 from .gacha import EfGachaPull as EfGachaPull
+from .gacha import EfGachaView as EfGachaView
 from .card import EndfieldCard as EndfieldCard
 from .gacha import EfGachaGroup as EfGachaGroup
 from .gacha import EfCharGachaInfo as EfCharGachaInfo

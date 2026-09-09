@@ -21,7 +21,7 @@ def test_role_selectors_preserve_target_and_game_scope(app, flag):
         (f"/skland arksign status {flag} 2", "arksign.status.role.role_index"),
         (f"/skland efsign status {flag} 2", "efsign.status.role.role_index"),
         (f"/skland gacha {flag} 2 -b 1 -l 3", "gacha.role.role_index"),
-        (f"/skland efgacha {flag} 2 -u", "efgacha.role.role_index"),
+        (f"/skland efgacha {flag} 2", "efgacha.role.role_index"),
         (f"/skland import https://example.com/export {flag} 2", "import.role.role_index"),
         (f"/skland rogue {flag} 2 --topic 萨米", "rogue.role.role_index"),
         (f"/skland rginfo 1 -f {flag} 2", "rginfo.role.role_index"),
@@ -66,7 +66,6 @@ def test_update_flags_keep_their_existing_meaning(app):
         ("/skland bind token -u", "bind.update"),
         ("/skland char -u", "char.update"),
         ("/skland sync -u", "sync.update"),
-        ("/skland efgacha -u", "efgacha.update"),
     ):
         result = skland_command.parse(command)
         assert result.matched, command
@@ -80,7 +79,7 @@ def test_update_flags_keep_their_existing_meaning(app):
         "/skland -r 0",
         "/skland efcard -r 0",
         "/skland gacha -r 0",
-        "/skland efgacha -r 0 -u",
+        "/skland efgacha -r 0",
         "/skland import https://example.com/export -r 0",
         "/skland box -r 0 -ra 6",
         "/skland rogue -r 0",

@@ -1,8 +1,9 @@
 from datetime import datetime
 
 from pydantic import AnyUrl as Url
+from nonebot_plugin_htmlrender import get_new_page, template_to_html
 
-from .model import Character
+from .image_cache import wait_for_page_resources
 from .config import RES_DIR, TEMPLATES_DIR, config
 from .image_cache import cached_template_to_pic as template_to_pic
 from .schemas import (
@@ -10,12 +11,11 @@ from .schemas import (
     Status,
     ArkCard,
     RogueData,
-    PlayerBase,
+    EfGachaView,
     EndfieldCard,
     BoundRolesCard,
     OperatorRoster,
     GroupedGachaRecord,
-    EfGroupedGachaRecord,
 )
 from .filters import (
     loads_json,
@@ -219,48 +219,39 @@ async def render_gacha_history(
     )
 
 
-EF_GACHA_BASE_MIN_WIDTH = 680
-EF_GACHA_JOINT_MIN_WIDTH = 900
-EF_GACHA_VIEWPORT_PADDING = 120
+EF_GACHA_PAGE_WIDTH = 800
+EF_GACHA_PAGE_HEIGHT = 1600
 
 
-def get_ef_gacha_min_width(props: EfGroupedGachaRecord) -> int:
-    return EF_GACHA_JOINT_MIN_WIDTH if props.joint_pools else EF_GACHA_BASE_MIN_WIDTH
-
-
-def get_ef_gacha_viewport_width(props: EfGroupedGachaRecord) -> int:
-    return get_ef_gacha_min_width(props) + EF_GACHA_VIEWPORT_PADDING
-
-
-async def render_ef_gacha_history(
-    props: EfGroupedGachaRecord,
-    player: PlayerBase,
-    char: Character,
-    begin: int | None = None,
-    limit: int | None = None,
-) -> bytes:
-    return await template_to_pic(
+async def render_ef_gacha_history(props: EfGachaView) -> list[bytes]:
+    """Measure complete event cards, paginate them, and capture bounded pages."""
+    html = await template_to_html(
         template_path=str(TEMPLATES_DIR),
         template_name="ef_gacha.html.jinja2",
-        templates={
-            "avatar_url": player.avatarUrl,
-            "record": props,
-            "character": char,
-            "ef_gacha_min_width": get_ef_gacha_min_width(props),
-            "start_index": begin,
-            "end_index": limit,
-        },
+        props=props,
         filters={
             "format_timestamp_md": format_timestamp_md,
             "ef_charId_to_avatarUrl": ef_charId_to_avatarUrl,
         },
-        pages={
-            "viewport": {"width": get_ef_gacha_viewport_width(props), "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
-        },
-        device_scale_factor=1.5,
-        screenshot_timeout=config.render_timeout,
     )
+    async with get_new_page(
+        device_scale_factor=1.5,
+        viewport={"width": EF_GACHA_PAGE_WIDTH, "height": EF_GACHA_PAGE_HEIGHT},
+        base_url=TEMPLATES_DIR.as_uri(),
+    ) as page:
+        page.set_default_timeout(config.render_timeout)
+        await page.goto(TEMPLATES_DIR.as_uri(), wait_until="load")
+        await page.set_content(html, wait_until="load")
+        await wait_for_page_resources(page, config.render_timeout)
+        page_count = await page.evaluate(
+            "options => window.paginateEndfieldGacha(options)",
+            {"maxHeight": EF_GACHA_PAGE_HEIGHT, "maxPools": config.ef_gacha_render_max},
+        )
+        await wait_for_page_resources(page, config.render_timeout)
+        pages = page.locator("#ef-pages > .ef-page")
+        return [
+            await pages.nth(index).screenshot(type="png", timeout=config.render_timeout) for index in range(page_count)
+        ]
 
 
 async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = False, is_simple: bool = False) -> bytes:

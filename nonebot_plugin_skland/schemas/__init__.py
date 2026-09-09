@@ -21,6 +21,7 @@ from .arknights import GachaGroup as GachaGroup
 from .arknights import GachaTable as GachaTable
 from .endfield import EfGachaInfo as EfGachaInfo
 from .endfield import EfGachaPull as EfGachaPull
+from .endfield import EfGachaView as EfGachaView
 from .arknights import RogueCareer as RogueCareer
 from .binding import BoundRoleKey as BoundRoleKey
 from .endfield import EfGachaGroup as EfGachaGroup

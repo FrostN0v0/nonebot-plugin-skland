@@ -8,6 +8,7 @@ Created: 2026-09-04
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
@@ -20,6 +21,8 @@ revision: str = "6f2c3a9b8d71"
 down_revision: str | Sequence[str] | None = "a689da19471b"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
+
+logger = logging.getLogger(__name__)
 
 _NEW_USER_TABLE = "_skland_user_multi"
 _NEW_CHARACTER_TABLE = "_skland_characters_multi"
@@ -277,18 +280,23 @@ def _copy_upgrade_data(
     new_gacha: sa.Table,
 ) -> None:
     user_rows = list(bind.execute(sa.select(old_users).order_by(old_users.c.id)).mappings())
-    character_rows = list(
+    legacy_character_rows = list(
         bind.execute(sa.select(old_characters).order_by(old_characters.c.id, old_characters.c.uid)).mappings()
     )
     old_user_ids = {int(row["id"]) for row in user_rows}
+    character_rows = [row for row in legacy_character_rows if int(row["id"]) in old_user_ids]
+    orphan_character_count = len(legacy_character_rows) - len(character_rows)
+    if orphan_character_count:
+        logger.warning(
+            "Discarding %d unreachable legacy character row(s) without a matching Skland account",
+            orphan_character_count,
+        )
     character_by_old_key: dict[tuple[int, str], Mapping[str, Any]] = {}
     normalized_role_keys: set[tuple[int, str, str, str]] = set()
 
     for row in character_rows:
         old_account_id = int(row["id"])
         uid = str(row["uid"])
-        if old_account_id not in old_user_ids:
-            raise _MigrationError(f"orphan character: {(old_account_id, uid)!r}")
         old_key = (old_account_id, uid)
         character_by_old_key[old_key] = row
         role_id = str(row["role_id"] or uid)

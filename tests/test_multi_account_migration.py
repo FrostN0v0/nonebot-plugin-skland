@@ -221,6 +221,48 @@ def test_multi_account_upgrade_preserves_data_and_generated_ids(tmp_path):
         assert new_record_id > 0
 
 
+def test_multi_account_upgrade_discards_unreachable_orphan_characters(tmp_path, caplog):
+    migration = _load_migration()
+    engine = sa.create_engine(f"sqlite:///{tmp_path / 'orphan.sqlite'}")
+    with engine.begin() as connection:
+        connection.exec_driver_sql("PRAGMA foreign_keys=ON")
+        users, characters, _gacha = _create_legacy_schema(connection)
+        connection.execute(
+            users.insert(),
+            [{"id": 7, "access_token": "access", "cred": "cred", "cred_token": "token", "user_id": "remote"}],
+        )
+        connection.execute(
+            characters.insert(),
+            [
+                {
+                    "id": 7,
+                    "uid": "reachable-role",
+                    "app_code": "arknights",
+                    "channel_master_id": "1",
+                    "nickname": "Reachable",
+                    "isdefault": True,
+                    "role_id": None,
+                },
+                {
+                    "id": 10,
+                    "uid": "orphan-role",
+                    "app_code": "arknights",
+                    "channel_master_id": "1",
+                    "nickname": "Orphan",
+                    "isdefault": True,
+                    "role_id": None,
+                },
+            ],
+        )
+
+        with caplog.at_level("WARNING"):
+            _run(connection, migration.upgrade)
+
+        roles = connection.execute(sa.text("SELECT uid FROM skland_characters ORDER BY uid")).scalars().all()
+        assert roles == ["reachable-role"]
+        assert "Discarding 1 unreachable legacy character row(s)" in caplog.text
+
+
 def test_multi_account_upgrade_rejects_ownership_mismatch(tmp_path):
     migration = _load_migration()
     engine = sa.create_engine(f"sqlite:///{tmp_path / 'invalid.sqlite'}")

@@ -39,8 +39,12 @@ dev = [
 ]
 
 [build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+requires = ["uv_build>=0.11.16,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "nonebot_plugin_skland"
+module-root = ""
 
 [tool.nonebot]
 plugins = ["nonebot_plugin_skland"]

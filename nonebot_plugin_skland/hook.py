@@ -77,6 +77,7 @@ async def startup():
     skland.shortcut("终末地全体签到详情", {"command": "skland efsign status --all", "fuzzy": False, "prefix": True})
     skland.shortcut(r"(ef|zmd)", {"command": "skland efcard", "fuzzy": True, "prefix": True})
     skland.shortcut("终末地抽卡记录", {"command": "skland efgacha", "fuzzy": True, "prefix": True})
+    skland.shortcut("战争回响", {"command": "skland efwar", "fuzzy": True, "prefix": True})
 
     if config.check_res_update:
         try:

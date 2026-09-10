@@ -9,7 +9,7 @@
 当前支持：
 
 - **明日方舟（Arknights）**：角色信息卡片、每日签到、肉鸽战绩与单局详情、抽卡记录查询、从小黑盒导入抽卡记录、方舟干员查询。
-- **明日方舟：终末地（Endfield）**：角色信息卡片、每日签到、抽卡记录查询与更新；抽卡统计支持角色池、武器池、新手池、常驻池、限定池、联合寻访池。
+- **明日方舟：终末地（Endfield）**：角色信息卡片、每日签到、战争回响战绩、抽卡记录查询与更新；抽卡统计支持角色池、武器池、新手池、常驻池、限定池、联合寻访池。
 
 ## 技术栈与关键依赖
 
@@ -83,7 +83,8 @@ nonebot_plugin_skland/
 │       ├── __init__.py  # 终末地 handler 导出
 │       ├── card.py      # 终末地角色卡片
 │       ├── sign.py      # 终末地签到与签到状态
-│       └── gacha.py     # Endfield gacha history update and paginated rendering
+│       ├── gacha.py     # Endfield gacha history update and paginated rendering
+│       └── war_echoes.py  # 终末地战争回响查询与图片发送
 ├── schemas/
 │   ├── __init__.py      # 对外集中导出 Pydantic 模型
 │   ├── binding.py       # 森空岛 wire model、确认快照与绑定角色卡 DTO
@@ -101,6 +102,7 @@ nonebot_plugin_skland/
 │   └── endfield/
 │       ├── card.py      # EndfieldCard 与终末地角色卡片结构
 │       ├── sign.py      # EndfieldSignResponse
+│       ├── war_echoes.py  # 战争回响 wire model、评级/荣勋与赛季轮换视图
 │       └── gacha/
 │           ├── base.py       # EndfieldPoolType、角色/武器抽卡响应、Content API 模型
 │           ├── pool.py       # EfGachaPoolInfo、保底/歪卡/武库配额统计
@@ -123,6 +125,7 @@ nonebot_plugin_skland/
         ├── ef_gacha.js       # Fixed category columns and ordered event continuations
         ├── rogue.html.jinja2
         ├── rogue_info.html.jinja2
+        ├── ef_war_echoes.html.jinja2
         ├── rogue_macros.html.jinja2
         ├── endfield_macros.html.jinja2
         ├── macros.html.jinja2
@@ -172,9 +175,10 @@ skland import <url> [-r|--role <index>]
 skland box [target] [filters ...] [-r|--role <index>] [-o <owned|unowned|all>] [-ra <rarity>] [-p <profession>] [-b <branch>] [--position <position>] [--gender <gender>] [-f <faction>] [--race <race>] [--potential <potential>] [-s <release|acquired|training>] [-n <name>]
 skland efcard [target] [-r|--role <index>] [-a] [-s]
 skland efgacha [target] [-r|--role <index>] [-b <begin>] [-l <limit>]
+skland efwar [target] [-r|--role <index>] [-s|--season <season>] [-w|--week <week>]
 ```
 
-内置快捷指令在 `hook.py` 启动时注册，并通过 `nonebot_plugin_alconna.command_manager` 持久化到插件缓存目录的 `shortcut.db`。当前包括：森空岛绑定、扫码绑定、森空岛解绑、森空岛角色、切换方舟角色、切换终末地角色、明日方舟签到、签到详情、全体签到、全体签到详情、各肉鸽主题、角色更新、全体角色更新、资源更新、战绩详情、收藏战绩详情、方舟抽卡记录、导入抽卡记录、方舟干员、终末地签到、终末地签到详情、终末地全体签到、终末地全体签到详情、`ef|zmd`、终末地抽卡记录。启动加载缓存后会清理旧的“终末地抽卡更新”入口。
+内置快捷指令在 `hook.py` 启动时注册，并通过 `nonebot_plugin_alconna.command_manager` 持久化到插件缓存目录的 `shortcut.db`。当前包括：森空岛绑定、扫码绑定、森空岛解绑、森空岛角色、切换方舟角色、切换终末地角色、明日方舟签到、签到详情、全体签到、全体签到详情、各肉鸽主题、角色更新、全体角色更新、资源更新、战绩详情、收藏战绩详情、方舟抽卡记录、导入抽卡记录、方舟干员、终末地签到、终末地签到详情、终末地全体签到、终末地全体签到详情、`ef|zmd`、终末地抽卡记录、终末地战争回响。启动加载缓存后会清理旧的“终末地抽卡更新”入口。
 
 `森空岛角色` 精确匹配 `skland char`；`切换方舟角色 <index>` / `切换终末地角色 <index>` 分别映射到 `skland char set ark <index>` / `skland char set ef <index>`，使用 `fuzzy=True` 接收序号、`compact=False` 要求空格分隔，并沿用 Bot 的命令前缀。内置快捷指令在加载缓存后注册。
 
@@ -263,6 +267,7 @@ class Config(BaseModel):
 - `get_rogue()`：明日方舟肉鸽数据。
 - `get_gacha_categories()` / `get_gacha_history()`：明日方舟抽卡类别与记录。
 - `endfield_card(cred, *, user_id, role_id, server_id)`：终末地角色卡片数据；API 层只接收标量身份，不依赖 ORM `Character`。
+- `endfield_war_echoes(cred, *, user_id, role_id, server_id, season_id=None)`：终末地战争回响赛季、轮换、关卡和荣勋数据。
 - `endfield_sign()`：终末地签到。
 - `get_ef_gacha_history()`：终末地角色池/武器池抽卡记录。
 - `get_ef_gacha_content()`：终末地卡池 UP 内容。
@@ -287,7 +292,7 @@ class Config(BaseModel):
 - `services/binding.py` 负责凭证和身份准备、确认快照复核及绑定/解绑的原子提交；`commands/bind.py` 只编排展示、waiter、扫码轮询与撤回。工作状态使用内部 dataclass，跨模块业务异常位于 `exception.py`。
 - `account.sync_account()` 使用普通凭证快照执行 API 请求，再重新读取账号并事务性同步角色/默认映射；不构造未持久化的 `SkUser` 充当临时凭证对象。
 - `skland char` 返回全部账号和角色；`skland char set <game> <index>` 按游戏独立序号切换插件默认角色，所有业务功能使用该角色所属账号的凭证。
-- 角色卡片、两游戏抽卡查询/更新、抽卡导入、干员查询、肉鸽及详情、两游戏个人签到及状态共 12 个入口统一支持 `-r` / `--role`。`matcher._role_option()` 为每个作用域构建独立选项，命令分发传入 `role_index`；各 handler 共用 `commands/selection.py` 的 `check_user_character(app_code=...)`，使用角色所属账号、不写 `CharacterDefault`、不要求已有默认角色，也不能临时选择他人的角色。`get_character_by_index()` 与 `char set` 共用 `get_user_characters()` 排序，无效序号不回退默认。
+- 角色卡片、两游戏抽卡查询/更新、抽卡导入、干员查询、肉鸽及详情、终末地战争回响、两游戏个人签到及状态共 13 个入口统一支持 `-r` / `--role`。`matcher._role_option()` 为每个作用域构建独立选项，命令分发传入 `role_index`；各 handler 共用 `commands/selection.py` 的 `check_user_character(app_code=...)`，使用角色所属账号、不写 `CharacterDefault`、不要求已有默认角色，也不能临时选择他人的角色。`get_character_by_index()` 与 `char set` 共用 `get_user_characters()` 排序，无效序号不回退默认。
 - `skland box -r` 统一用于角色序号，原星级短选项改为 `-ra`；`--rarity`、`rarity` 和自然筛选词继续保留。所有旧示例和调用必须同步迁移，不能根据值猜测 `-r` 是星级还是角色。
 - 签到状态不带选角参数时保留本人全部角色结果；显式选角时按 owner 和角色主键共同过滤缓存，防止跨账号、跨用户混入。`--all` 为超管全体状态，与选角互斥；全体签到提交后展示状态时不读取已过期的 `UserSession.user`。
 - 肉鸽详情不带选角参数时使用引用图片的缓存数据；显式选角时获取所选角色的新数据，引用图片只提供主题，无引用时使用角色当前主题。肉鸽 API 读取后在渲染前提交凭证刷新；线索、背景等暗语继续沿用原卡片携带的数据。
@@ -370,6 +375,7 @@ class Config(BaseModel):
 - `EfGroupedGachaRecord` 负责各类统计：总抽数、六星平均抽数、保底、UP/歪卡、武库配额、可见卡池切片。
 - `EfGachaView.from_record()` 保留完整累计统计，按各类别 `-b` / `-l` 选择池集合后，预先计算带五星汇总的付费六星事件与免费批次；免费抽不改变付费计数，多金分组和出货间隔不因分页重算。渲染只操作这些完整事件。
 - `render.render_ef_gacha_history(EfGachaView)` 返回有序 PNG 列表，固定 800px 三列：左列限定池，中列武器池，右列依次为新手、常驻、联合寻访。同类按最近抽卡时间倒序排列；每列只处理队首卡池，达到高度或该类别的每页池数上限时在下一页原列继续，不跨列补位，也不跳过较大的池先放后面的短池。短池保持完整，单池本身超长时才按完整事件续段；单页逻辑高度上限 1600px，累计统计仅首页展示。
+- `schemas/endfield/war_echoes.py` 负责评级、荣勋、最高通关难度、相对赛季选择和用户信息投影；`-s -1` 表示上一赛季，负数先从默认响应解析真实赛季 ID，再请求该赛季详情。命令提交凭证刷新后再渲染脱离 ORM 的视图。
 
 ### 渲染系统
 
@@ -389,6 +395,7 @@ class Config(BaseModel):
 - `render_ef_card()`：终末地角色卡片，支持 `show_all` 和 `simple` 背景。
 - `render_gacha_history()`：明日方舟抽卡记录。
 - `render_ef_gacha_history()`：终末地抽卡记录，返回固定三列、内容高度约束的多页 PNG。
+- `render_ef_war_echoes()`：终末地战争回响赛季、荣勋、轮换与编队记录长图。
 - `render_rogue_card()` / `render_rogue_info()`：肉鸽战绩总览 / 单局详情。
 - `render_clue_board()`：线索看板。
 
@@ -401,6 +408,8 @@ class Config(BaseModel):
 终末地抽卡保留原有横幅、头像、进度条及统计元素，沿用角色卡的 `bound-roles-dossier` / `bound-roles-header` / `bound-roles-account` 纹理和灰阶面板，使用终末地字标与黄色强调色。局部几何样式仍在 `tailwind.css`，`resources/templates/ef_gacha.js` 只负责测量和分页，不计算业务统计。
 
 卡池卡片只显示池名，不重复显示分类标题；UP 头像、总抽数、六星/歪卡和垫抽合并为紧凑信息行，空间不足时允许换行。多金和免费批次沿用“十连 N 金”“免费10连”的用户术语，不显示 FREE 占位图或重复免费徽标；无横幅资源时只保留细色条，不预留空横幅区域。
+
+战争回响采用固定 422px 移动端布局。模板使用 `resources/images/endfield/war_echoes/` 中的随包静态素材，渲染时加载 API 返回的赛季 KV 和干员头像。
 
 ### 定时任务
 
@@ -481,7 +490,8 @@ uv run pytest -s tests/test_skland_api.py
 - `tests/test_multi_account_migration.py` 覆盖旧结构升级、数据保护检查、生成主键和不可表示数据的 downgrade 拒绝。
 - `tests/test_bind.py` 覆盖 token/cred 确认式新增/更新、取消/超时零写入、确认期间状态变化，以及真实 UserSession 下选择性/全量解绑的双 waiter 和提交后反馈。
 - `tests/test_sign.py` 覆盖多账号同名/同 UID 角色、角色所属凭证、签到缓存 list 结构、序号选角和默认不变，以及签到/状态的 `--role`/`--all` 冲突、状态 owner/角色联合过滤、空结果和全体状态的 ORM 过期边界。
-- `tests/test_role_selection.py` 覆盖全部 12 个选角入口的长短选项、`-r` / `-ra` 冲突隔离、旧 UID 语法拒绝、更新开关保留，以及存在默认角色时无效序号的真实 matcher 分发，确保没有回退默认和外部数据访问。
+- `tests/test_role_selection.py` 覆盖全部 13 个选角入口的长短选项、`-r` / `-ra` 冲突隔离、旧 UID 语法拒绝、更新开关保留，以及存在默认角色时无效序号的真实 matcher 分发，确保没有回退默认和外部数据访问。
+- `tests/test_war_echoes.py` 覆盖评级投影、荣勋累计、用户信息、当前/指定/相对赛季轮换选择、最高已通关难度和命令提交后渲染发送。
 - `tests/test_skland_api.py` 会调用真实接口；单独运行时使用 `uv run pytest -s tests/test_skland_api.py`，其中 `-s` 用于显示终端二维码输出；凭证优先级为：
   1. `tests/cred_cache.json`
   2. 环境变量 `SKLAND_TOKEN` 或 `SKLAND_CRED`

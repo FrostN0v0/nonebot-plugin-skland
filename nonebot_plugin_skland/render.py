@@ -13,6 +13,7 @@ from .schemas import (
     RogueData,
     EfGachaView,
     EndfieldCard,
+    WarEchoesView,
     BoundRolesCard,
     OperatorRoster,
     GroupedGachaRecord,
@@ -25,6 +26,7 @@ from .filters import (
     format_timestamp,
     get_rarity_color,
     time_to_next_4am,
+    war_echoes_asset,
     get_property_icon,
     charId_to_avatarUrl,
     format_stamina_time,
@@ -33,8 +35,13 @@ from .filters import (
     format_timestamp_str,
     charId_to_portraitUrl,
     ef_charId_to_avatarUrl,
+    format_war_echoes_date,
     get_equip_rarity_color,
+    war_echoes_stage_asset,
     time_to_next_monday_4am,
+    war_echoes_rating_asset,
+    format_war_echoes_duration,
+    war_echoes_potential_asset,
 )
 
 
@@ -252,6 +259,31 @@ async def render_ef_gacha_history(props: EfGachaView) -> list[bytes]:
         return [
             await pages.nth(index).screenshot(type="png", timeout=config.render_timeout) for index in range(page_count)
         ]
+
+
+async def render_ef_war_echoes(props: WarEchoesView) -> bytes:
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="ef_war_echoes.html.jinja2",
+        templates={"view": props},
+        filters={
+            "war_echoes_asset": war_echoes_asset,
+            "war_echoes_rating_asset": war_echoes_rating_asset,
+            "war_echoes_stage_asset": war_echoes_stage_asset,
+            "war_echoes_potential_asset": war_echoes_potential_asset,
+            "get_property_icon": get_property_icon,
+            "get_rarity_color": get_rarity_color,
+            "format_war_echoes_date": format_war_echoes_date,
+            "format_war_echoes_duration": format_war_echoes_duration,
+        },
+        pages={
+            "viewport": {"width": 422, "height": 1},
+            "base_url": TEMPLATES_DIR.as_uri(),
+        },
+        device_scale_factor=2,
+        screenshot_timeout=config.render_timeout,
+        readiness="resources",
+    )
 
 
 async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = False, is_simple: bool = False) -> bytes:

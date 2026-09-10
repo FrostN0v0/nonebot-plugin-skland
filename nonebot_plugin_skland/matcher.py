@@ -145,6 +145,14 @@ skland_command = Alconna(
         help_text="终末地角色面板查询",
     ),
     Subcommand(
+        "efwar",
+        Args["target?#目标", At | int],
+        _role_option(),
+        Option("-s|--season|season", Args["season_id", int], help_text="赛季序号，负数从当前赛季回溯"),
+        Option("-w|--week|week", Args["week_id", int], help_text="轮换序号"),
+        help_text="查询终末地战争回响战绩",
+    ),
+    Subcommand(
         "efgacha",
         Args["target?#目标", At | int],
         _role_option(),

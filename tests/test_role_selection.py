@@ -22,6 +22,7 @@ def test_role_selectors_preserve_target_and_game_scope(app, flag):
         (f"/skland efsign status {flag} 2", "efsign.status.role.role_index"),
         (f"/skland gacha {flag} 2 -b 1 -l 3", "gacha.role.role_index"),
         (f"/skland efgacha {flag} 2", "efgacha.role.role_index"),
+        (f"/skland efwar {flag} 2 -s 3 -w 2", "efwar.role.role_index"),
         (f"/skland import https://example.com/export {flag} 2", "import.role.role_index"),
         (f"/skland rogue {flag} 2 --topic 萨米", "rogue.role.role_index"),
         (f"/skland rginfo 1 -f {flag} 2", "rginfo.role.role_index"),
@@ -33,6 +34,14 @@ def test_role_selectors_preserve_target_and_game_scope(app, flag):
         if result.subcommands:
             assert not result.find("role")
         assert not skland_command.parse(command.replace(f"{flag} 2", f"{flag} invalid")).matched
+
+
+def test_war_echoes_accepts_relative_season_index(app):
+    from nonebot_plugin_skland.matcher import skland_command
+
+    result = skland_command.parse("/skland efwar -s -1")
+    assert result.matched
+    assert result.query("efwar.season.season_id") == -1
 
 
 @pytest.mark.parametrize(
@@ -80,6 +89,7 @@ def test_update_flags_keep_their_existing_meaning(app):
         "/skland efcard -r 0",
         "/skland gacha -r 0",
         "/skland efgacha -r 0",
+        "/skland efwar -r 0",
         "/skland import https://example.com/export -r 0",
         "/skland box -r 0 -ra 6",
         "/skland rogue -r 0",
@@ -109,6 +119,7 @@ async def test_role_commands_reject_invalid_index_without_data_access(app, mocke
     import nonebot_plugin_skland.commands.endfield.card as ef_card
     from nonebot_plugin_skland.api import SklandAPI, SklandLoginAPI
     from nonebot_plugin_skland.matcher import skland, skland_command
+    import nonebot_plugin_skland.commands.endfield.war_echoes as ef_war
     from nonebot_plugin_skland.db_handler import set_default_character
 
     async with get_session() as session:
@@ -140,6 +151,7 @@ async def test_role_commands_reject_invalid_index_without_data_access(app, mocke
         mocker.patch.object(selection, "render_bound_roles_card", new=mocker.AsyncMock(return_value=b"image"))
         ark_api = mocker.patch.object(ark_card, "get_ark_card", new=mocker.AsyncMock())
         ef_api = mocker.patch.object(ef_card.SklandAPI, "endfield_card", new=mocker.AsyncMock())
+        ef_war_api = mocker.patch.object(ef_war.SklandAPI, "endfield_war_echoes", new=mocker.AsyncMock())
         remote_calls = [
             mocker.patch.object(SklandAPI, name, new=mocker.AsyncMock())
             for name in ("get_rogue", "ark_sign", "endfield_sign")
@@ -196,4 +208,5 @@ async def test_role_commands_reject_invalid_index_without_data_access(app, mocke
             remote_call.assert_not_awaited()
         ark_api.assert_not_awaited()
         ef_api.assert_not_awaited()
+        ef_war_api.assert_not_awaited()
         assert not session.in_transaction()

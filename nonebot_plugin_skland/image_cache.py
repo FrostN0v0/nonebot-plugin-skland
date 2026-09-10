@@ -17,7 +17,7 @@ from playwright.async_api import Error as PlaywrightError
 
 from .compact import template_to_html
 from .config import CACHE_DIR, config
-from .compact import html_to_pic, get_new_page
+from .compact import html_to_pic, open_html_page
 from .compact import template_to_pic as base_template_to_pic
 
 PendingImage = tuple[str, Path]
@@ -135,17 +135,23 @@ async def _html_to_pic_with_cache(
     pending_by_url = dict(pending)
     cache_tasks: list[asyncio.Task[None]] = []
 
-    async with get_new_page(device_scale_factor, **pages) as page:
+    def cache_request(request: Request) -> None:
+        path = pending_by_url.get(request.url)
+        if path is not None:
+            cache_tasks.append(asyncio.create_task(_cache_finished_request(request, path)))
+
+    def configure_page(page: Page) -> None:
         page.on("console", lambda msg: logger.debug(f"Browser console: {msg.text}"))
-
-        def cache_request(request: Request) -> None:
-            path = pending_by_url.get(request.url)
-            if path is not None:
-                cache_tasks.append(asyncio.create_task(_cache_finished_request(request, path)))
-
         page.on("requestfinished", cache_request)
-        await page.goto(template_path, wait_until="load")
-        await page.set_content(html, wait_until="load" if readiness == "resources" else "networkidle")
+
+    async with open_html_page(
+        html,
+        template_path=template_path,
+        wait_until="load" if readiness == "resources" else "networkidle",
+        device_scale_factor=device_scale_factor,
+        before_load=configure_page,
+        **pages,
+    ) as page:
         if readiness == "resources":
             await wait_for_page_resources(page, screenshot_timeout)
         await page.wait_for_timeout(wait)

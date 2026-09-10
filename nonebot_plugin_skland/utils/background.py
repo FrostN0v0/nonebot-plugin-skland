@@ -26,7 +26,7 @@ async def get_background_image(game_type: Literal["ark", "endfield"] = "ark") ->
 
     match config.background_source:
         case "default":
-            background_image = default_background.as_posix()
+            background_image = default_background.resolve().as_uri()
         case "Lolicon":
             background_image = await get_lolicon_image(lolicon_tag)
         case "random":
@@ -34,7 +34,7 @@ async def get_background_image(game_type: Literal["ark", "endfield"] = "ark") ->
         case CustomSource() as cs:
             background_image = cs.to_uri()
         case _:
-            background_image = default_background.as_posix()
+            background_image = default_background.resolve().as_uri()
     return background_image
 
 
@@ -50,9 +50,9 @@ async def get_rogue_background_image(rogue_id: str) -> str | Url:
     }
     match config.rogue_background_source:
         case "default":
-            background_image = default_background.as_posix()
+            background_image = default_background.resolve().as_uri()
         case "rogue":
-            background_image = default_rogue_background_map.get(rogue_id, default_background).as_posix()
+            background_image = default_rogue_background_map.get(rogue_id, default_background).resolve().as_uri()
         case "Lolicon":
             background_image = await get_lolicon_image()
         case CustomSource() as cs:

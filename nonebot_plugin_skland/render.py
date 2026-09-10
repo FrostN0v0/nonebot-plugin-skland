@@ -4,7 +4,7 @@ from pydantic import AnyUrl as Url
 
 from .image_cache import wait_for_page_resources
 from .config import RES_DIR, TEMPLATES_DIR, config
-from .compact import get_new_page, template_to_html
+from .compact import open_html_page, template_to_html
 from .image_cache import cached_template_to_pic as template_to_pic
 from .schemas import (
     Clue,
@@ -241,14 +241,15 @@ async def render_ef_gacha_history(props: EfGachaView) -> list[bytes]:
             "ef_charId_to_avatarUrl": ef_charId_to_avatarUrl,
         },
     )
-    async with get_new_page(
+    async with open_html_page(
+        html,
+        template_path=TEMPLATES_DIR.as_uri(),
+        wait_until="load",
         device_scale_factor=1.5,
+        before_load=lambda page: page.set_default_timeout(config.render_timeout),
         viewport={"width": EF_GACHA_PAGE_WIDTH, "height": EF_GACHA_PAGE_HEIGHT},
         base_url=TEMPLATES_DIR.as_uri(),
     ) as page:
-        page.set_default_timeout(config.render_timeout)
-        await page.goto(TEMPLATES_DIR.as_uri(), wait_until="load")
-        await page.set_content(html, wait_until="load")
         await wait_for_page_resources(page, config.render_timeout)
         page_count = await page.evaluate(
             "options => window.paginateEndfieldGacha(options)",
@@ -318,8 +319,8 @@ async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = Fa
 
     # Simple 背景模式：命令行参数优先于配置
     simple_bg_enabled = is_simple or config.endfield_background_simple
-    simple_bg = (RES_DIR / "images" / "background" / "endfield" / "simple" / "simple_bg.png").as_posix()
-    simple_bg_top = (RES_DIR / "images" / "background" / "endfield" / "simple" / "simple_bg_top.png").as_posix()
+    simple_bg = (RES_DIR / "images" / "background" / "endfield" / "simple" / "simple_bg.png").resolve().as_uri()
+    simple_bg_top = (RES_DIR / "images" / "background" / "endfield" / "simple" / "simple_bg_top.png").resolve().as_uri()
 
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),

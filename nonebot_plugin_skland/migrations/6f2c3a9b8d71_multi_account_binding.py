@@ -30,6 +30,30 @@ _LEGACY_USER_TABLE = "_skland_user_legacy"
 _LEGACY_CHARACTER_TABLE = "_skland_characters_legacy"
 _LEGACY_GACHA_TABLE = "_skland_gacha_record_legacy"
 
+_POSTGRES_TEMP_CONSTRAINT_SUFFIX = "__migration_tmp"
+
+_NEW_CONSTRAINT_NAMES: dict[str, tuple[str, ...]] = {
+    "skland_user": ("pk_skland_user", "uq_skland_user_owner_account"),
+    "skland_characters": (
+        "pk_skland_characters",
+        "uq_skland_character_account_game_role_server",
+    ),
+    "skland_character_default": (
+        "pk_skland_character_default",
+        "uq_skland_character_default_character_id",
+    ),
+    "skland_gacha_record": (
+        "pk_skland_gacha_record",
+        "uq_skland_gacha_character_ts_pos",
+    ),
+}
+
+_LEGACY_CONSTRAINT_NAMES: dict[str, tuple[str, ...]] = {
+    "skland_user": ("pk_skland_user",),
+    "skland_characters": ("pk_skland_characters",),
+    "skland_gacha_record": ("pk_skland_gacha_record", "_app_char_ts_pos_uc"),
+}
+
 
 class _MigrationError(RuntimeError):
     pass
@@ -57,7 +81,30 @@ def _assert_foreign_keys(bind: Connection) -> None:
         raise _MigrationError(f"foreign key validation failed: {violations!r}")
 
 
-def _new_tables() -> tuple[sa.Table, sa.Table, sa.Table, sa.Table]:
+def _constraint_name(bind: Connection, name: str) -> str:
+    if bind.dialect.name == "postgresql":
+        return f"{name}{_POSTGRES_TEMP_CONSTRAINT_SUFFIX}"
+    return name
+
+
+def _restore_constraint_names(bind: Connection, constraints: Mapping[str, Sequence[str]]) -> None:
+    if bind.dialect.name != "postgresql":
+        return
+
+    preparer = bind.dialect.identifier_preparer
+    for table_name, names in constraints.items():
+        quoted_table_name = preparer.quote(table_name)
+        for name in names:
+            temporary_name = _constraint_name(bind, name)
+            bind.execute(
+                sa.text(
+                    f"ALTER TABLE {quoted_table_name} "
+                    f"RENAME CONSTRAINT {preparer.quote(temporary_name)} TO {preparer.quote(name)}"
+                )
+            )
+
+
+def _new_tables(bind: Connection) -> tuple[sa.Table, sa.Table, sa.Table, sa.Table]:
     users = op.create_table(
         _NEW_USER_TABLE,
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
@@ -66,8 +113,12 @@ def _new_tables() -> tuple[sa.Table, sa.Table, sa.Table, sa.Table]:
         sa.Column("cred", sa.Text(), nullable=False),
         sa.Column("cred_token", sa.Text(), nullable=False),
         sa.Column("skland_user_id", sa.Text(), nullable=True),
-        sa.PrimaryKeyConstraint("id", name="pk_skland_user"),
-        sa.UniqueConstraint("owner_id", "skland_user_id", name="uq_skland_user_owner_account"),
+        sa.PrimaryKeyConstraint("id", name=_constraint_name(bind, "pk_skland_user")),
+        sa.UniqueConstraint(
+            "owner_id",
+            "skland_user_id",
+            name=_constraint_name(bind, "uq_skland_user_owner_account"),
+        ),
         info={"bind_key": "nonebot_plugin_skland"},
     )
     characters = op.create_table(
@@ -88,13 +139,13 @@ def _new_tables() -> tuple[sa.Table, sa.Table, sa.Table, sa.Table]:
             name="fk_skland_characters_account_id_skland_user",
             ondelete="CASCADE",
         ),
-        sa.PrimaryKeyConstraint("id", name="pk_skland_characters"),
+        sa.PrimaryKeyConstraint("id", name=_constraint_name(bind, "pk_skland_characters")),
         sa.UniqueConstraint(
             "account_id",
             "app_code",
             "channel_master_id",
             "role_id",
-            name="uq_skland_character_account_game_role_server",
+            name=_constraint_name(bind, "uq_skland_character_account_game_role_server"),
         ),
         info={"bind_key": "nonebot_plugin_skland"},
     )
@@ -109,8 +160,15 @@ def _new_tables() -> tuple[sa.Table, sa.Table, sa.Table, sa.Table]:
             name="fk_skland_character_default_character_id_skland_characters",
             ondelete="CASCADE",
         ),
-        sa.PrimaryKeyConstraint("owner_id", "app_code", name="pk_skland_character_default"),
-        sa.UniqueConstraint("character_id", name="uq_skland_character_default_character_id"),
+        sa.PrimaryKeyConstraint(
+            "owner_id",
+            "app_code",
+            name=_constraint_name(bind, "pk_skland_character_default"),
+        ),
+        sa.UniqueConstraint(
+            "character_id",
+            name=_constraint_name(bind, "uq_skland_character_default_character_id"),
+        ),
         info={"bind_key": "nonebot_plugin_skland"},
     )
     gacha = op.create_table(
@@ -133,19 +191,19 @@ def _new_tables() -> tuple[sa.Table, sa.Table, sa.Table, sa.Table]:
             name="fk_skland_gacha_record_character_id_skland_characters",
             ondelete="CASCADE",
         ),
-        sa.PrimaryKeyConstraint("id", name="pk_skland_gacha_record"),
+        sa.PrimaryKeyConstraint("id", name=_constraint_name(bind, "pk_skland_gacha_record")),
         sa.UniqueConstraint(
             "character_id",
             "gacha_ts",
             "pos",
-            name="uq_skland_gacha_character_ts_pos",
+            name=_constraint_name(bind, "uq_skland_gacha_character_ts_pos"),
         ),
         info={"bind_key": "nonebot_plugin_skland"},
     )
     return users, characters, defaults, gacha
 
 
-def _legacy_tables() -> tuple[sa.Table, sa.Table, sa.Table]:
+def _legacy_tables(bind: Connection) -> tuple[sa.Table, sa.Table, sa.Table]:
     users = op.create_table(
         _LEGACY_USER_TABLE,
         sa.Column("id", sa.Integer(), nullable=False),
@@ -153,7 +211,7 @@ def _legacy_tables() -> tuple[sa.Table, sa.Table, sa.Table]:
         sa.Column("cred", sa.Text(), nullable=False),
         sa.Column("cred_token", sa.Text(), nullable=False),
         sa.Column("user_id", sa.Text(), nullable=True),
-        sa.PrimaryKeyConstraint("id", name="pk_skland_user"),
+        sa.PrimaryKeyConstraint("id", name=_constraint_name(bind, "pk_skland_user")),
         info={"bind_key": "nonebot_plugin_skland"},
     )
     characters = op.create_table(
@@ -165,7 +223,7 @@ def _legacy_tables() -> tuple[sa.Table, sa.Table, sa.Table]:
         sa.Column("nickname", sa.Text(), nullable=False),
         sa.Column("isdefault", sa.Boolean(), nullable=False),
         sa.Column("role_id", sa.VARCHAR(), nullable=True, comment="Game role ID"),
-        sa.PrimaryKeyConstraint("id", "uid", name="pk_skland_characters"),
+        sa.PrimaryKeyConstraint("id", "uid", name=_constraint_name(bind, "pk_skland_characters")),
         info={"bind_key": "nonebot_plugin_skland"},
     )
     gacha = op.create_table(
@@ -195,8 +253,14 @@ def _legacy_tables() -> tuple[sa.Table, sa.Table, sa.Table]:
             [f"{_LEGACY_USER_TABLE}.id"],
             name="fk_skland_gacha_record_uid_skland_user",
         ),
-        sa.PrimaryKeyConstraint("id", name="pk_skland_gacha_record"),
-        sa.UniqueConstraint("char_uid", "app_code", "gacha_ts", "pos", name="_app_char_ts_pos_uc"),
+        sa.PrimaryKeyConstraint("id", name=_constraint_name(bind, "pk_skland_gacha_record")),
+        sa.UniqueConstraint(
+            "char_uid",
+            "app_code",
+            "gacha_ts",
+            "pos",
+            name=_constraint_name(bind, "_app_char_ts_pos_uc"),
+        ),
         info={"bind_key": "nonebot_plugin_skland"},
     )
     return users, characters, gacha
@@ -455,7 +519,7 @@ def upgrade(name: str = "") -> None:
     old_users = _reflect(bind, "skland_user")
     old_characters = _reflect(bind, "skland_characters")
     old_gacha = _reflect(bind, "skland_gacha_record")
-    new_users, new_characters, new_defaults, new_gacha = _new_tables()
+    new_users, new_characters, new_defaults, new_gacha = _new_tables(bind)
 
     _copy_upgrade_data(
         bind,
@@ -475,6 +539,7 @@ def upgrade(name: str = "") -> None:
     op.rename_table(_NEW_CHARACTER_TABLE, "skland_characters")
     op.rename_table(_NEW_DEFAULT_TABLE, "skland_character_default")
     op.rename_table(_NEW_GACHA_TABLE, "skland_gacha_record")
+    _restore_constraint_names(bind, _NEW_CONSTRAINT_NAMES)
 
     op.create_index("ix_skland_user_owner_id", "skland_user", ["owner_id"], unique=False)
     op.create_index("ix_skland_characters_account_id", "skland_characters", ["account_id"], unique=False)
@@ -498,7 +563,7 @@ def downgrade(name: str = "") -> None:
     characters = _reflect(bind, "skland_characters")
     defaults = _reflect(bind, "skland_character_default")
     gacha = _reflect(bind, "skland_gacha_record")
-    legacy_users, legacy_characters, legacy_gacha = _legacy_tables()
+    legacy_users, legacy_characters, legacy_gacha = _legacy_tables(bind)
 
     _copy_downgrade_data(
         bind,
@@ -518,6 +583,7 @@ def downgrade(name: str = "") -> None:
     op.rename_table(_LEGACY_USER_TABLE, "skland_user")
     op.rename_table(_LEGACY_CHARACTER_TABLE, "skland_characters")
     op.rename_table(_LEGACY_GACHA_TABLE, "skland_gacha_record")
+    _restore_constraint_names(bind, _LEGACY_CONSTRAINT_NAMES)
 
     op.create_index("ix_skland_gacha_record_app_code", "skland_gacha_record", ["app_code"], unique=False)
     op.create_index("ix_skland_gacha_record_char_uid", "skland_gacha_record", ["char_uid"], unique=False)

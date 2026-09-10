@@ -1,5 +1,6 @@
 import sys
 import importlib.util
+from io import StringIO
 from pathlib import Path
 
 import pytest
@@ -73,6 +74,36 @@ def _run(connection: sa.Connection, function) -> None:
     context = MigrationContext.configure(connection)
     with Operations.context(context):
         function()
+
+
+@pytest.mark.parametrize(
+    ("factory_name", "constraint_names_name"),
+    [
+        ("_new_tables", "_NEW_CONSTRAINT_NAMES"),
+        ("_legacy_tables", "_LEGACY_CONSTRAINT_NAMES"),
+    ],
+)
+def test_postgresql_table_swap_uses_temporary_constraint_names(factory_name, constraint_names_name):
+    migration = _load_migration()
+    output = StringIO()
+    context = MigrationContext.configure(
+        dialect_name="postgresql",
+        opts={"as_sql": True, "output_buffer": output},
+    )
+
+    with Operations.context(context):
+        bind = migration.op.get_bind()
+        getattr(migration, factory_name)(bind)
+        constraint_names = getattr(migration, constraint_names_name)
+        migration._restore_constraint_names(bind, constraint_names)
+
+    ddl = output.getvalue()
+    for names in constraint_names.values():
+        for name in names:
+            temporary_name = f"{name}{migration._POSTGRES_TEMP_CONSTRAINT_SUFFIX}"
+            assert f"CONSTRAINT {temporary_name}" in ddl
+            assert f"RENAME CONSTRAINT {temporary_name} TO {name}" in ddl
+            assert f"CONSTRAINT {name} " not in ddl
 
 
 def test_multi_account_upgrade_preserves_data_and_generated_ids(tmp_path):

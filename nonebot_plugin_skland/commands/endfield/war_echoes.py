@@ -22,13 +22,13 @@ async def ef_war_echoes_handler(
     week_id: int | None = None,
 ) -> None:
     @refresh_credentials
-    async def get_war_echoes(user: SkUser, character: Character, user_id: str):
+    async def get_war_echoes(user: SkUser, character: Character, user_id: str, requested_season_id: int | str | None):
         return await SklandAPI.endfield_war_echoes(
             CRED(cred=user.cred, token=user.cred_token),
             user_id=user_id,
             role_id=character.role_id,
             server_id=character.channel_master_id,
-            season_id=season_id,
+            season_id=requested_season_id,
         )
 
     if target.available:
@@ -47,16 +47,25 @@ async def ef_war_echoes_handler(
         return
 
     send_reaction(user_session, "processing")
+    resolved_season_id: str | int | None = season_id
     try:
-        data = await get_war_echoes(user, character, user.skland_user_id)
+        requested_season_id = None if season_id is not None and season_id < 0 else season_id
+        data = await get_war_echoes(user, character, user.skland_user_id, requested_season_id)
+        if season_id is not None and season_id < 0:
+            resolved_season_id = data.select_season(season_id).id
+            data = await get_war_echoes(user, character, user.skland_user_id, resolved_season_id)
     except SklandException as error:
         await session.commit()
         await send_request_error(error)
         return
+    except ValueError as error:
+        await session.commit()
+        await UniMessage(str(error)).send(at_sender=True)
+        return
     await session.commit()
 
     try:
-        view = WarEchoesView.from_data(data, season_id=season_id, week_id=week_id)
+        view = WarEchoesView.from_data(data, season_id=resolved_season_id, week_id=week_id)
     except ValueError as error:
         await UniMessage(str(error)).send(at_sender=True)
         return

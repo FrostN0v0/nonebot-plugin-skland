@@ -286,7 +286,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | ---- | ---- | ---- |
 | `skland efwar` | 所有 | 查询当前赛季与当前轮换的战争回响战绩 |
 | `skland efwar -r <序号>` | 所有 | 临时查询自己的指定终末地角色 |
-| `skland efwar -s <赛季> -w <轮换>` | 所有 | 查询指定赛季与轮换 |
+| `skland efwar -s <赛季> -w <轮换>` | 所有 | 查询指定赛季与轮换；`-s -1` 表示上一赛季 |
 
 **快捷指令：** `终末地战争回响`
 

@@ -154,7 +154,9 @@ class WarEchoes(BaseModel):
     def select_season(self, season_id: str | int | None = None, *, now: float | None = None) -> WarEchoesSeason:
         if not self.seasons:
             raise ValueError("暂无战争回响赛季数据")
-        if season_id is not None:
+
+        relative_offset = season_id if isinstance(season_id, int) and season_id < 0 else None
+        if season_id is not None and relative_offset is None:
             selected = next((season for season in self.seasons if season.id == str(season_id)), None)
             if selected is None:
                 options = "、".join(f"{season.id}:{season.name}" for season in self.seasons)
@@ -167,9 +169,15 @@ class WarEchoes(BaseModel):
             (season for season in ordered if _timestamp(season.startTs) <= current <= _timestamp(season.endTs)),
             None,
         )
-        if active is not None:
-            return active
-        return ordered[0] if current < _timestamp(ordered[0].startTs) else ordered[-1]
+        selected = active or (ordered[0] if current < _timestamp(ordered[0].startTs) else ordered[-1])
+        if relative_offset is None:
+            return selected
+
+        current_index = ordered.index(selected)
+        selected_index = current_index + relative_offset
+        if selected_index < 0:
+            raise ValueError(f"当前赛季最多可回溯 {current_index} 个赛季")
+        return ordered[selected_index]
 
 
 class WarEchoesHonorSummary(BaseModel):

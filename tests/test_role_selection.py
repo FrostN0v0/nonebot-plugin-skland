@@ -36,6 +36,14 @@ def test_role_selectors_preserve_target_and_game_scope(app, flag):
         assert not skland_command.parse(command.replace(f"{flag} 2", f"{flag} invalid")).matched
 
 
+def test_war_echoes_accepts_relative_season_index(app):
+    from nonebot_plugin_skland.matcher import skland_command
+
+    result = skland_command.parse("/skland efwar -s -1")
+    assert result.matched
+    assert result.query("efwar.season.season_id") == -1
+
+
 @pytest.mark.parametrize(
     "options",
     ["-r 2 -ra 6", "-ra 6 -r 2", "--role 2 --rarity 6"],

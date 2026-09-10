@@ -106,8 +106,29 @@ def test_view_accepts_explicit_season_and_week_and_rejects_unknown_values(app):
         WarEchoesView.from_data(_war_echoes_data(), week_id=9)
 
 
+def test_view_selects_season_relative_to_current(app):
+    from nonebot_plugin_skland.schemas import WarEchoesView
+
+    view = WarEchoesView.from_data(_war_echoes_data(), season_id=-1, week_id=1, now=150)
+    assert (view.season.id, view.week.id) == ("2", "1")
+
+    with pytest.raises(ValueError, match="最多可回溯 1 个赛季"):
+        WarEchoesView.from_data(_war_echoes_data(), season_id=-2, now=150)
+
+
+@pytest.mark.parametrize(
+    ("season_id", "selected_season_id", "requested_season_ids"),
+    [(3, "3", [3]), (-1, "2", [None, "2"])],
+)
 @pytest.mark.asyncio
-async def test_command_renders_selected_war_echoes_after_releasing_transaction(app, mocker, make_user_session):
+async def test_command_renders_selected_war_echoes_after_releasing_transaction(
+    app,
+    mocker,
+    make_user_session,
+    season_id,
+    selected_season_id,
+    requested_season_ids,
+):
     from nonebot_plugin_orm import get_session
     from nonebot_plugin_alconna import Image, Match, UniMessage
 
@@ -145,7 +166,7 @@ async def test_command_renders_selected_war_echoes_after_releasing_transaction(a
 
         async def render(view):
             assert not session.in_transaction()
-            assert (view.season.id, view.week.id) == ("3", "1")
+            assert (view.season.id, view.week.id) == (selected_season_id, "1")
             return b"war-echoes"
 
         async def send(message, **kwargs):
@@ -161,16 +182,19 @@ async def test_command_renders_selected_war_echoes_after_releasing_transaction(a
             user_session,
             session,  # pyright: ignore[reportArgumentType]
             Match(0, available=False),
-            season_id=3,
+            season_id=season_id,
             week_id=1,
         )
 
-        api.assert_awaited_once()
-        assert api.await_args.kwargs == {
-            "user_id": "remote-user",
-            "role_id": "role-1",
-            "server_id": "1",
-            "season_id": 3,
-        }
+        assert api.await_count == len(requested_season_ids)
+        assert [request.kwargs for request in api.await_args_list] == [
+            {
+                "user_id": "remote-user",
+                "role_id": "role-1",
+                "server_id": "1",
+                "season_id": requested_season_id,
+            }
+            for requested_season_id in requested_season_ids
+        ]
         assert len(messages) == 1
         assert messages[0][Image][0].raw == b"war-echoes"

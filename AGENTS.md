@@ -374,7 +374,7 @@ class Config(BaseModel):
 - `EfGroupedGachaRecord` 负责各类统计：总抽数、六星平均抽数、保底、UP/歪卡、武库配额、可见卡池切片。
 - `EfGachaView.from_record()` 保留完整累计统计，按各类别 `-b` / `-l` 选择池集合后，预先计算带五星汇总的付费六星事件与免费批次；免费抽不改变付费计数，多金分组和出货间隔不因分页重算。渲染只操作这些完整事件。
 - `render.render_ef_gacha_history(EfGachaView)` 返回有序 PNG 列表，固定 800px 三列：左列限定池，中列武器池，右列依次为新手、常驻、联合寻访。同类按最近抽卡时间倒序排列；每列只处理队首卡池，达到高度或该类别的每页池数上限时在下一页原列继续，不跨列补位，也不跳过较大的池先放后面的短池。短池保持完整，单池本身超长时才按完整事件续段；单页逻辑高度上限 1600px，累计统计仅首页展示。
-- `schemas/endfield/war_echoes.py` 负责评级、荣勋和最高通关难度投影；命令提交凭证刷新后再渲染脱离 ORM 的视图。
+- `schemas/endfield/war_echoes.py` 负责评级、荣勋、最高通关难度和相对赛季选择投影；`-s -1` 表示上一赛季，负数先从默认响应解析真实赛季 ID，再请求该赛季详情。命令提交凭证刷新后再渲染脱离 ORM 的视图。
 
 ### 渲染系统
 
@@ -483,7 +483,7 @@ uv run pytest -s tests/test_skland_api.py
 - `tests/test_bind.py` 覆盖 token/cred 确认式新增/更新、取消/超时零写入、确认期间状态变化，以及真实 UserSession 下选择性/全量解绑的双 waiter 和提交后反馈。
 - `tests/test_sign.py` 覆盖多账号同名/同 UID 角色、角色所属凭证、签到缓存 list 结构、序号选角和默认不变，以及签到/状态的 `--role`/`--all` 冲突、状态 owner/角色联合过滤、空结果和全体状态的 ORM 过期边界。
 - `tests/test_role_selection.py` 覆盖全部 13 个选角入口的长短选项、`-r` / `-ra` 冲突隔离、旧 UID 语法拒绝、更新开关保留，以及存在默认角色时无效序号的真实 matcher 分发，确保没有回退默认和外部数据访问。
-- `tests/test_war_echoes.py` 覆盖评级投影、荣勋累计、当前/指定赛季轮换选择、最高已通关难度和命令提交后渲染发送。
+- `tests/test_war_echoes.py` 覆盖评级投影、荣勋累计、当前/指定/相对赛季轮换选择、最高已通关难度和命令提交后渲染发送。
 - `tests/test_skland_api.py` 会调用真实接口；单独运行时使用 `uv run pytest -s tests/test_skland_api.py`，其中 `-s` 用于显示终端二维码输出；凭证优先级为：
   1. `tests/cred_cache.json`
   2. 环境变量 `SKLAND_TOKEN` 或 `SKLAND_CRED`

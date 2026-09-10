@@ -170,6 +170,7 @@ async def test_command_renders_selected_war_echoes_after_releasing_transaction(a
             "user_id": "remote-user",
             "role_id": "role-1",
             "server_id": "1",
+            "season_id": 3,
         }
         assert len(messages) == 1
         assert messages[0][Image][0].raw == b"war-echoes"

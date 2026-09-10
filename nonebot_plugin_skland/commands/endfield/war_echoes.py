@@ -28,6 +28,7 @@ async def ef_war_echoes_handler(
             user_id=user_id,
             role_id=character.role_id,
             server_id=character.channel_master_id,
+            season_id=season_id,
         )
 
     if target.available:

@@ -312,6 +312,28 @@ class TestRealAPI:
         assert card is not None, "返回的终末地卡片数据不应为空"
         logger.success(f"获取到终末地角色卡片，roleId={role.roleId}")
 
+    async def test_endfield_war_echoes(self, cred, binding):
+        """获取终末地战争回响数据（需要已绑定终末地角色）"""
+        from nonebot_plugin_skland.api import SklandAPI
+
+        ef_apps = [app for app in binding if app.appCode == "endfield"]
+        if not ef_apps or not ef_apps[0].bindingList:
+            pytest.skip("未绑定终末地角色")
+
+        char_info = ef_apps[0].bindingList[0]
+        role = char_info.roles[0] if char_info.roles else None
+        if not role:
+            pytest.skip("终末地角色无 role 信息")
+
+        data = await SklandAPI.endfield_war_echoes(
+            cred,
+            user_id=cred.userId,
+            role_id=role.roleId,
+            server_id=role.serverId,
+        )
+        assert data.seasons, "战争回响赛季列表不应为空"
+        logger.success(f"获取到终末地战争回响数据，season={data.seasons[0].name}")
+
 
 # ==================== 自定义接口测试模板 ====================
 

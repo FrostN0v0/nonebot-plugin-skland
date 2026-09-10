@@ -1,0 +1,161 @@
+{% autoescape true %}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=422, initial-scale=1">
+  <title>{{ view.season.name }} - 战争回响</title>
+  <style>{% include "index.css" %}</style>
+</head>
+<body class="m-0 min-h-full w-[422px] bg-[#2c2d2d]">
+  <main id="ef-war-echoes-card"
+    class="relative min-h-screen w-[422px] overflow-hidden bg-[#2c2d2d] px-4 text-white font-sans"
+    style="background-image: linear-gradient(180deg, rgb(255 255 255 / 5%), transparent 55%), repeating-linear-gradient(135deg, rgb(255 255 255 / 1.8%) 0, rgb(255 255 255 / 1.8%) 1px, transparent 1px, transparent 5px)">
+    <img class="pointer-events-none absolute top-0 left-0 z-[1] block h-auto w-full" src="{{ view.season.kvImage }}"
+      alt="">
+
+    <header class="relative -mx-4 h-[218px] bg-[#dcdcdc]">
+      <div class="absolute inset-0 z-[2] flex flex-col justify-end px-20 pt-20 pb-[52px]">
+        <div class="relative flex h-3.5 w-fit max-w-[145px] items-center overflow-hidden bg-[#23b1da] px-2 text-[10px] leading-3 font-medium text-[#111]">
+          <i class="absolute inset-y-0 left-0 w-1 bg-[#ff2102]"></i>
+          <span class="translate-y-[0.5px]">战争回响</span>
+        </div>
+        <div class="flex min-h-8 w-[145px] max-w-full items-center gap-1.5 bg-black/[0.7] py-1.5 pr-1 pl-2">
+          <strong class="min-w-0 flex-1 overflow-hidden pb-0.5 text-[18px] leading-[1.1] font-medium tracking-[-0.36px] text-[#eee]">
+            {{ view.season.name }}
+          </strong>
+          <img class="size-3.5 shrink-0 object-contain" src="{{ 'season_switch.png' | war_echoes_asset }}" alt="">
+        </div>
+        <time class="min-h-3.5 w-[145px] max-w-full bg-gray-500/[0.15] py-[3px] pr-2.5 pl-[9px] font-[Bender] text-[10px] leading-3 text-black/[0.4] backdrop-blur-[2px]">
+          {{ view.season.startTs | format_war_echoes_date }}–{{ view.season.endTs | format_war_echoes_date }}
+        </time>
+      </div>
+    </header>
+
+    <section class="relative -mx-4 -mt-0.5 min-h-[626px] bg-top bg-no-repeat px-4 pt-px pb-12 [background-size:100%_100%]"
+      style="background-image: url('{{ 'content.png' | war_echoes_asset }}')">
+      <div class="relative z-[2] -mt-3.5">
+        <h2 class="mt-4 mb-2.5 text-sm leading-[17px] font-medium text-white/[0.58]">// 个人数据</h2>
+
+        <div class="grid h-16 grid-cols-2 gap-1.5">
+          <article class="grid min-w-0 grid-cols-2 items-center rounded-sm bg-center bg-cover bg-no-repeat px-2 backdrop-blur-sm"
+            style="background-image: url('{{ 'summary_rating.png' | war_echoes_asset }}')">
+            <span class="min-w-0 text-center text-[13px] font-medium text-[#eee]">赛季评级</span>
+            {% set season_rating_url = view.season.rating | war_echoes_rating_asset %}
+            {% if season_rating_url %}
+            <img class="h-7 w-[59.5px] justify-self-center object-contain" src="{{ season_rating_url }}"
+              alt="{{ view.season.rating }}">
+            {% else %}
+            <strong class="flex h-7 w-[59.5px] items-center justify-center justify-self-center font-[Bender] text-lg font-black italic text-[#f8f8ef]">{{ view.season.rating }}</strong>
+            {% endif %}
+          </article>
+          <article class="grid min-w-0 grid-cols-[minmax(0,1fr)_100px] items-center rounded-sm bg-center bg-cover bg-no-repeat px-2 backdrop-blur-sm"
+            style="background-image: url('{{ 'summary_honor.png' | war_echoes_asset }}')">
+            <span class="min-w-0 text-center text-[13px] font-medium text-[#eee]">荣勋</span>
+            <div class="grid w-[100px] grid-cols-3 items-center gap-0.5">
+              {% for tier, label, count in [('gold', '金', view.honor.gold), ('silver', '银', view.honor.silver), ('bronze', '铜', view.honor.bronze)] %}
+              <div class="flex flex-col items-center">
+                <img class="size-[22px] object-contain" src="{{ ('honor_' ~ tier ~ '.png') | war_echoes_asset }}" alt="{{ label }}">
+                <strong class="mt-0.5 text-xs leading-none font-semibold text-white">{{ count }}</strong>
+              </div>
+              {% endfor %}
+            </div>
+          </article>
+        </div>
+
+        <nav class="flex h-10 gap-2 overflow-hidden" aria-label="轮换列表">
+          {% for week in view.season.weeks %}
+          {% set active = week.id == view.week.id %}
+          <div class="relative flex min-w-0 shrink-0 items-end justify-center overflow-hidden px-2 pb-[5px] text-sm leading-[16.8px] font-semibold whitespace-nowrap {{ 'text-white' if active else 'text-white/[0.48]' }}">
+            {% if active %}
+            <i class="absolute inset-x-0 bottom-0.5 h-[19px]"
+              style="background: linear-gradient(to bottom, rgb(255 0 4 / 0%) 0%, rgb(255 0 4 / 20%) 90%)"></i>
+            <i class="absolute inset-x-0 bottom-0 h-0.5 bg-[#ff2102]"></i>
+            {% if loop.index <= 3 %}
+            <img class="absolute left-1 h-7 w-auto object-contain" src="{{ ('week_' ~ loop.index ~ '.png') | war_echoes_asset }}" alt="">
+            {% endif %}
+            {% endif %}
+            <span class="relative z-[1]">{{ week.name }}</span>
+          </div>
+          {% endfor %}
+        </nav>
+
+        <div class="mt-2 flex min-h-11 items-center justify-between gap-2 rounded-sm bg-black/[0.4] py-2 px-3 text-[10px] leading-[12.1px] font-medium text-[#bfbfbf]">
+          <div class="flex min-w-0 flex-col gap-[3px]">
+            <span>轮换周期：</span>
+            <time class="font-[Bender] text-[10px] leading-3 text-[#787878]">
+              {{ view.week.startTs | format_war_echoes_date }}–{{ view.week.endTs | format_war_echoes_date }}
+            </time>
+          </div>
+          <div class="flex shrink-0 items-center gap-1">
+            <span>本轮评级</span>
+            {% set week_rating_url = view.week.rating | war_echoes_rating_asset %}
+            {% if week_rating_url %}
+            <img class="h-7 w-[59.5px] object-contain" src="{{ week_rating_url }}" alt="{{ view.week.rating }}">
+            {% else %}
+            <strong class="flex h-7 w-[59.5px] items-center justify-center font-[Bender] text-lg font-black italic text-[#f8f8ef]">{{ view.week.rating }}</strong>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="mt-1.5 flex flex-col gap-1.5">
+          {% for group in view.week.dungeonGroups %}
+          {% set dungeon = group.selected_dungeon %}
+          <article class="relative h-[108px] w-full overflow-hidden rounded-sm bg-center bg-cover bg-no-repeat px-3.5 py-3 text-left text-white shadow-[0_0_8px_rgb(0_0_0/10%),0_2px_4px_rgb(0_0_0/15%)]"
+            style="background-image: url('{{ ('dungeon.png' if dungeon else 'dungeon_empty.png') | war_echoes_asset }}')">
+            <div class="absolute top-1.5 right-3.5 left-3 flex h-7 items-center justify-between gap-3 pr-[66px]">
+              <div class="flex min-w-0 flex-1 flex-col items-start gap-1">
+                <strong class="w-full min-w-0 text-sm leading-[1.2] font-semibold text-[#eee]">{{ group.name }}</strong>
+                <img class="h-1 w-[49px] shrink-0 object-contain" src="{{ 'title_rule.png' | war_echoes_asset }}" alt="">
+              </div>
+              <img class="absolute top-[calc(50%-2px)] right-0 h-[22px] translate-x-1 -translate-y-1/2 object-contain"
+                src="{{ group.star | war_echoes_stage_asset(group.plusTask) }}" alt="{{ group.star }}星">
+            </div>
+
+            {% if dungeon and dungeon.bestRecord %}
+            <div class="absolute right-3.5 bottom-2.5 left-3.5 flex h-[52px] items-center justify-between gap-3">
+              <div class="relative top-[-10px] left-[-2px] flex min-w-0 flex-1 items-center gap-0.5 overflow-hidden text-[13px] font-semibold whitespace-nowrap text-[#d7e127]">
+                <img class="size-4 shrink-0 object-contain" src="{{ 'time.png' | war_echoes_asset }}" alt="">
+                <strong class="relative top-[-1.5px] min-w-0 overflow-hidden leading-[1.2]">
+                  {{ dungeon.bestRecord.passTs | format_war_echoes_duration }}
+                </strong>
+              </div>
+              <div class="flex shrink-0 items-center gap-1 drop-shadow-[0_1px_4px_rgb(0_0_0/20%)]">
+                {% for index in range(4) %}
+                {% set character = dungeon.bestRecord.chars[index] if index < dungeon.bestRecord.chars | length else none %}
+                <div class="relative flex size-12 shrink-0 overflow-hidden rounded-[3px] border-[0.5px] border-white/[0.2] bg-white/[0.1]">
+                  {% if character %}
+                  <img class="size-full object-cover" src="{{ character.avatarUrl }}" alt="">
+                  <img class="absolute top-0.5 left-0.5 size-3.5 object-contain"
+                    src="../images/endfield/{{ character.property.key | get_property_icon }}" alt="">
+                  <span class="absolute bottom-0.5 left-0 flex min-w-4 items-center justify-center rounded-tr-[2px] border-[0.5px] border-white/[0.2] bg-black/[0.6] px-0.5 pb-px font-[Bender] text-[10px] leading-[1.2] font-semibold text-[#eee]">
+                    {{ character.level }}
+                  </span>
+                  {% set potential_url = character.potentialLevel | war_echoes_potential_asset %}
+                  {% if potential_url %}
+                  <img class="absolute right-0 bottom-0.5 size-3.5 object-cover drop-shadow-[0_1px_2px_rgb(0_0_0/85%)]"
+                    src="{{ potential_url }}" alt="">
+                  {% endif %}
+                  <i class="absolute bottom-0 left-0 h-0.5 w-12"
+                    style="background-color: {{ character.rarity.key | get_rarity_color }}"></i>
+                  {% else %}
+                  <img class="m-auto size-4 object-contain" src="{{ 'operator_empty.png' | war_echoes_asset }}" alt="">
+                  {% endif %}
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+          </article>
+          {% endfor %}
+        </div>
+
+        <footer class="mt-[26px] flex h-10 items-center justify-center text-center font-[Bender] text-[10px] tracking-wider text-white/60">
+          Generated by nonebot-plugin-skland
+        </footer>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+{% endautoescape %}

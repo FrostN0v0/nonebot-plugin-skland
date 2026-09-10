@@ -8,6 +8,7 @@ from .arknights import Topics as Topics
 from .sign import SignCache as SignCache
 from .arknights import ArkCard as ArkCard
 from .sign import SignResult as SignResult
+from .endfield import WarEchoes as WarEchoes
 from .arknights import CharTable as CharTable
 from .arknights import GachaCate as GachaCate
 from .arknights import GachaInfo as GachaInfo
@@ -31,6 +32,7 @@ from .arknights import GachaDetails as GachaDetails
 from .arknights import OperatorCard as OperatorCard
 from .arknights import OperatorSort as OperatorSort
 from .arknights import RogueHistory as RogueHistory
+from .endfield import WarEchoesView as WarEchoesView
 from .arknights import GachaResponse as GachaResponse
 from .binding import BoundRolesCard as BoundRolesCard
 from .binding import BoundRolesPlan as BoundRolesPlan

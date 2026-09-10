@@ -1,4 +1,6 @@
+import os
 from pathlib import Path
+from importlib.metadata import version
 
 import pytest
 import nonebot
@@ -11,6 +13,8 @@ from nonebug import NONEBOT_INIT_KWARGS, NONEBOT_START_LIFESPAN, App
 
 def pytest_configure(config: pytest.Config):
     config.stash[NONEBOT_INIT_KWARGS] = {
+        "_env_file": (os.devnull,),
+        "log_level": "INFO",
         "sqlalchemy_database_url": "sqlite+aiosqlite://",
         "sqlalchemy_engine_options": {"poolclass": StaticPool},
         "driver": "~fastapi+~httpx",
@@ -28,13 +32,41 @@ def pytest_collection_modifyitems(items):
 
 
 @pytest.fixture(scope="session", autouse=True)
-async def after_nonebot_init(after_nonebot_init: None):
+async def after_nonebot_init(after_nonebot_init: None, tmp_path_factory: pytest.TempPathFactory):
     """NoneBug 初始化后注册适配器并加载插件"""
 
     driver = nonebot.get_driver()
+    store = tmp_path_factory.getbasetemp() / "localstore"
+    driver.config.localstore_cache_dir = store / "cache"
+    driver.config.localstore_config_dir = store / "config"
+    driver.config.localstore_data_dir = store / "data"
+    if version("nonebot-plugin-htmlrender").startswith("0.7."):
+        driver.config.render_backend = "playwright"
+    # htmlrender 0.8 restricts local template access; older versions ignore this namespace.
+    driver.config.render = {
+        "startup": "off",
+        "resources": {
+            "local_access": {
+                "allowed_paths": [
+                    tmp_path_factory.getbasetemp(),
+                ],
+            },
+        },
+    }
     driver.register_adapter(OneBotV11Adapter)
     await driver._lifespan.startup()
     nonebot.load_from_toml("pyproject.toml")
+
+
+@pytest.fixture(scope="session")
+def tiny_png() -> bytes:
+    from io import BytesIO
+
+    from PIL import Image
+
+    image = BytesIO()
+    Image.new("RGB", (1, 1), "white").save(image, format="PNG")
+    return image.getvalue()
 
 
 @pytest.fixture

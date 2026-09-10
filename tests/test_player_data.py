@@ -449,12 +449,12 @@ async def test_get_ark_card_refreshes_each_waiter_context(app, mocker):
 
 
 @pytest.mark.asyncio
-async def test_gacha_handler_renders_after_session_commit(app, mocker):
+async def test_gacha_handler_renders_after_session_commit(app, mocker, tiny_png):
     from nonebot_plugin_orm import get_session
-    from nonebot_plugin_htmlrender.data_source import template_to_html
 
     import nonebot_plugin_skland.render as render
     import nonebot_plugin_skland.commands.gacha as gacha
+    from nonebot_plugin_skland.compact import template_to_html
     from nonebot_plugin_skland.model import SkUser, Character, CharacterDefault
 
     rendered_html: list[str] = []
@@ -467,7 +467,7 @@ async def test_gacha_handler_renders_after_session_commit(app, mocker):
             **kwargs["templates"],
         )
         rendered_html.append(html)
-        return b"image"
+        return tiny_png
 
     mocker.patch.object(render, "template_to_pic", new=render_template)
     mocker.patch.object(gacha, "send_reaction")

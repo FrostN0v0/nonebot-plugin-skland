@@ -151,6 +151,22 @@ _✨ 通过森空岛查询游戏数据 ✨_
 >
 > 本插件所使用的`干员半身像`、`技能图标`等资源均优先调用本地，不存在时从网络请求。开启 `skland__ark_portrait_cache_enabled` 后，首次渲染仍直接使用远程方舟干员或皮肤半身图；Chromium 加载成功后会将该响应写入本地缓存，后续渲染优先读取本地。该过程不会额外请求图片或重新生成 HTML，接口直接返回的图片链接仍由浏览器访问。方舟干员页面会显式等待字体及全部图片完成加载和解码后截图，不再等待每页进入 `networkidle`；远程背景也会加入该等待。方舟干员默认输出 JPEG 90，可通过配置切回 PNG。全量资源更新仍为可选项。
 
+### htmlrender 版本兼容
+
+插件保留 htmlrender 0.6.5 起的旧接口支持，同时适配 0.8.x，不要求旧版用户整体升级。模板布局、截图格式、缩放、毫秒截图超时、半身图缓存及终末地抽卡分页保持原有行为。
+
+- **0.6.x**：沿用原有 htmlrender 配置。
+- **0.7.x**：按上游要求选择 `render_backend=playwright`，浏览器选项放在 `render_playwright` 下。
+- **0.8.x**：无需为本插件填写 `render__provider` 或 `render__resources__local_access__allowed_paths`。插件自动处理自带模板、字体、图片和缓存目录；未配置共享 Playwright 时按需使用默认 Chromium，已有共享 Playwright 时直接复用。
+
+自动授权只存在于 skland 的私有资源作用域，不修改其他插件共用的全局路径权限，也不设置全盘访问。用户已有的浏览器连接、启动参数和显式授权保持有效；插件退出只清理自己创建的应用，不关闭其他插件仍在使用的共享浏览器。关闭开始后拒绝新的模板和页面请求，不会重新创建浏览器。
+
+0.8.x 的普通模板截图沿用上游资源策略：本机默认通过 `file` 访问，远程默认通过 `memory` 传输；显式选择的 `filehost`、`passthrough`、`error` 和关闭资源解析的配置继续生效，无需强制使用 filehost。兼容层复用上游资源准备、发布与浏览器路由，仍保留原生全页截图和毫秒截图超时；半身图资源就绪与终末地抽卡分页的自定义页面流程维持原有行为。
+
+Playwright 依赖及浏览器运行环境仍需正常安装（htmlrender 的 `[playwright]` 或 `[all]` extra）；浏览器首次安装沿用上游逻辑。仅当需要自定义浏览器连接等高级行为时才配置上游。0.8 会拒绝 `render_backend` 等旧配置键，升级时应移除或迁移旧键，不要将两代配置同时填写。详见 [htmlrender 官方指南](https://github.com/kexue-z/nonebot-plugin-htmlrender/blob/v0.8.1/docs/guides/migration/v0.8.md)。
+
+已知问题：htmlrender 0.8.1 的自动安装子进程可能遗漏浏览器缓存目录，导致安装后仍找不到浏览器。该问题暂时保留并交由上游处理，本插件不修补安装器；已有可用浏览器的接口适配不受此次移除影响。
+
 ### background_source
 
 `skland__background_source` 为背景图来源，可选值为字面量 `default` / `Lolicon` / `random` 或者结构 `CustomSource` 。 `Lolicon` 为网络请求获取随机带`arknights`tag 的背景图，`random`为从[默认背景目录](/nonebot_plugin_skland/resources/images/background/)中随机, `CustomSource` 用于自定义背景图。 默认为 `default`。

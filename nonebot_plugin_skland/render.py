@@ -1,10 +1,10 @@
 from datetime import datetime
 
 from pydantic import AnyUrl as Url
-from nonebot_plugin_htmlrender import get_new_page, template_to_html
 
 from .image_cache import wait_for_page_resources
 from .config import RES_DIR, TEMPLATES_DIR, config
+from .compact import get_new_page, template_to_html
 from .image_cache import cached_template_to_pic as template_to_pic
 from .schemas import (
     Clue,
@@ -52,7 +52,7 @@ async def render_operator_roster(
         },
         pages={
             "viewport": {"width": 706, "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         device_scale_factor=1.5,
         screenshot_timeout=config.render_timeout,
@@ -69,7 +69,7 @@ async def render_bound_roles_card(props: BoundRolesCard) -> bytes:
         templates={"props": props},
         pages={
             "viewport": {"width": 706, "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         device_scale_factor=1.5,
         screenshot_timeout=config.render_timeout,
@@ -105,7 +105,7 @@ async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:
         },
         pages={
             "viewport": {"width": 706, "height": 1160},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         screenshot_timeout=config.render_timeout,
     )
@@ -131,7 +131,7 @@ async def render_rogue_card(props: RogueData, bg: str | Url) -> bytes:
         },
         pages={
             "viewport": {"width": 2200, "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         device_scale_factor=1.5,
         screenshot_timeout=config.render_timeout,
@@ -164,7 +164,7 @@ async def render_rogue_info(props: RogueData, bg: str | Url, id: int, is_favored
         },
         pages={
             "viewport": {"width": 1100, "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         device_scale_factor=1.5,
         screenshot_timeout=config.render_timeout,
@@ -180,7 +180,7 @@ async def render_clue_board(props: Clue):
         },
         pages={
             "viewport": {"width": 1100, "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         device_scale_factor=1.5,
         screenshot_timeout=config.render_timeout,
@@ -212,7 +212,7 @@ async def render_gacha_history(
         },
         pages={
             "viewport": {"width": 720, "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         device_scale_factor=1.5,
         screenshot_timeout=config.render_timeout,
@@ -325,7 +325,7 @@ async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = Fa
         },
         pages={
             "viewport": {"width": 706, "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         screenshot_timeout=config.render_timeout,
     )

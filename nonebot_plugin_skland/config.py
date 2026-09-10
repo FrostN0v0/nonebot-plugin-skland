@@ -1,6 +1,6 @@
 import random
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 from nonebot import logger
 from pydantic import Field
@@ -29,7 +29,7 @@ OPERATOR_METADATA_PATH = DATA_DIR / "operator_metadata.json"
 class CustomSource(BaseModel):
     uri: Url | Path
 
-    def to_uri(self) -> Any:
+    def resolve(self) -> Url | Path:
         if isinstance(self.uri, Path):
             uri = self.uri
             if not uri.is_absolute():
@@ -38,11 +38,11 @@ class CustomSource(BaseModel):
             if uri.is_dir():
                 files = [file for file in uri.iterdir() if file.is_file()]
                 logger.debug(f"CustomSource: {uri} is a directory, random pick a file: {files}")
-                return random.choice(files).resolve().as_uri()
+                return random.choice(files).resolve()
 
             if not uri.exists():
                 raise FileNotFoundError(f"CustomSource: {uri} not exists")
-            return uri.resolve().as_uri()
+            return uri.resolve()
 
         return self.uri
 

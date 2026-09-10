@@ -161,11 +161,18 @@ async def test_template_failure_preserves_the_original_error(app, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_local_background_sources_return_file_urls(app, tmp_path, monkeypatch):
-    from urllib.parse import urlsplit
+async def test_local_background_paths_are_preserved_for_messages(app, tmp_path, monkeypatch):
+    from pathlib import Path
+
+    from nonebot_plugin_alconna import Text, Image
 
     from nonebot_plugin_skland.config import CustomSource, config
-    from nonebot_plugin_skland.utils.background import get_background_image, get_rogue_background_image
+    from nonebot_plugin_skland.utils.message import build_background_argot_segment
+    from nonebot_plugin_skland.utils.background import (
+        background_to_uri,
+        get_background_image,
+        get_rogue_background_image,
+    )
 
     monkeypatch.setattr(config, "background_source", "default")
     monkeypatch.setattr(config, "rogue_background_source", "rogue")
@@ -174,11 +181,25 @@ async def test_local_background_sources_return_file_urls(app, tmp_path, monkeypa
         await get_background_image("endfield"),
         await get_rogue_background_image("rogue_1"),
     )
-    assert all(urlsplit(str(background)).scheme == "file" for background in backgrounds)
+    assert all(isinstance(background, Path) for background in backgrounds)
+    for background in backgrounds:
+        assert isinstance(background, Path)
+        assert background.is_file()
+        assert background_to_uri(background) == background.as_uri()
+        segment = build_background_argot_segment(background)
+        assert isinstance(segment, Image)
+        assert segment.path == background
 
     custom_background = tmp_path / "background #1.png"
     custom_background.write_bytes(b"image")
-    assert CustomSource(uri=custom_background).to_uri() == custom_background.resolve().as_uri()
+    assert CustomSource(uri=custom_background).resolve() == custom_background.resolve()
+
+    remote_segments = build_background_argot_segment("https://example.com/background.png")
+    assert isinstance(remote_segments, list)
+    assert isinstance(remote_segments[0], Text)
+    assert remote_segments[0].text == "https://example.com/background.png"
+    assert isinstance(remote_segments[1], Image)
+    assert remote_segments[1].url == "https://example.com/background.png"
 
 
 @pytest.mark.asyncio

@@ -1,10 +1,9 @@
 from datetime import datetime
 
-from pydantic import AnyUrl as Url
-
 from .image_cache import wait_for_page_resources
 from .config import RES_DIR, TEMPLATES_DIR, config
 from .compact import open_html_page, template_to_html
+from .utils.background import BackgroundImage, background_to_uri
 from .image_cache import cached_template_to_pic as template_to_pic
 from .schemas import (
     Clue,
@@ -48,14 +47,14 @@ from .filters import (
 async def render_operator_roster(
     *,
     props: OperatorRoster,
-    background_image: str | Url | None,
+    background_image: BackgroundImage | None,
 ) -> bytes:
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),
         template_name="operator_roster.html.jinja2",
         templates={
             "props": props,
-            "background_image": background_image,
+            "background_image": background_to_uri(background_image),
         },
         pages={
             "viewport": {"width": 706, "height": 1},
@@ -84,13 +83,13 @@ async def render_bound_roles_card(props: BoundRolesCard) -> bytes:
     )
 
 
-async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:
+async def render_ark_card(props: ArkCard, bg: BackgroundImage) -> bytes:
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),
         template_name="ark_card.html.jinja2",
         templates={
             "now_ts": datetime.now().timestamp(),
-            "background_image": bg,
+            "background_image": background_to_uri(bg),
             "status": props.status,
             "employed_chars": len(props.chars),
             "skins": len(props.skins),
@@ -118,12 +117,12 @@ async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:
     )
 
 
-async def render_rogue_card(props: RogueData, bg: str | Url) -> bytes:
+async def render_rogue_card(props: RogueData, bg: BackgroundImage) -> bytes:
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),
         template_name="rogue.html.jinja2",
         templates={
-            "background_image": bg,
+            "background_image": background_to_uri(bg),
             "topic_img": props.topic_img,
             "topic": props.topic,
             "now_ts": datetime.now().timestamp(),
@@ -145,7 +144,7 @@ async def render_rogue_card(props: RogueData, bg: str | Url) -> bytes:
     )
 
 
-async def render_rogue_info(props: RogueData, bg: str | Url, id: int, is_favored: bool) -> bytes:
+async def render_rogue_info(props: RogueData, bg: BackgroundImage, id: int, is_favored: bool) -> bytes:
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),
         template_name="rogue_info.html.jinja2",
@@ -155,7 +154,7 @@ async def render_rogue_info(props: RogueData, bg: str | Url, id: int, is_favored
             if is_favored and id - 1 < len(props.history.favourRecords)
             else (props.history.records[id - 1] if id - 1 < len(props.history.records) else None),
             "is_favored": is_favored,
-            "background_image": bg,
+            "background_image": background_to_uri(bg),
             "topic_img": props.topic_img,
             "topic": props.topic,
             "now_ts": datetime.now().timestamp(),
@@ -287,7 +286,12 @@ async def render_ef_war_echoes(props: WarEchoesView) -> bytes:
     )
 
 
-async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = False, is_simple: bool = False) -> bytes:
+async def render_ef_card(
+    props: EndfieldCard,
+    bg: BackgroundImage,
+    show_all: bool = False,
+    is_simple: bool = False,
+) -> bytes:
     # 预处理角色列表：根据 show_all 决定是否过滤
     if show_all:
         filtered_chars = props.chars
@@ -327,7 +331,7 @@ async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = Fa
         template_name="endfield_card.html.jinja2",
         templates={
             "now_ts": datetime.now().timestamp(),
-            "background_image": bg,
+            "background_image": background_to_uri(bg),
             "simple_bg_enabled": simple_bg_enabled,
             "simple_bg": simple_bg,
             "simple_bg_top": simple_bg_top,

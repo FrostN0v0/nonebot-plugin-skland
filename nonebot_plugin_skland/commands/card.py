@@ -6,7 +6,7 @@ from nonebot.compat import model_dump
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_alconna import At, Match, UniMessage
-from nonebot_plugin_argot import Text, Argot, Image, ArgotEvent, on_argot
+from nonebot_plugin_argot import Argot, ArgotEvent, on_argot
 
 from ..schemas import Clue
 from ..config import config
@@ -15,7 +15,7 @@ from ..exception import SklandException
 from .selection import check_user_character
 from ..utils.background import get_background_image
 from ..render import render_ark_card, render_clue_board
-from ..utils.message import send_reaction, send_request_error
+from ..utils.message import send_reaction, send_request_error, build_background_argot_segment
 
 
 async def card_handler(
@@ -50,10 +50,7 @@ async def card_handler(
         return
     background = await get_background_image("ark")
     image = await render_ark_card(info, background)
-    if str(background).startswith("http"):
-        argot_seg = [Text(str(background)), Image(url=str(background))]
-    else:
-        argot_seg = Image(path=str(background))
+    argot_seg = build_background_argot_segment(background)
     msg = UniMessage.image(raw=image) + Argot(
         "background", argot_seg, command="background", expired_at=config.argot_expire
     )

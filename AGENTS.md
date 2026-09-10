@@ -399,7 +399,7 @@ class Config(BaseModel):
 
 模板位于 `resources/templates/`，过滤器位于 `filters.py`。Tailwind 输出 CSS 为 `nonebot_plugin_skland/resources/templates/index.css`。
 
-`ArkCard.recruit_complete_time` 直接依赖 `filters.format_timestamp`，schema 不反向导入 `render.py`。背景选择位于 `utils/background.py`，不混入渲染入口；本地背景统一使用 `Path.as_uri()` 返回 `file://` URI，由兼容层按当前资源策略处理，禁止向浏览器传递裸本地路径。
+`ArkCard.recruit_complete_time` 直接依赖 `filters.format_timestamp`，schema 不反向导入 `render.py`。背景选择位于 `utils/background.py`，本地来源返回 `Path`、远程来源返回 URL；渲染入口将本地路径转换为 `file://` URI，消息和 Argot 则保留真实路径，禁止跨边界复用同一种字符串表示。
 
 账号角色卡的纹理、阴影和字体样式集中于 `tailwind.css` 的 `bound-roles-*` 类，终末地抽卡复用相同主题类而不更改角色卡样式。账号角色卡仍沿用 706px 视口、1.5 倍 PNG 和全局截图超时，不额外请求角色详情或远程图片。
 

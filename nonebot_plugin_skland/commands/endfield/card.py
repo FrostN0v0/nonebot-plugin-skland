@@ -1,7 +1,7 @@
 from nonebot_plugin_argot import Argot
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_user import UserSession, get_user
-from nonebot_plugin_alconna import At, Text, Image, Match, UniMessage
+from nonebot_plugin_alconna import At, Match, UniMessage
 
 from ...schemas import CRED
 from ...api import SklandAPI
@@ -12,7 +12,7 @@ from ...exception import SklandException
 from ..selection import check_user_character
 from ...services.auth import refresh_credentials
 from ...utils.background import get_background_image
-from ...utils.message import send_reaction, send_request_error
+from ...utils.message import send_reaction, send_request_error, build_background_argot_segment
 
 
 async def efcard_handler(
@@ -60,10 +60,7 @@ async def efcard_handler(
         return
     background = await get_background_image("endfield")
     image = await render_ef_card(info, background, show_all, is_simple)
-    if str(background).startswith("http"):
-        argot_seg = [Text(str(background)), Image(url=str(background))]
-    else:
-        argot_seg = Image(path=str(background))
+    argot_seg = build_background_argot_segment(background)
     msg = UniMessage.image(raw=image) + Argot(
         "background", argot_seg, command="background", expired_at=config.argot_expire
     )

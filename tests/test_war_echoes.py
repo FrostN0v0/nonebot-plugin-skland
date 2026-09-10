@@ -81,7 +81,14 @@ def _war_echoes_data():
 def test_view_selects_active_week_and_projects_official_ratings(app):
     from nonebot_plugin_skland.schemas import WarEchoesView
 
-    view = WarEchoesView.from_data(_war_echoes_data(), now=150)
+    view = WarEchoesView.from_data(
+        _war_echoes_data(),
+        nickname="管理员",
+        role_id="role-1",
+        server_name="China",
+        avatar_url="https://example.com/profile.png",
+        now=150,
+    )
 
     assert view.season.id == "3"
     assert view.season.rating == "S+"
@@ -92,6 +99,12 @@ def test_view_selects_active_week_and_projects_official_ratings(app):
     assert view.week.dungeonGroups[0].selected_dungeon.bestRecord is not None
     assert view.week.dungeonGroups[0].selected_dungeon.bestRecord.passTs == "57"
     assert view.honor.model_dump() == {"gold": 1, "silver": 2, "bronze": 3}
+    assert (view.nickname, view.role_id, view.server_name, view.avatar_url) == (
+        "管理员",
+        "role-1",
+        "China",
+        "https://example.com/profile.png",
+    )
 
 
 def test_view_accepts_explicit_season_and_week_and_rejects_unknown_values(app):
@@ -117,8 +130,8 @@ def test_view_selects_season_relative_to_current(app):
 
 
 @pytest.mark.parametrize(
-    ("season_id", "selected_season_id", "requested_season_ids"),
-    [(3, "3", [3]), (-1, "2", [None, "2"])],
+    ("season_id", "selected_season_id", "requested_season_ids", "profile_available"),
+    [(3, "3", [3], True), (-1, "2", [None, "2"], True), (3, "3", [3], False)],
 )
 @pytest.mark.asyncio
 async def test_command_renders_selected_war_echoes_after_releasing_transaction(
@@ -128,6 +141,7 @@ async def test_command_renders_selected_war_echoes_after_releasing_transaction(
     season_id,
     selected_season_id,
     requested_season_ids,
+    profile_available,
 ):
     from nonebot_plugin_orm import get_session
     from nonebot_plugin_alconna import Image, Match, UniMessage
@@ -167,6 +181,12 @@ async def test_command_renders_selected_war_echoes_after_releasing_transaction(
         async def render(view):
             assert not session.in_transaction()
             assert (view.season.id, view.week.id) == (selected_season_id, "1")
+            assert (view.nickname, view.role_id, view.server_name, view.avatar_url) == (
+                "管理员",
+                "role-1",
+                "China",
+                "https://example.com/profile.png" if profile_available else "",
+            )
             return b"war-echoes"
 
         async def send(message, **kwargs):
@@ -174,6 +194,11 @@ async def test_command_renders_selected_war_echoes_after_releasing_transaction(
             messages.append(message)
 
         api = mocker.patch.object(command.SklandAPI, "endfield_war_echoes", return_value=_war_echoes_data())
+        profile = mocker.patch.object(command.SklandAPI, "endfield_card")
+        if profile_available:
+            profile.return_value = mocker.Mock(base=mocker.Mock(avatarUrl="https://example.com/profile.png"))
+        else:
+            profile.side_effect = RuntimeError("profile unavailable")
         mocker.patch.object(command, "render_ef_war_echoes", new=render)
         mocker.patch.object(command, "send_reaction")
         mocker.patch.object(UniMessage, "send", new=send)
@@ -196,5 +221,11 @@ async def test_command_renders_selected_war_echoes_after_releasing_transaction(
             }
             for requested_season_id in requested_season_ids
         ]
+        profile.assert_awaited_once()
+        assert profile.await_args.kwargs == {
+            "user_id": "remote-user",
+            "role_id": "role-1",
+            "server_id": "1",
+        }
         assert len(messages) == 1
         assert messages[0][Image][0].raw == b"war-echoes"

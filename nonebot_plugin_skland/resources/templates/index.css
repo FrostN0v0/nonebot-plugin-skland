@@ -276,9 +276,6 @@
   .top-18\.25 {
     top: calc(var(--spacing) * 18.25);
   }
-  .top-\[-1\.5px\] {
-    top: -1.5px;
-  }
   .top-\[-10px\] {
     top: -10px;
   }
@@ -1072,6 +1069,9 @@
   .w-\[49px\] {
     width: 49px;
   }
+  .w-\[51px\] {
+    width: 51px;
+  }
   .w-\[59\.5px\] {
     width: 59.5px;
   }
@@ -1470,9 +1470,6 @@
   }
   .self-stretch {
     align-self: stretch;
-  }
-  .justify-self-center {
-    justify-self: center;
   }
   .truncate {
     overflow: hidden;
@@ -2330,6 +2327,9 @@
   .text-\[13px\] {
     font-size: 13px;
   }
+  .text-\[15px\] {
+    font-size: 15px;
+  }
   .text-\[18px\] {
     font-size: 18px;
   }
@@ -2389,6 +2389,10 @@
   .leading-\[1\.2\] {
     --tw-leading: 1.2;
     line-height: 1.2;
+  }
+  .leading-\[9px\] {
+    --tw-leading: 9px;
+    line-height: 9px;
   }
   .leading-\[12\.1px\] {
     --tw-leading: 12.1px;
@@ -2471,6 +2475,9 @@
   }
   .break-all {
     word-break: break-all;
+  }
+  .text-ellipsis {
+    text-overflow: ellipsis;
   }
   .whitespace-nowrap {
     white-space: nowrap;
@@ -2603,6 +2610,9 @@
   }
   .text-\[\#d7e127\] {
     color: #d7e127;
+  }
+  .text-\[\#e3d600\] {
+    color: #e3d600;
   }
   .text-\[\#eee\] {
     color: #eee;

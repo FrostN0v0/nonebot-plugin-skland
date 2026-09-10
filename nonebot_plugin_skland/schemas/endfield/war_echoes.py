@@ -204,6 +204,10 @@ class WarEchoesView(BaseModel):
     season: WarEchoesSeason
     week: WarEchoesWeek
     honor: WarEchoesHonorSummary
+    nickname: str = ""
+    role_id: str = ""
+    server_name: str = ""
+    avatar_url: str = ""
 
     @classmethod
     def from_data(
@@ -212,6 +216,10 @@ class WarEchoesView(BaseModel):
         *,
         season_id: str | int | None = None,
         week_id: str | int | None = None,
+        nickname: str = "",
+        role_id: str = "",
+        server_name: str = "",
+        avatar_url: str = "",
         now: float | None = None,
     ) -> WarEchoesView:
         season = data.select_season(season_id, now=now)
@@ -219,4 +227,8 @@ class WarEchoesView(BaseModel):
             season=season,
             week=season.select_week(week_id, now=now),
             honor=WarEchoesHonorSummary.from_achievements(data.achieves),
+            nickname=nickname,
+            role_id=role_id,
+            server_name=server_name,
+            avatar_url=avatar_url,
         )

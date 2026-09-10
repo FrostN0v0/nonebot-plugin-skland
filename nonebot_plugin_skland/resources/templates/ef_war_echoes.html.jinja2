@@ -20,11 +20,17 @@
           <i class="absolute inset-y-0 left-0 w-1 bg-[#ff2102]"></i>
           <span class="translate-y-[0.5px]">战争回响</span>
         </div>
-        <div class="flex min-h-8 w-[145px] max-w-full items-center gap-1.5 bg-black/[0.7] py-1.5 pr-1 pl-2">
-          <strong class="min-w-0 flex-1 overflow-hidden pb-0.5 text-[18px] leading-[1.1] font-medium tracking-[-0.36px] text-[#eee]">
+        <div class="flex min-h-8 w-[145px] max-w-full items-center gap-1 bg-black/[0.7] py-1 pr-1 pl-2">
+          <strong class="min-w-0 flex-1 overflow-hidden pb-0.5 text-[18px] leading-[1.1] font-medium tracking-[-0.36px] whitespace-nowrap text-[#eee]">
             {{ view.season.name }}
           </strong>
-          <img class="size-3.5 shrink-0 object-contain" src="{{ 'season_switch.png' | war_echoes_asset }}" alt="">
+          {% set season_rating_url = view.season.rating | war_echoes_rating_asset %}
+          {% if season_rating_url %}
+          <img class="h-6 w-[51px] shrink-0 object-contain" src="{{ season_rating_url }}"
+            alt="{{ view.season.rating }}">
+          {% else %}
+          <strong class="flex h-6 w-[51px] shrink-0 items-center justify-center font-[Bender] text-base font-black italic text-[#f8f8ef]">{{ view.season.rating }}</strong>
+          {% endif %}
         </div>
         <time class="min-h-3.5 w-[145px] max-w-full bg-gray-500/[0.15] py-[3px] pr-2.5 pl-[9px] font-[Bender] text-[10px] leading-3 text-black/[0.4] backdrop-blur-[2px]">
           {{ view.season.startTs | format_war_echoes_date }}–{{ view.season.endTs | format_war_echoes_date }}
@@ -38,16 +44,19 @@
         <h2 class="mt-4 mb-2.5 text-sm leading-[17px] font-medium text-white/[0.58]">// 个人数据</h2>
 
         <div class="grid h-16 grid-cols-2 gap-1.5">
-          <article class="grid min-w-0 grid-cols-2 items-center rounded-sm bg-center bg-cover bg-no-repeat px-2 backdrop-blur-sm"
+          <article class="relative flex min-w-0 items-center gap-2 overflow-hidden rounded-sm bg-center bg-cover bg-no-repeat px-2 text-white backdrop-blur-sm"
             style="background-image: url('{{ 'summary_rating.png' | war_echoes_asset }}')">
-            <span class="min-w-0 text-center text-[13px] font-medium text-[#eee]">赛季评级</span>
-            {% set season_rating_url = view.season.rating | war_echoes_rating_asset %}
-            {% if season_rating_url %}
-            <img class="h-7 w-[59.5px] justify-self-center object-contain" src="{{ season_rating_url }}"
-              alt="{{ view.season.rating }}">
+            {% if view.avatar_url %}
+            <img class="relative size-10 shrink-0 border border-white/35 object-cover" src="{{ view.avatar_url }}" alt="">
             {% else %}
-            <strong class="flex h-7 w-[59.5px] items-center justify-center justify-self-center font-[Bender] text-lg font-black italic text-[#f8f8ef]">{{ view.season.rating }}</strong>
+            <div class="relative flex size-10 shrink-0 items-center justify-center border border-white/35 font-[Akrobat] text-lg text-[#e3d600]">EF</div>
             {% endif %}
+            <div class="relative min-w-0 flex-1">
+              <strong class="block overflow-hidden text-[15px] leading-4 font-bold text-ellipsis whitespace-nowrap">{{ view.nickname }}</strong>
+              <div class="mt-1 overflow-hidden font-[Bender] text-[8px] leading-[9px] text-ellipsis whitespace-nowrap text-white/65">
+                UID {{ view.role_id }}{% if view.server_name %} · {{ '国服' if view.server_name == 'China' else view.server_name }}{% endif %}
+              </div>
+            </div>
           </article>
           <article class="grid min-w-0 grid-cols-[minmax(0,1fr)_100px] items-center rounded-sm bg-center bg-cover bg-no-repeat px-2 backdrop-blur-sm"
             style="background-image: url('{{ 'summary_honor.png' | war_echoes_asset }}')">
@@ -116,7 +125,7 @@
             <div class="absolute right-3.5 bottom-2.5 left-3.5 flex h-[52px] items-center justify-between gap-3">
               <div class="relative top-[-10px] left-[-2px] flex min-w-0 flex-1 items-center gap-0.5 overflow-hidden text-[13px] font-semibold whitespace-nowrap text-[#d7e127]">
                 <img class="size-4 shrink-0 object-contain" src="{{ 'time.png' | war_echoes_asset }}" alt="">
-                <strong class="relative top-[-1.5px] min-w-0 overflow-hidden leading-[1.2]">
+                <strong class="flex h-4 min-w-0 items-center overflow-hidden leading-4">
                   {{ dungeon.bestRecord.passTs | format_war_echoes_duration }}
                 </strong>
               </div>

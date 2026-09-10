@@ -269,6 +269,28 @@ async def _(
     )
 
 
+@skland.assign("efwar")
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+    target: Match[At | int],
+    season_id: Match[int],
+    week_id: Match[int],
+    result: Arparma,
+):
+    """查询终末地战争回响战绩"""
+    from .commands.endfield import ef_war_echoes_handler
+
+    await ef_war_echoes_handler(
+        user_session,
+        session,
+        target,
+        role_index=result.query("efwar.role.role_index"),
+        season_id=season_id.result if season_id.available else None,
+        week_id=week_id.result if week_id.available else None,
+    )
+
+
 @skland.assign("efgacha")
 async def _(
     user_session: UserSession,

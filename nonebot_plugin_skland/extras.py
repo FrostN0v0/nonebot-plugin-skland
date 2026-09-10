@@ -208,6 +208,21 @@ extra_data = {
             ),
         },
         {
+            "func": "终末地战争回响",
+            "trigger_method": "**已绑定用户**",
+            "trigger_condition": "**终末地战争回响** | `skland efwar`",
+            "brief_des": "查询终末地战争回响赛季、荣勋与轮换战绩。",
+            "detail_des": (
+                "- **终末地战争回响**\n\n"
+                "```bash\n"
+                "skland efwar [-r <index>] [-s <season>] [-w <week>]\n"
+                "```\n\n"
+                "默认展示当前赛季和当前轮换；"
+                "`-s` 正数使用卡片中的赛季序号，负数从当前赛季回溯（`-1` 为上一赛季）；"
+                "`-w` 使用轮换序号，`-r` 临时选择自己的终末地角色。"
+            ),
+        },
+        {
             "func": "<傀影|水月|萨米|萨卡兹|界园|树海>肉鸽",
             "trigger_method": "**无限制**",
             "trigger_condition": "**<傀影|水月|萨米|萨卡兹|界园|树海>肉鸽** | `skland rogue --topic <主题>`",

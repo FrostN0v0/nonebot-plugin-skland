@@ -16,5 +16,6 @@ from .endfield import ef_sign_handler as ef_sign_handler
 from .arksign import arksign_all_handler as arksign_all_handler
 from .endfield import ef_sign_all_handler as ef_sign_all_handler
 from .arksign import arksign_sign_handler as arksign_sign_handler
+from .endfield import ef_war_echoes_handler as ef_war_echoes_handler
 from .arksign import arksign_status_handler as arksign_status_handler
 from .endfield import ef_sign_status_handler as ef_sign_status_handler

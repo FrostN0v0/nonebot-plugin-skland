@@ -51,6 +51,55 @@ def format_timestamp_md(ms: int) -> str:
         return datetime.fromtimestamp(ms).strftime("%m-%d")
 
 
+def format_war_echoes_date(timestamp: str | float) -> str:
+    try:
+        return datetime.fromtimestamp(float(timestamp)).strftime("%Y/%m/%d")
+    except (TypeError, ValueError, OSError):
+        return "--"
+
+
+def format_war_echoes_duration(duration: str | float) -> str:
+    try:
+        seconds = int(float(duration))
+    except (TypeError, ValueError):
+        return "--"
+    if seconds <= 0:
+        return "--"
+    minutes, seconds = divmod(seconds, 60)
+    return f"{minutes}分{seconds}秒"
+
+
+WAR_ECHOES_ASSET_DIR = "../images/endfield/war_echoes"
+WAR_ECHOES_RATING_ASSETS = {
+    "S+": "rating_s_plus.png",
+    "S": "rating_s.png",
+    "A": "rating_a.png",
+    "B": "rating_b.png",
+    "C": "rating_c.png",
+    "D": "rating_d.png",
+    "--": "rating_empty.png",
+}
+
+
+def war_echoes_asset(filename: str) -> str:
+    return f"{WAR_ECHOES_ASSET_DIR}/{filename}"
+
+
+def war_echoes_rating_asset(rating: str) -> str:
+    filename = WAR_ECHOES_RATING_ASSETS.get(rating, WAR_ECHOES_RATING_ASSETS["--"])
+    return war_echoes_asset(filename)
+
+
+def war_echoes_stage_asset(stars: int, plus_task: bool) -> str:
+    filename = "stage_plus.png" if stars >= 3 and plus_task else f"stage_{max(0, min(stars, 3))}.png"
+    return war_echoes_asset(filename)
+
+
+def war_echoes_potential_asset(level: int) -> str:
+    normalized = max(0, min(level, 5))
+    return f"../images/endfield/potential/potential_{normalized}.png"
+
+
 def charId_to_avatarUrl(charId: str) -> str:
     avatar_id = next(
         (charId.replace(symbol, "_", 1) for symbol in ["@", "#"] if symbol in charId),

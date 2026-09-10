@@ -3,10 +3,12 @@ from .gacha import EfGachaInfo as EfGachaInfo
 from .gacha import EfGachaPull as EfGachaPull
 from .gacha import EfGachaView as EfGachaView
 from .card import EndfieldCard as EndfieldCard
+from .war_echoes import WarEchoes as WarEchoes
 from .gacha import EfGachaGroup as EfGachaGroup
 from .gacha import EfCharGachaInfo as EfCharGachaInfo
 from .gacha import EfGachaPoolInfo as EfGachaPoolInfo
 from .gacha import EfGachaResponse as EfGachaResponse
+from .war_echoes import WarEchoesView as WarEchoesView
 from .gacha import EndfieldPoolType as EndfieldPoolType
 from .gacha import EfWeaponGachaInfo as EfWeaponGachaInfo
 from .gacha import EfCharGachaResponse as EfCharGachaResponse

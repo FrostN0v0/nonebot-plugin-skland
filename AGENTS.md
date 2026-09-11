@@ -84,7 +84,7 @@ nonebot_plugin_skland/
 │       ├── card.py      # 终末地角色卡片
 │       ├── sign.py      # 终末地签到与签到状态
 │       ├── gacha.py     # Endfield gacha history update and paginated rendering
-│       └── war_echoes.py  # 终末地战争回响查询与图片发送
+│       └── war_echoes.py  # 战争回响查询与图片发送
 ├── schemas/
 │   ├── __init__.py      # 对外集中导出 Pydantic 模型
 │   ├── binding.py       # 森空岛 wire model、确认快照与绑定角色卡 DTO
@@ -178,7 +178,7 @@ skland efgacha [target] [-r|--role <index>] [-b <begin>] [-l <limit>]
 skland efwar [target] [-r|--role <index>] [-s|--season <season>] [-w|--week <week>]
 ```
 
-内置快捷指令在 `hook.py` 启动时注册，并通过 `nonebot_plugin_alconna.command_manager` 持久化到插件缓存目录的 `shortcut.db`。当前包括：森空岛绑定、扫码绑定、森空岛解绑、森空岛角色、切换方舟角色、切换终末地角色、明日方舟签到、签到详情、全体签到、全体签到详情、各肉鸽主题、角色更新、全体角色更新、资源更新、战绩详情、收藏战绩详情、方舟抽卡记录、导入抽卡记录、方舟干员、终末地签到、终末地签到详情、终末地全体签到、终末地全体签到详情、`ef|zmd`、终末地抽卡记录、终末地战争回响。启动加载缓存后会清理旧的“终末地抽卡更新”入口。
+内置快捷指令在 `hook.py` 启动时注册，并通过 `nonebot_plugin_alconna.command_manager` 持久化到插件缓存目录的 `shortcut.db`。当前包括：森空岛绑定、扫码绑定、森空岛解绑、森空岛角色、切换方舟角色、切换终末地角色、明日方舟签到、签到详情、全体签到、全体签到详情、各肉鸽主题、角色更新、全体角色更新、资源更新、战绩详情、收藏战绩详情、方舟抽卡记录、导入抽卡记录、方舟干员、终末地签到、终末地签到详情、终末地全体签到、终末地全体签到详情、`ef|zmd`、终末地抽卡记录、战争回响。启动加载缓存后会清理旧的“终末地抽卡更新”入口。
 
 `森空岛角色` 精确匹配 `skland char`；`切换方舟角色 <index>` / `切换终末地角色 <index>` 分别映射到 `skland char set ark <index>` / `skland char set ef <index>`，使用 `fuzzy=True` 接收序号、`compact=False` 要求空格分隔，并沿用 Bot 的命令前缀。内置快捷指令在加载缓存后注册。
 
@@ -269,7 +269,7 @@ class Config(BaseModel):
 - `get_rogue()`：明日方舟肉鸽数据。
 - `get_gacha_categories()` / `get_gacha_history()`：明日方舟抽卡类别与记录。
 - `endfield_card(cred, *, user_id, role_id, server_id)`：终末地角色卡片数据；API 层只接收标量身份，不依赖 ORM `Character`。
-- `endfield_war_echoes(cred, *, user_id, role_id, server_id, season_id=None)`：终末地战争回响赛季、轮换、关卡和荣勋数据。
+- `endfield_war_echoes(cred, *, user_id, role_id, server_id, season_id=None)`：战争回响赛季、轮换、关卡和荣勋数据。
 - `endfield_sign()`：终末地签到。
 - `get_ef_gacha_history()`：终末地角色池/武器池抽卡记录。
 - `get_ef_gacha_content()`：终末地卡池 UP 内容。
@@ -294,7 +294,7 @@ class Config(BaseModel):
 - `services/binding.py` 负责凭证和身份准备、确认快照复核及绑定/解绑的原子提交；`commands/bind.py` 只编排展示、waiter、扫码轮询与撤回。工作状态使用内部 dataclass，跨模块业务异常位于 `exception.py`。
 - `account.sync_account()` 使用普通凭证快照执行 API 请求，再重新读取账号并事务性同步角色/默认映射；不构造未持久化的 `SkUser` 充当临时凭证对象。
 - `skland char` 返回全部账号和角色；`skland char set <game> <index>` 按游戏独立序号切换插件默认角色，所有业务功能使用该角色所属账号的凭证。
-- 角色卡片、两游戏抽卡查询/更新、抽卡导入、干员查询、肉鸽及详情、终末地战争回响、两游戏个人签到及状态共 13 个入口统一支持 `-r` / `--role`。`matcher._role_option()` 为每个作用域构建独立选项，命令分发传入 `role_index`；各 handler 共用 `commands/selection.py` 的 `check_user_character(app_code=...)`，使用角色所属账号、不写 `CharacterDefault`、不要求已有默认角色，也不能临时选择他人的角色。`get_character_by_index()` 与 `char set` 共用 `get_user_characters()` 排序，无效序号不回退默认。
+- 角色卡片、两游戏抽卡查询/更新、抽卡导入、干员查询、肉鸽及详情、战争回响、两游戏个人签到及状态共 13 个入口统一支持 `-r` / `--role`。`matcher._role_option()` 为每个作用域构建独立选项，命令分发传入 `role_index`；各 handler 共用 `commands/selection.py` 的 `check_user_character(app_code=...)`，使用角色所属账号、不写 `CharacterDefault`、不要求已有默认角色，也不能临时选择他人的角色。`get_character_by_index()` 与 `char set` 共用 `get_user_characters()` 排序，无效序号不回退默认。
 - `skland box -r` 统一用于角色序号，原星级短选项改为 `-ra`；`--rarity`、`rarity` 和自然筛选词继续保留。所有旧示例和调用必须同步迁移，不能根据值猜测 `-r` 是星级还是角色。
 - 签到状态不带选角参数时保留本人全部角色结果；显式选角时按 owner 和角色主键共同过滤缓存，防止跨账号、跨用户混入。`--all` 为超管全体状态，与选角互斥；全体签到提交后展示状态时不读取已过期的 `UserSession.user`。
 - 肉鸽详情不带选角参数时使用引用图片的缓存数据；显式选角时获取所选角色的新数据，引用图片只提供主题，无引用时使用角色当前主题。肉鸽 API 读取后在渲染前提交凭证刷新；线索、背景等暗语继续沿用原卡片携带的数据。
@@ -395,7 +395,7 @@ class Config(BaseModel):
 - `render_ef_card()`：终末地角色卡片，支持 `show_all` 和 `simple` 背景。
 - `render_gacha_history()`：明日方舟抽卡记录。
 - `render_ef_gacha_history()`：终末地抽卡记录，返回固定三列、内容高度约束的多页 PNG。
-- `render_ef_war_echoes()`：终末地战争回响赛季、荣勋、轮换与编队记录长图。
+- `render_ef_war_echoes()`：战争回响赛季、荣勋、轮换与编队记录长图。
 - `render_rogue_card()` / `render_rogue_info()`：肉鸽战绩总览 / 单局详情。
 - `render_clue_board()`：线索看板。
 
@@ -425,8 +425,13 @@ async def run_daily_efsign(): ...
 
 
 @scheduler.scheduled_job(
-    "cron", hour=9, minute=0, id="daily_resource_update",
-    max_instances=1, coalesce=True, misfire_grace_time=3600,
+    "cron",
+    hour=9,
+    minute=0,
+    id="daily_resource_update",
+    max_instances=1,
+    coalesce=True,
+    misfire_grace_time=3600,
 )
 async def run_daily_resource_update(): ...
 ```

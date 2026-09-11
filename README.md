@@ -60,8 +60,6 @@ _✨ 通过森空岛查询游戏数据 ✨_
 >
 > 如在使用过程中遇到问题，欢迎提 [issue](https://github.com/FrostN0v0/nonebot-plugin-skland/issues/new/choose) 帮助改进项目
 
-<img width="100%" src="https://starify.komoridevs.icu/api/starify?owner=FrostN0v0&repo=nonebot-plugin-skland" alt="starify" />
-
 <details>
   <summary><kbd>Star History</kbd></summary>
   <picture>
@@ -153,19 +151,13 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 ### htmlrender 版本兼容
 
-插件保留 htmlrender 0.6.5 起的旧接口支持，同时适配 0.8.x，不要求旧版用户整体升级。模板布局、截图格式、缩放、毫秒截图超时、半身图缓存及终末地抽卡分页保持原有行为。
+支持 htmlrender **0.6.5～0.8.x**，旧版用户无需强制升级。
 
-- **0.6.x**：沿用原有 htmlrender 配置。
-- **0.7.x**：按上游要求选择 `render_backend=playwright`，浏览器选项放在 `render_playwright` 下。
-- **0.8.x**：无需为本插件填写 `render__provider` 或 `render__resources__local_access__allowed_paths`。插件自动处理自带模板、字体、图片和缓存目录；未配置共享 Playwright 时按需使用默认 Chromium，已有共享 Playwright 时直接复用。
+- **0.6.x**：沿用原有配置。
+- **0.7.x**：设置 `render_backend=playwright`。
+- **0.8.x**：本插件无需额外配置；从旧版升级时，移除或迁移 `render_backend` 等旧配置键，详见 [官方迁移指南](https://github.com/kexue-z/nonebot-plugin-htmlrender/blob/v0.8.1/docs/guides/migration/v0.8.md)。
 
-自动授权只存在于 skland 的私有资源作用域，不修改其他插件共用的全局路径权限，也不设置全盘访问。用户已有的浏览器连接、启动参数和显式授权保持有效；插件退出只清理自己创建的应用，不关闭其他插件仍在使用的共享浏览器。关闭开始后拒绝新的模板和页面请求，不会重新创建浏览器。
-
-0.8.x 的普通模板截图沿用上游资源策略：本机默认通过 `file` 访问，远程默认通过 `memory` 传输；显式选择的 `filehost`、`passthrough`、`error` 和关闭资源解析的配置继续生效，无需强制使用 filehost。兼容层复用上游资源准备、发布与浏览器路由，仍保留原生全页截图和毫秒截图超时；半身图资源就绪与终末地抽卡分页的自定义页面流程维持原有行为。
-
-Playwright 依赖及浏览器运行环境仍需正常安装（htmlrender 的 `[playwright]` 或 `[all]` extra）；浏览器首次安装沿用上游逻辑。仅当需要自定义浏览器连接等高级行为时才配置上游。0.8 会拒绝 `render_backend` 等旧配置键，升级时应移除或迁移旧键，不要将两代配置同时填写。详见 [htmlrender 官方指南](https://github.com/kexue-z/nonebot-plugin-htmlrender/blob/v0.8.1/docs/guides/migration/v0.8.md)。
-
-已知问题：htmlrender 0.8.1 的自动安装子进程可能遗漏浏览器缓存目录，导致安装后仍找不到浏览器。该问题暂时保留并交由上游处理，本插件不修补安装器；已有可用浏览器的接口适配不受此次移除影响。
+渲染需要可用的 Playwright 浏览器环境。若 htmlrender 0.8.1 自动安装后仍提示找不到浏览器，请检查浏览器安装及缓存目录配置。
 
 ### background_source
 
@@ -246,7 +238,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 
 `--role` 使用最新 `skland char` 卡片中对应游戏的角色序号，不是账号序号或玩家 UID；无需预先设置默认角色，只对本次命令生效。它只允许选择自己的绑定角色，序号无效时会提示重新查看卡片，不会回退到默认角色。裸数字仍表示 QQ 目标，不能用 `skland 2` 代替 `skland --role 2`。
 
-所有按角色执行的入口均支持 `-r` / `--role`：角色卡片、两游戏抽卡查询、终末地战争回响、抽卡导入、方舟干员、肉鸽战绩与详情、两游戏个人签到与签到状态。例：`sk gacha -r 2`、`sk efgacha -r 2`、`sk efwar -r 2`、`sk rogue -r 2`。绑定、解绑、账号管理、资源同步及超管全体签到不按单个游戏角色执行。
+所有按角色执行的入口均支持 `-r` / `--role`：角色卡片、两游戏抽卡查询、战争回响、抽卡导入、方舟干员、肉鸽战绩与详情、两游戏个人签到与签到状态。例：`sk gacha -r 2`、`sk efgacha -r 2`、`sk efwar -r 2`、`sk rogue -r 2`。绑定、解绑、账号管理、资源同步及超管全体签到不按单个游戏角色执行。
 
 干员查询的 `-r` 也统一表示角色；星级短选项改为 `-ra`，保留 `--rarity` 和 `6星` 等自然筛选词。例如 `sk box -r 2 -ra 6` 查询第 2 个角色的六星干员。
 
@@ -296,7 +288,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 **快捷指令：** `ef`
 
 
-#### 终末地战争回响
+#### 战争回响
 
 | 指令 | 权限 | 说明 |
 | ---- | ---- | ---- |
@@ -304,7 +296,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `skland efwar -r <序号>` | 所有 | 临时查询自己的指定终末地角色 |
 | `skland efwar -s <赛季> -w <轮换>` | 所有 | 查询指定赛季与轮换；`-s -1` 表示上一赛季 |
 
-**快捷指令：** `终末地战争回响`
+**快捷指令：** `战争回响`
 
 </details>
 
@@ -488,12 +480,12 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 | `方舟抽卡记录`       | `skland gacha -l 3`           | 查询抽卡记录       |
 | `导入抽卡记录`       | `skland import`               | 导入抽卡数据       |
 | `终末地抽卡记录`     | `skland efgacha`              | 获取、保存并展示最新记录 |
-| `终末地战争回响`     | `skland efwar`                | 查询战争回响赛季与轮换战绩 |
+| `战争回响`           | `skland efwar`                | 查询战争回响赛季与轮换战绩 |
 | `方舟干员`           | `skland box`                  | 中文筛选词查询干员 |
 
 角色序号按游戏分别计算，以最新 `森空岛角色` 卡片为准；例如 `切换方舟角色 2` 只切换方舟默认角色，不影响终末地。快捷指令和序号之间保留空格，是否需要 `/` 等命令前缀由 Bot 配置决定。
 
-抽卡、战争回响、导入、干员、肉鸽、战绩详情及个人签到/状态的中文快捷指令同样支持追加 `-r <序号>`；例如 `方舟抽卡记录 -r 2`、`终末地抽卡记录 -r 2`、`终末地战争回响 -r 2`、`树海肉鸽 -r 2`。
+抽卡、战争回响、导入、干员、肉鸽、战绩详情及个人签到/状态的中文快捷指令同样支持追加 `-r <序号>`；例如 `方舟抽卡记录 -r 2`、`终末地抽卡记录 -r 2`、`战争回响 -r 2`、`树海肉鸽 -r 2`。
 
 </details>
 
@@ -599,6 +591,13 @@ Bot: skland::skland 的快捷指令: "查战绩" 添加成功
 
 </details>
 
+<details>
+  <summary>⚔️ 战争回响</summary>
+
+![战争回响战绩](docs/ef_war_echoes.png)
+
+</details>
+
 ## 💖 鸣谢
 
 - [`Alconna`](https://github.com/ArcletProject/Alconna): 简单、灵活、高效的命令参数解析器
@@ -637,6 +636,6 @@ Bot: skland::skland 的快捷指令: "查战绩" 添加成功
 - [x] 支持终末地抽卡记录查询及分页
 - [x] 实现 box 查询
 - [x] 实现图鉴查询
-- [ ] 完善多服账号管理
+- [x] 完善多服账号管理
 - [ ] ~~扬了不必要的 💩~~
 - [ ] 待补充，欢迎 pr

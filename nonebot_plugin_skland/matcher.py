@@ -150,7 +150,7 @@ skland_command = Alconna(
         _role_option(),
         Option("-s|--season|season", Args["season_id", int], help_text="赛季序号，负数从当前赛季回溯"),
         Option("-w|--week|week", Args["week_id", int], help_text="轮换序号"),
-        help_text="查询终末地战争回响战绩",
+        help_text="查询战争回响战绩",
     ),
     Subcommand(
         "efgacha",

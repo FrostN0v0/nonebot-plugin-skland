@@ -1,10 +1,9 @@
 from datetime import datetime
 
-from pydantic import AnyUrl as Url
-from nonebot_plugin_htmlrender import get_new_page, template_to_html
-
 from .image_cache import wait_for_page_resources
 from .config import RES_DIR, TEMPLATES_DIR, config
+from .compact import open_html_page, template_to_html
+from .utils.background import BackgroundImage, background_to_uri
 from .image_cache import cached_template_to_pic as template_to_pic
 from .schemas import (
     Clue,
@@ -48,18 +47,18 @@ from .filters import (
 async def render_operator_roster(
     *,
     props: OperatorRoster,
-    background_image: str | Url | None,
+    background_image: BackgroundImage | None,
 ) -> bytes:
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),
         template_name="operator_roster.html.jinja2",
         templates={
             "props": props,
-            "background_image": background_image,
+            "background_image": background_to_uri(background_image),
         },
         pages={
             "viewport": {"width": 706, "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         device_scale_factor=1.5,
         screenshot_timeout=config.render_timeout,
@@ -76,7 +75,7 @@ async def render_bound_roles_card(props: BoundRolesCard) -> bytes:
         templates={"props": props},
         pages={
             "viewport": {"width": 706, "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         device_scale_factor=1.5,
         screenshot_timeout=config.render_timeout,
@@ -84,13 +83,13 @@ async def render_bound_roles_card(props: BoundRolesCard) -> bytes:
     )
 
 
-async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:
+async def render_ark_card(props: ArkCard, bg: BackgroundImage) -> bytes:
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),
         template_name="ark_card.html.jinja2",
         templates={
             "now_ts": datetime.now().timestamp(),
-            "background_image": bg,
+            "background_image": background_to_uri(bg),
             "status": props.status,
             "employed_chars": len(props.chars),
             "skins": len(props.skins),
@@ -112,18 +111,18 @@ async def render_ark_card(props: ArkCard, bg: str | Url) -> bytes:
         },
         pages={
             "viewport": {"width": 706, "height": 1160},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         screenshot_timeout=config.render_timeout,
     )
 
 
-async def render_rogue_card(props: RogueData, bg: str | Url) -> bytes:
+async def render_rogue_card(props: RogueData, bg: BackgroundImage) -> bytes:
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),
         template_name="rogue.html.jinja2",
         templates={
-            "background_image": bg,
+            "background_image": background_to_uri(bg),
             "topic_img": props.topic_img,
             "topic": props.topic,
             "now_ts": datetime.now().timestamp(),
@@ -138,14 +137,14 @@ async def render_rogue_card(props: RogueData, bg: str | Url) -> bytes:
         },
         pages={
             "viewport": {"width": 2200, "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         device_scale_factor=1.5,
         screenshot_timeout=config.render_timeout,
     )
 
 
-async def render_rogue_info(props: RogueData, bg: str | Url, id: int, is_favored: bool) -> bytes:
+async def render_rogue_info(props: RogueData, bg: BackgroundImage, id: int, is_favored: bool) -> bytes:
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),
         template_name="rogue_info.html.jinja2",
@@ -155,7 +154,7 @@ async def render_rogue_info(props: RogueData, bg: str | Url, id: int, is_favored
             if is_favored and id - 1 < len(props.history.favourRecords)
             else (props.history.records[id - 1] if id - 1 < len(props.history.records) else None),
             "is_favored": is_favored,
-            "background_image": bg,
+            "background_image": background_to_uri(bg),
             "topic_img": props.topic_img,
             "topic": props.topic,
             "now_ts": datetime.now().timestamp(),
@@ -171,7 +170,7 @@ async def render_rogue_info(props: RogueData, bg: str | Url, id: int, is_favored
         },
         pages={
             "viewport": {"width": 1100, "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         device_scale_factor=1.5,
         screenshot_timeout=config.render_timeout,
@@ -187,7 +186,7 @@ async def render_clue_board(props: Clue):
         },
         pages={
             "viewport": {"width": 1100, "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         device_scale_factor=1.5,
         screenshot_timeout=config.render_timeout,
@@ -219,7 +218,7 @@ async def render_gacha_history(
         },
         pages={
             "viewport": {"width": 720, "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         device_scale_factor=1.5,
         screenshot_timeout=config.render_timeout,
@@ -241,14 +240,15 @@ async def render_ef_gacha_history(props: EfGachaView) -> list[bytes]:
             "ef_charId_to_avatarUrl": ef_charId_to_avatarUrl,
         },
     )
-    async with get_new_page(
+    async with open_html_page(
+        html,
+        template_path=TEMPLATES_DIR.as_uri(),
+        wait_until="load",
         device_scale_factor=1.5,
+        before_load=lambda page: page.set_default_timeout(config.render_timeout),
         viewport={"width": EF_GACHA_PAGE_WIDTH, "height": EF_GACHA_PAGE_HEIGHT},
         base_url=TEMPLATES_DIR.as_uri(),
     ) as page:
-        page.set_default_timeout(config.render_timeout)
-        await page.goto(TEMPLATES_DIR.as_uri(), wait_until="load")
-        await page.set_content(html, wait_until="load")
         await wait_for_page_resources(page, config.render_timeout)
         page_count = await page.evaluate(
             "options => window.paginateEndfieldGacha(options)",
@@ -286,7 +286,12 @@ async def render_ef_war_echoes(props: WarEchoesView) -> bytes:
     )
 
 
-async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = False, is_simple: bool = False) -> bytes:
+async def render_ef_card(
+    props: EndfieldCard,
+    bg: BackgroundImage,
+    show_all: bool = False,
+    is_simple: bool = False,
+) -> bytes:
     # 预处理角色列表：根据 show_all 决定是否过滤
     if show_all:
         filtered_chars = props.chars
@@ -318,15 +323,15 @@ async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = Fa
 
     # Simple 背景模式：命令行参数优先于配置
     simple_bg_enabled = is_simple or config.endfield_background_simple
-    simple_bg = (RES_DIR / "images" / "background" / "endfield" / "simple" / "simple_bg.png").as_posix()
-    simple_bg_top = (RES_DIR / "images" / "background" / "endfield" / "simple" / "simple_bg_top.png").as_posix()
+    simple_bg = (RES_DIR / "images" / "background" / "endfield" / "simple" / "simple_bg.png").resolve().as_uri()
+    simple_bg_top = (RES_DIR / "images" / "background" / "endfield" / "simple" / "simple_bg_top.png").resolve().as_uri()
 
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),
         template_name="endfield_card.html.jinja2",
         templates={
             "now_ts": datetime.now().timestamp(),
-            "background_image": bg,
+            "background_image": background_to_uri(bg),
             "simple_bg_enabled": simple_bg_enabled,
             "simple_bg": simple_bg,
             "simple_bg_top": simple_bg_top,
@@ -357,7 +362,7 @@ async def render_ef_card(props: EndfieldCard, bg: str | Url, show_all: bool = Fa
         },
         pages={
             "viewport": {"width": 706, "height": 1},
-            "base_url": f"file://{TEMPLATES_DIR}",
+            "base_url": TEMPLATES_DIR.as_uri(),
         },
         screenshot_timeout=config.render_timeout,
     )

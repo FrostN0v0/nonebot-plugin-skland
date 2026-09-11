@@ -2,7 +2,7 @@
 
 import json
 
-from nonebot_plugin_argot import Text, Argot, Image
+from nonebot_plugin_argot import Argot, Image
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_argot.data_source import get_argot
@@ -19,7 +19,7 @@ from ..schemas import CRED, Topics, RogueData
 from ..services.auth import refresh_credentials
 from ..render import render_rogue_card, render_rogue_info
 from ..utils.background import get_rogue_background_image
-from ..utils.message import send_reaction, send_request_error
+from ..utils.message import send_reaction, send_request_error, build_background_argot_segment
 
 
 @refresh_credentials
@@ -69,10 +69,7 @@ async def rogue_handler(
         return
     background = await get_rogue_background_image(topic_id)
     img = await render_rogue_card(rogue, background)
-    if str(background).startswith("http"):
-        argot_seg = [Text(str(background)), Image(url=str(background))]
-    else:
-        argot_seg = Image(path=str(background))
+    argot_seg = build_background_argot_segment(background)
     await UniMessage(
         Image(raw=img)
         + Argot("data", json.dumps(model_dump(rogue)), command=False, expired_at=config.argot_expire)
@@ -130,10 +127,7 @@ async def rginfo_handler(
     send_reaction(user_session, "processing")
     background = await get_rogue_background_image(rogue_data.topic)
     img = await render_rogue_info(rogue_data, background, id.result, result.find("rginfo.favored"))
-    if str(background).startswith("http"):
-        argot_seg = [Text(str(background)), Image(url=str(background))]
-    else:
-        argot_seg = Image(path=str(background))
+    argot_seg = build_background_argot_segment(background)
     await UniMessage(
         Image(raw=img) + Argot("background", argot_seg, command="background", expired_at=config.argot_expire)
     ).send()

@@ -1,12 +1,11 @@
 import random
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 from nonebot import logger
 from pydantic import Field
 from pydantic import BaseModel
 from pydantic import AnyUrl as Url
-from nonebot.compat import PYDANTIC_V2
 import nonebot_plugin_localstore as store
 from nonebot.plugin import get_plugin_config
 
@@ -30,27 +29,20 @@ OPERATOR_METADATA_PATH = DATA_DIR / "operator_metadata.json"
 class CustomSource(BaseModel):
     uri: Url | Path
 
-    def to_uri(self) -> Any:
+    def resolve(self) -> Url | Path:
         if isinstance(self.uri, Path):
             uri = self.uri
             if not uri.is_absolute():
                 uri = Path(store.get_plugin_data_dir() / uri)
 
             if uri.is_dir():
-                # random pick a file
-                files = [f for f in uri.iterdir() if f.is_file()]
+                files = [file for file in uri.iterdir() if file.is_file()]
                 logger.debug(f"CustomSource: {uri} is a directory, random pick a file: {files}")
-                if PYDANTIC_V2:
-                    return Url((uri / random.choice(files)).as_posix())
-                else:
-                    return Url((uri / random.choice(files)).as_posix(), scheme="file")  # type: ignore
+                return random.choice(files).resolve()
 
             if not uri.exists():
                 raise FileNotFoundError(f"CustomSource: {uri} not exists")
-            if PYDANTIC_V2:
-                return Url(uri.as_posix())
-            else:
-                return Url(uri.as_posix(), scheme="file")  # type: ignore
+            return uri.resolve()
 
         return self.uri
 

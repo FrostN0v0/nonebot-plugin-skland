@@ -46,6 +46,7 @@ nonebot_plugin_skland/
 ├── data_source.py       # 游戏数据下载、干员目录构建与本地元数据缓存
 ├── player_data.py       # 玩家实时数据账号级短期缓存：ArkCard TTL/LRU/single-flight
 ├── image_cache.py       # 方舟半身图浏览器响应缓存与显式资源就绪等待
+├── compact.py           # htmlrender 新旧版本模板、页面与截图接口适配
 ├── download.py          # 图片下载与数据专用 GitHub 客户端：提交定位、连接池及代理回退
 ├── render.py            # HTML 模板渲染为图片的函数
 ├── filters.py           # Jinja2 过滤器与可复用图片资源 URL 函数
@@ -380,7 +381,11 @@ class Config(BaseModel):
 
 ### 渲染系统
 
-渲染入口在 `render.py`。一般模板沿用 `cached_template_to_pic()`；终末地抽卡使用 htmlrender 的模板生成和独立 Playwright 页面，复用 `image_cache.wait_for_page_resources()` 等待字体/图片，完成 DOM 高度排版后逐页截图，所有阶段沿用全局 `render_timeout`。
+渲染入口在 `render.py`。一般模板沿用 `cached_template_to_pic()`；终末地抽卡通过 `compact.open_html_page()` 建立自定义页面，业务模块负责资源就绪等待与 DOM 分页。普通截图和自定义页面均沿用全局 `render_timeout`。
+
+`compact.py` 是唯一 htmlrender 兼容边界，支持最低 0.6.5 至 0.8.x，统一提供模板生成、普通截图和自定义页面接口。0.8.x 使用插件私有 Application 授权 `RES_DIR`、`CACHE_DIR`，按上游资源策略处理本地资源；可复用共享 Playwright，但不得由插件关闭。响应缓存、资源就绪等待和 DOM 分页保留在各自业务模块。
+
+兼容层不得修改全局 Application、全局授权或浏览器安装流程，也不在运行错误后切换 API 分支。插件关闭后拒绝新渲染请求；文件 URI 统一使用 `Path.as_uri()`。
 
 主要函数：
 
@@ -396,7 +401,7 @@ class Config(BaseModel):
 
 模板位于 `resources/templates/`，过滤器位于 `filters.py`。Tailwind 输出 CSS 为 `nonebot_plugin_skland/resources/templates/index.css`。
 
-`ArkCard.recruit_complete_time` 直接依赖 `filters.format_timestamp`，schema 不反向导入 `render.py`。背景选择位于 `utils/background.py`，不混入渲染入口。
+`ArkCard.recruit_complete_time` 直接依赖 `filters.format_timestamp`，schema 不反向导入 `render.py`。背景选择位于 `utils/background.py`，本地来源返回 `Path`、远程来源返回 URL；渲染入口将本地路径转换为 `file://` URI，消息和 Argot 则保留真实路径，禁止跨边界复用同一种字符串表示。
 
 账号角色卡的纹理、阴影和字体样式集中于 `tailwind.css` 的 `bound-roles-*` 类，终末地抽卡复用相同主题类而不更改角色卡样式。账号角色卡仍沿用 706px 视口、1.5 倍 PNG 和全局截图超时，不额外请求角色详情或远程图片。
 
@@ -468,7 +473,7 @@ uv run pytest -s tests/test_skland_api.py
 
 测试说明：
 
-- `tests/conftest.py` 使用 nonebug 初始化 NoneBot，并加载 `pyproject.toml` 中配置的插件。
+- `tests/conftest.py` 使用 nonebug 初始化 NoneBot，并加载 `pyproject.toml` 中配置的插件。测试配置忽略项目 dotenv，localstore 使用 pytest 临时目录；htmlrender 本地授权仅覆盖测试临时目录，禁止通过测试配置绕过生产资源授权。
 - 数据库测试使用内存 SQLite：`sqlite+aiosqlite://`。
 - `make_user_session` fixture 将真实 `UserSession.user` 加入命令使用的同一个 SQLAlchemy session；解绑、缺少默认角色和签到选择失败的回归测试覆盖事务结束后用户 ORM 属性过期的行为，不能只用普通整数模拟 `user_id`。
 - `tests/test_auth.py` 覆盖有界重试、缺少 token 时零刷新请求及刷新失败传播；`tests/test_player_data.py` 覆盖真实缓存中并发等待者分别刷新凭证与成功结果合并。
@@ -476,8 +481,9 @@ uv run pytest -s tests/test_skland_api.py
 - `tests/test_data_source.py` 使用离线 HTTP 传输与真实 loader 验证同版本不下载、固定提交直接下载、完整批次校验、失败零版本推进、写入回滚、冷启动缓存可用、首次下载不误报警告、损坏缓存保留警告、PRTS 回退及终末地等价数据不重写。
 - `tests/test_resource_updates.py` 覆盖手动/定时互斥、独立游戏失败、取消释放、关闭任务、09:00 时区边界、旧快捷指令缓存迁移为数据更新，以及用户回复的状态图标和终末地更新/未变化时的卡池数量。
 - `tests/test_ef_gacha_joint_pool.py` 覆盖终末地联合寻访分类与统计；`tests/test_ef_gacha_view.py` 覆盖免费/付费间隔隔离、多金事件完整性及分类切片不改变累计统计；`tests/test_ef_gacha_command.py` 覆盖默认同步、去重、先保存再渲染、显式缓存回退、失败零部分写入、选角身份及有序发送。
-- `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、JPEG/PNG 参数、分页发送与渲染参数。
-- `tests/test_image_cache.py` 覆盖配置开关、单次模板生成、浏览器半身图响应落盘、本地复用、显式字体/图片就绪、等待超时、未知 URL 跳过与失败响应忽略。
+- `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、实际模板中的已拥有/未拥有干员，以及分页发送。
+- `tests/test_image_cache.py` 覆盖配置开关、浏览器半身图响应落盘、本地复用、资源就绪与等待超时，以及失败响应不进入缓存。
+- `tests/test_compact.py` 覆盖支持版本的模板渲染、资源授权和生命周期。真实 Chromium 回归验证 `memory`、`filehost` 策略下普通截图与自定义页面均不依赖浏览器读取本地文件，并保留文档内 fragment 引用；测试仅使用已安装的 Chromium，缺失时跳过且不自动安装。
 - `tests/test_qrcode.py` 覆盖头像 URL 限制、图片下载校验、无头像降级、二维码原始像素保持、群聊发起者标记及扫码绑定流程。
 - `tests/test_account_management.py` 覆盖多账号所有权、分游戏默认角色、角色同步、账号操作互斥、临时选角与角色卡序号一致、默认映射不变、按选定角色导入记录，以及缺少默认角色和跨用户临时选角时的隐私/事务边界。
 - `tests/test_bound_roles.py` 覆盖 binding API 规范化、角色卡投影、序号、默认徽标、两游戏玩家 UID 选择、内部 ID 隐藏、昵称转义、四种展示模式及空态/不可用角色。

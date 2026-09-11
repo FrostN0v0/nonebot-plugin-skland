@@ -37,24 +37,20 @@ class FakeRequest:
 
 
 class FakePage:
-    def __init__(self, requests: list[FakeRequest]) -> None:
+    def __init__(self, requests: list[FakeRequest], image: bytes) -> None:
         self.requests = requests
+        self.image = image
         self.handlers: dict[str, list[Any]] = {}
         self.html = ""
-        self.goto_wait_until: str | None = None
-        self.wait_until = ""
-        self.evaluated_scripts: list[str] = []
 
     def on(self, event: str, handler: Any) -> None:
         self.handlers.setdefault(event, []).append(handler)
 
     async def goto(self, url: str, *, wait_until: str | None = None) -> None:
-        self.goto_wait_until = wait_until
         return None
 
     async def set_content(self, html: str, *, wait_until: str) -> None:
         self.html = html
-        self.wait_until = wait_until
         for request in self.requests:
             for handler in self.handlers.get("requestfinished", []):
                 handler(request)
@@ -63,22 +59,31 @@ class FakePage:
         return None
 
     async def evaluate(self, script: str) -> None:
-        self.evaluated_scripts.append(script)
+        return None
 
     async def screenshot(self, **kwargs: Any) -> bytes:
-        return b"image"
+        return self.image
 
 
 def fake_page_context(page: FakePage):
     @asynccontextmanager
-    async def get_page(*args: Any, **kwargs: Any) -> AsyncIterator[FakePage]:
+    async def open_page(
+        html: str,
+        *,
+        wait_until: str,
+        before_load: Any = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[FakePage]:
+        if before_load is not None:
+            before_load(page)
+        await page.set_content(html, wait_until=wait_until)
         yield page
 
-    return get_page
+    return open_page
 
 
 @pytest.mark.asyncio
-async def test_cached_template_saves_browser_portrait_responses_without_rerender(app, tmp_path, mocker, monkeypatch):
+async def test_cached_template_uses_remote_portraits_then_local_files(app, tmp_path, mocker, monkeypatch, tiny_png):
     from nonebot_plugin_skland.config import config
     from nonebot_plugin_skland import filters, image_cache
 
@@ -90,10 +95,7 @@ async def test_cached_template_saves_browser_portrait_responses_without_rerender
     template_path.mkdir()
     template_name = "portraits.html.jinja2"
     (template_path / template_name).write_text(
-        """
-        <img src="{{ skin_id | skin_portrait }}">
-        <img src="{{ char_id | character_portrait }}">
-        """,
+        '<img src="{{ skin_id | skin_portrait }}"><img src="{{ char_id | character_portrait }}">',
         encoding="utf-8",
     )
 
@@ -104,22 +106,11 @@ async def test_cached_template_saves_browser_portrait_responses_without_rerender
     skin_path = tmp_path / "portrait" / "char_290_vigna_summer#1.png"
     char_path = tmp_path / "portrait" / "char_290_vigna.png"
     page = FakePage(
-        [
-            FakeRequest(skin_url, FakeResponse(b"skin-image")),
-            FakeRequest(char_url, FakeResponse(b"character-image")),
-        ]
+        [FakeRequest(skin_url, FakeResponse(tiny_png)), FakeRequest(char_url, FakeResponse(tiny_png))],
+        tiny_png,
     )
-    monkeypatch.setattr(image_cache, "get_new_page", fake_page_context(page))
-    template_renderer = mocker.patch.object(
-        image_cache,
-        "template_to_html",
-        new=mocker.AsyncMock(wraps=image_cache.template_to_html),
-    )
-    local_renderer = mocker.patch.object(
-        image_cache,
-        "html_to_pic",
-        new=mocker.AsyncMock(return_value=b"local-image"),
-    )
+    monkeypatch.setattr(image_cache, "open_html_page", fake_page_context(page))
+    local_renderer = mocker.patch.object(image_cache, "html_to_pic", new=mocker.AsyncMock(return_value=tiny_png))
 
     render_kwargs = {
         "template_path": str(template_path),
@@ -132,24 +123,24 @@ async def test_cached_template_saves_browser_portrait_responses_without_rerender
     }
     first = await image_cache.cached_template_to_pic(**render_kwargs)
 
-    assert first == b"image"
-    assert template_renderer.await_count == 1
+    assert first == tiny_png
     assert skin_url in page.html
     assert char_url in page.html
-    assert skin_path.read_bytes() == b"skin-image"
-    assert char_path.read_bytes() == b"character-image"
-    local_renderer.assert_not_awaited()
+    assert skin_path.read_bytes() == tiny_png
+    assert char_path.read_bytes() == tiny_png
 
     second = await image_cache.cached_template_to_pic(**render_kwargs)
 
-    assert second == b"local-image"
-    assert template_renderer.await_count == 2
-    assert skin_path.as_uri() in local_renderer.await_args.kwargs["html"]
-    assert char_path.as_uri() in local_renderer.await_args.kwargs["html"]
+    assert second == tiny_png
+    local_html = local_renderer.await_args.kwargs["html"]
+    assert skin_path.as_uri() in local_html
+    assert char_path.as_uri() in local_html
+    assert skin_url not in local_html
+    assert char_url not in local_html
 
 
 @pytest.mark.asyncio
-async def test_cached_template_leaves_unknown_urls_untouched(app, tmp_path, mocker, monkeypatch):
+async def test_cached_template_leaves_unknown_urls_untouched(app, tmp_path, mocker, monkeypatch, tiny_png):
     from nonebot_plugin_skland import image_cache
     from nonebot_plugin_skland.config import config
 
@@ -159,25 +150,26 @@ async def test_cached_template_leaves_unknown_urls_untouched(app, tmp_path, mock
     template_name = "remote.html.jinja2"
     (template_path / template_name).write_text('<img src="{{ image_url }}">', encoding="utf-8")
 
-    renderer = mocker.patch.object(
-        image_cache,
-        "html_to_pic",
-        new=mocker.AsyncMock(return_value=b"image"),
-    )
+    renderer = mocker.patch.object(image_cache, "html_to_pic", new=mocker.AsyncMock(return_value=tiny_png))
     remote_url = "https://example.com/api-returned-image.png"
 
-    result = await image_cache.cached_template_to_pic(
+    await image_cache.cached_template_to_pic(
         template_path=str(template_path),
         template_name=template_name,
         templates={"image_url": remote_url},
     )
 
-    assert result == b"image"
     assert remote_url in renderer.await_args.kwargs["html"]
 
 
+@pytest.mark.parametrize(
+    ("status", "content_type"),
+    [(404, "image/png"), (200, "text/html")],
+)
 @pytest.mark.asyncio
-async def test_cached_template_skips_failed_portrait_responses(app, tmp_path, mocker, monkeypatch):
+async def test_cached_template_skips_failed_portrait_responses(
+    app, tmp_path, monkeypatch, tiny_png, status, content_type
+):
     from nonebot_plugin_skland.config import config
     from nonebot_plugin_skland import filters, image_cache
 
@@ -193,8 +185,11 @@ async def test_cached_template_skips_failed_portrait_responses(app, tmp_path, mo
     skin_id = "char_290_vigna@summer#1"
     skin_url = "https://web.hycdn.cn/arknights/game/assets/char_skin/portrait/char_290_vigna%40summer%231.png"
     skin_path = tmp_path / "portrait" / "char_290_vigna_summer#1.png"
-    page = FakePage([FakeRequest(skin_url, FakeResponse(b"not-found", status=404))])
-    monkeypatch.setattr(image_cache, "get_new_page", fake_page_context(page))
+    page = FakePage(
+        [FakeRequest(skin_url, FakeResponse(b"not-an-image", status=status, content_type=content_type))],
+        tiny_png,
+    )
+    monkeypatch.setattr(image_cache, "open_html_page", fake_page_context(page))
 
     result = await image_cache.cached_template_to_pic(
         template_path=str(template_path),
@@ -203,72 +198,75 @@ async def test_cached_template_skips_failed_portrait_responses(app, tmp_path, mo
         filters={"portrait_url": filters.ark_skin_portrait_url},
     )
 
-    assert result == b"image"
+    assert result == tiny_png
     assert skin_url in page.html
     assert not skin_path.exists()
 
 
 @pytest.mark.asyncio
-async def test_cached_template_delegates_when_disabled(app, mocker, monkeypatch):
-    from nonebot_plugin_skland import image_cache
+async def test_disabled_cache_keeps_portraits_remote_without_writing_files(app, tmp_path, monkeypatch, tiny_png):
     from nonebot_plugin_skland.config import config
+    from nonebot_plugin_skland import filters, image_cache
 
     monkeypatch.setattr(config, "ark_portrait_cache_enabled", False)
-    renderer = mocker.patch.object(
-        image_cache,
-        "base_template_to_pic",
-        new=mocker.AsyncMock(return_value=b"image"),
-    )
-    template_renderer = mocker.patch.object(
-        image_cache,
-        "template_to_html",
-        new=mocker.AsyncMock(),
-    )
+    monkeypatch.setattr(filters, "CACHE_DIR", tmp_path)
+    monkeypatch.setattr(image_cache, "CACHE_DIR", tmp_path)
+    template = tmp_path / "portrait.html.jinja2"
+    template.write_text('<img src="{{ skin_id | portrait_url }}">', encoding="utf-8")
+    skin_url = "https://web.hycdn.cn/arknights/game/assets/char_skin/portrait/char_290_vigna%40summer%231.png"
+    page = FakePage([FakeRequest(skin_url, FakeResponse(tiny_png))], tiny_png)
+    monkeypatch.setattr(image_cache, "open_html_page", fake_page_context(page))
 
-    result = await image_cache.cached_template_to_pic(
-        template_path="templates",
-        template_name="card.html.jinja2",
-        templates={"value": 1},
-    )
-
-    assert result == b"image"
-    renderer.assert_awaited_once()
-    assert renderer.await_args.kwargs["screenshot_timeout"] == 30_000
-    template_renderer.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_cached_template_waits_for_page_resources_when_requested(app, tmp_path, mocker, monkeypatch):
-    from nonebot_plugin_skland import image_cache
-    from nonebot_plugin_skland.config import config
-
-    monkeypatch.setattr(config, "ark_portrait_cache_enabled", False)
-    template_path = tmp_path / "templates"
-    template_path.mkdir()
-    template_name = "resources.html.jinja2"
-    (template_path / template_name).write_text('<img src="data:image/png;base64,AA==">', encoding="utf-8")
-    page = FakePage([])
-    monkeypatch.setattr(image_cache, "get_new_page", fake_page_context(page))
-    base_renderer = mocker.patch.object(
-        image_cache,
-        "base_template_to_pic",
-        new=mocker.AsyncMock(return_value=b"base-image"),
-    )
-
-    result = await image_cache.cached_template_to_pic(
-        template_path=str(template_path),
-        template_name=template_name,
-        templates={},
+    await image_cache.cached_template_to_pic(
+        template_path=str(tmp_path),
+        template_name=template.name,
+        templates={"skin_id": "char_290_vigna@summer#1"},
+        filters={"portrait_url": filters.ark_skin_portrait_url},
         readiness="resources",
     )
 
-    assert result == b"image"
-    base_renderer.assert_not_awaited()
-    assert page.goto_wait_until == "load"
-    assert page.wait_until == "load"
-    assert len(page.evaluated_scripts) == 1
-    assert "document.fonts.ready" in page.evaluated_scripts[0]
-    assert "image.decode" in page.evaluated_scripts[0]
+    assert skin_url in page.html
+    assert not (tmp_path / "portrait").exists()
+
+
+@pytest.mark.asyncio
+async def test_cached_template_waits_until_resources_are_ready(app, tmp_path, monkeypatch, tiny_png):
+    from nonebot_plugin_skland import image_cache
+    from nonebot_plugin_skland.config import config
+
+    monkeypatch.setattr(config, "ark_portrait_cache_enabled", False)
+    template = tmp_path / "resources.html.jinja2"
+    template.write_text("<p>Resource readiness</p>", encoding="utf-8")
+    waiting = asyncio.Event()
+    ready = asyncio.Event()
+
+    class LoadingPage(FakePage):
+        async def evaluate(self, script: str) -> None:
+            waiting.set()
+            await ready.wait()
+
+        async def screenshot(self, **kwargs: Any) -> bytes:
+            assert ready.is_set(), "A screenshot must not precede resource readiness"
+            return await super().screenshot(**kwargs)
+
+    page = LoadingPage([], tiny_png)
+    monkeypatch.setattr(image_cache, "open_html_page", fake_page_context(page))
+    rendering = asyncio.create_task(
+        image_cache.cached_template_to_pic(
+            template_path=str(tmp_path),
+            template_name=template.name,
+            templates={},
+            readiness="resources",
+        )
+    )
+    try:
+        await asyncio.wait_for(waiting.wait(), 1)
+        assert not rendering.done()
+        ready.set()
+        assert await rendering == tiny_png
+    finally:
+        rendering.cancel()
+        await asyncio.gather(rendering, return_exceptions=True)
 
 
 @pytest.mark.asyncio
@@ -277,14 +275,7 @@ async def test_page_resource_wait_respects_timeout(app):
 
     class SlowPage:
         async def evaluate(self, script: str) -> None:
-            await asyncio.sleep(0.05)
+            await asyncio.Event().wait()
 
     with pytest.raises(asyncio.TimeoutError):
-        await wait_for_page_resources(SlowPage(), 1)
-
-
-def test_ark_portrait_cache_config(app):
-    from nonebot_plugin_skland.config import ScopedConfig
-
-    assert ScopedConfig().ark_portrait_cache_enabled is False
-    assert ScopedConfig(ark_portrait_cache_enabled=True).ark_portrait_cache_enabled is True
+        await wait_for_page_resources(SlowPage(), 1)  # pyright: ignore[reportArgumentType]

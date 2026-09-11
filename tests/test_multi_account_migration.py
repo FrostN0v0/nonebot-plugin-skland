@@ -1,5 +1,6 @@
 import sys
 import importlib.util
+from io import StringIO
 from pathlib import Path
 
 import pytest
@@ -73,6 +74,36 @@ def _run(connection: sa.Connection, function) -> None:
     context = MigrationContext.configure(connection)
     with Operations.context(context):
         function()
+
+
+@pytest.mark.parametrize(
+    ("factory_name", "constraint_names_name"),
+    [
+        ("_new_tables", "_NEW_CONSTRAINT_NAMES"),
+        ("_legacy_tables", "_LEGACY_CONSTRAINT_NAMES"),
+    ],
+)
+def test_postgresql_table_swap_uses_temporary_constraint_names(factory_name, constraint_names_name):
+    migration = _load_migration()
+    output = StringIO()
+    context = MigrationContext.configure(
+        dialect_name="postgresql",
+        opts={"as_sql": True, "output_buffer": output},
+    )
+
+    with Operations.context(context):
+        bind = migration.op.get_bind()
+        getattr(migration, factory_name)(bind)
+        constraint_names = getattr(migration, constraint_names_name)
+        migration._restore_constraint_names(bind, constraint_names)
+
+    ddl = output.getvalue()
+    for names in constraint_names.values():
+        for name in names:
+            temporary_name = f"{name}{migration._POSTGRES_TEMP_CONSTRAINT_SUFFIX}"
+            assert f"CONSTRAINT {temporary_name}" in ddl
+            assert f"RENAME CONSTRAINT {temporary_name} TO {name}" in ddl
+            assert f"CONSTRAINT {name} " not in ddl
 
 
 def test_multi_account_upgrade_preserves_data_and_generated_ids(tmp_path):
@@ -188,6 +219,48 @@ def test_multi_account_upgrade_preserves_data_and_generated_ids(tmp_path):
         assert new_account_id > account["id"]
         assert new_character_id > max(role["id"] for role in roles)
         assert new_record_id > 0
+
+
+def test_multi_account_upgrade_discards_unreachable_orphan_characters(tmp_path, caplog):
+    migration = _load_migration()
+    engine = sa.create_engine(f"sqlite:///{tmp_path / 'orphan.sqlite'}")
+    with engine.begin() as connection:
+        connection.exec_driver_sql("PRAGMA foreign_keys=ON")
+        users, characters, _gacha = _create_legacy_schema(connection)
+        connection.execute(
+            users.insert(),
+            [{"id": 7, "access_token": "access", "cred": "cred", "cred_token": "token", "user_id": "remote"}],
+        )
+        connection.execute(
+            characters.insert(),
+            [
+                {
+                    "id": 7,
+                    "uid": "reachable-role",
+                    "app_code": "arknights",
+                    "channel_master_id": "1",
+                    "nickname": "Reachable",
+                    "isdefault": True,
+                    "role_id": None,
+                },
+                {
+                    "id": 10,
+                    "uid": "orphan-role",
+                    "app_code": "arknights",
+                    "channel_master_id": "1",
+                    "nickname": "Orphan",
+                    "isdefault": True,
+                    "role_id": None,
+                },
+            ],
+        )
+
+        with caplog.at_level("WARNING"):
+            _run(connection, migration.upgrade)
+
+        roles = connection.execute(sa.text("SELECT uid FROM skland_characters ORDER BY uid")).scalars().all()
+        assert roles == ["reachable-role"]
+        assert "Discarding 1 unreachable legacy character row(s)" in caplog.text
 
 
 def test_multi_account_upgrade_rejects_ownership_mismatch(tmp_path):

@@ -2,25 +2,56 @@
 
 from pathlib import Path
 from typing import Any, Literal
-from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from collections.abc import Callable, AsyncIterator
+from importlib.metadata import PackageNotFoundError, version
 
 from playwright.async_api import Page
 import nonebot_plugin_htmlrender as _htmlrender
 
-if hasattr(_htmlrender, "get_new_page"):
+
+def _uses_application_api() -> bool:
+    try:
+        release = version("nonebot-plugin-htmlrender")
+    except PackageNotFoundError:
+        return hasattr(_htmlrender, "get_default_application")
+    major, minor = release.split(".", 2)[:2]
+    return (int(major), int(minor)) >= (0, 8)
+
+
+if not _uses_application_api():
     get_new_page = getattr(_htmlrender, "get_new_page")
     html_to_pic = getattr(_htmlrender, "html_to_pic")
     template_to_html = getattr(_htmlrender, "template_to_html")
     template_to_pic = getattr(_htmlrender, "template_to_pic")
+
+    @asynccontextmanager
+    async def open_html_page(
+        html: str,
+        *,
+        template_path: str | None = None,
+        wait_until: Literal["load", "domcontentloaded", "networkidle"] = "networkidle",
+        device_scale_factor: float = 2,
+        before_load: Callable[[Page], None] | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[Page]:
+        async with get_new_page(device_scale_factor, **kwargs) as page:
+            if before_load is not None:
+                before_load(page)
+            if template_path is not None:
+                await page.goto(template_path, wait_until="load")
+            await page.set_content(html, wait_until=wait_until)
+            yield page
 else:
     from typing import cast
     from copy import deepcopy
+    from dataclasses import replace
     from collections.abc import Mapping
 
     from anyio import CancelScope
     from nonebot import get_driver
     from nonebot_plugin_htmlrender.capabilities import PLAYWRIGHT
+    from nonebot_plugin_htmlrender.preparation.models import PreparedHtml
     from nonebot_plugin_htmlrender.adapters.playwright.provider import PROVIDER
     from nonebot_plugin_htmlrender import Application, RenderTemplateHtmlRequest
     from nonebot_plugin_htmlrender.adapters.playwright.config import PlaywrightConfig
@@ -136,6 +167,14 @@ else:
             )
         )
 
+    def _without_fragment_references(prepared: PreparedHtml) -> PreparedHtml:
+        references = tuple(
+            reference for reference in prepared.structure.references if not reference.strip().startswith("#")
+        )
+        if references == prepared.structure.references:
+            return prepared
+        return replace(prepared, structure=replace(prepared.structure, references=references))
+
     @asynccontextmanager
     async def _prepare_page_resources(
         html: str, base_url: str
@@ -149,17 +188,19 @@ else:
         if strategy.resolve_mode is ResourceResolveMode.OFF:
             policy = RemoteLocalResourcePolicy.PASSTHROUGH
         prepared = await application.preparation.prepare_html(html, base_url=f"{base_url.rstrip('/')}/")
+        resource_prepared = _without_fragment_references(prepared)
         asset_urls = None
         authorization: dict[str, Mapping[str, str]] = {}
         publisher = dependencies.asset_publisher
         lease_id = None
         try:
             if policy in (RemoteLocalResourcePolicy.MEMORY, RemoteLocalResourcePolicy.FILEHOST):
-                prepared = await materialize_local_assets(
-                    prepared,
+                materialized = await materialize_local_assets(
+                    resource_prepared,
                     resources=dependencies.resources,
                     strict=strategy.resolve_mode is ResourceResolveMode.STRICT,
                 )
+                prepared = replace(materialized, structure=prepared.structure)
                 if policy == RemoteLocalResourcePolicy.FILEHOST and prepared.assets:
                     if publisher is None:
                         raise CapabilityUnavailable("filehost")
@@ -168,7 +209,7 @@ else:
                         prepared, publisher=publisher, lease_id=lease_id
                     )
             elif policy is RemoteLocalResourcePolicy.ERROR:
-                _assert_no_local_resources(prepared, document_url=None)
+                _assert_no_local_resources(resource_prepared, document_url=None)
             direct_files = policy in (LocalLocalResourcePolicy.FILE, RemoteLocalResourcePolicy.PASSTHROUGH)
             yield (
                 build_browser_load_plan(
@@ -184,6 +225,30 @@ else:
                 with CancelScope(shield=True):
                     await publisher.release(lease_id)
 
+    @asynccontextmanager
+    async def open_html_page(
+        html: str,
+        *,
+        template_path: str | None = None,
+        wait_until: Literal["load", "domcontentloaded", "networkidle"] = "networkidle",
+        device_scale_factor: float = 2,
+        before_load: Callable[[Page], None] | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[Page]:
+        async with (
+            _prepare_page_resources(html, template_path or Path.cwd().as_uri()) as (plan, authorization),
+            get_new_page(device_scale_factor, **kwargs) as page,
+        ):
+            if authorization:
+                await install_filehost_request_route(page, authorization=authorization)
+            await install_browser_asset_routes(page, plan)
+            if before_load is not None:
+                before_load(page)
+            if plan.document_url is not None:
+                await page.goto(plan.document_url, wait_until="load")
+            await page.set_content(plan.html, wait_until=wait_until)
+            yield page
+
     async def html_to_pic(
         html: str,
         wait: int = 0,
@@ -195,16 +260,13 @@ else:
         **kwargs: Any,
     ) -> bytes:
         # 复用上游资源策略，但保留原生截图的全页、页面参数和毫秒超时契约。
-        async with (
-            _prepare_page_resources(html, template_path or Path.cwd().as_uri()) as (plan, authorization),
-            get_new_page(device_scale_factor, **kwargs) as page,
-        ):
-            if authorization:
-                await install_filehost_request_route(page, authorization=authorization)
-            await install_browser_asset_routes(page, plan)
-            if plan.document_url is not None:
-                await page.goto(plan.document_url, wait_until="load")
-            await page.set_content(plan.html, wait_until="networkidle")
+        async with open_html_page(
+            html,
+            template_path=template_path,
+            wait_until="networkidle",
+            device_scale_factor=device_scale_factor,
+            **kwargs,
+        ) as page:
             await page.wait_for_timeout(wait)
             return await page.screenshot(
                 full_page=True,

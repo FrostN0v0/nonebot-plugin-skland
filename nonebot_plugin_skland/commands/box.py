@@ -3,7 +3,6 @@
 import asyncio
 
 from nonebot.adapters import Bot
-from pydantic import AnyUrl as Url
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_user import UserSession, get_user
 from nonebot_plugin_alconna import At, Match, CustomNode, UniMessage
@@ -13,9 +12,9 @@ from ..player_data import get_ark_card
 from ..data_source import gacha_table_data
 from ..render import render_operator_roster
 from .selection import check_user_character
-from ..utils.background import get_background_image
 from ..exception import SklandException, RequestException
 from ..utils.message import send_reaction, send_request_error
+from ..utils.background import BackgroundImage, get_background_image
 from ..schemas import OperatorCard, OperatorRoster, OperatorRosterQuery
 
 
@@ -65,7 +64,7 @@ def _build_query(
     )
 
 
-async def _get_roster_background_image() -> str | Url | None:
+async def _get_roster_background_image() -> BackgroundImage | None:
     if config.background_source == "default":
         return None
     return await get_background_image("ark")
@@ -78,7 +77,7 @@ def _split_roster_cards(cards: list[OperatorCard], page_size: int) -> list[list[
 async def _render_roster_pages(
     *,
     roster: OperatorRoster,
-    background_image: str | Url | None,
+    background_image: BackgroundImage | None,
     page_size: int,
 ) -> list[bytes]:
     semaphore = asyncio.Semaphore(4)
@@ -129,7 +128,7 @@ async def _send_roster_images(
 async def _render_and_send_roster(
     *,
     roster: OperatorRoster,
-    background_image: str | Url | None,
+    background_image: BackgroundImage | None,
     user_session: UserSession,
     bot: Bot,
 ) -> None:

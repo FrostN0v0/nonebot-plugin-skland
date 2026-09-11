@@ -379,13 +379,11 @@ class Config(BaseModel):
 
 ### 渲染系统
 
-渲染入口在 `render.py`。一般模板沿用 `cached_template_to_pic()`；终末地抽卡使用 htmlrender 的模板生成和独立 Playwright 页面，复用 `image_cache.wait_for_page_resources()` 等待字体/图片，完成 DOM 高度排版后逐页截图，所有阶段沿用全局 `render_timeout`。
+渲染入口在 `render.py`。一般模板沿用 `cached_template_to_pic()`；终末地抽卡通过 `compact.open_html_page()` 建立自定义页面，业务模块负责资源就绪等待与 DOM 分页。普通截图和自定义页面均沿用全局 `render_timeout`。
 
-`compact.py` 是唯一 htmlrender 接口适配边界，导入时按公开 `get_new_page` 是否存在选择实现。0.6.5/0.7.x 直接使用上游原有四个函数；0.8.x 通过公开 `prepare_runtime()` 懒建 skland 私有 Application，在独立配置副本中追加 `RES_DIR`、`CACHE_DIR` 授权，再通过其 Renderer 编译模板并取字符串。Provider SDK 适配器仅取得上游组合生成的私有资源服务和发布器，沿用 Playwright 的配置与实现；若默认 Application 已提供 Playwright 能力，私有应用承担模板与资源处理，页面复用共享浏览器，不启动私有浏览器；否则为本插件按需建立默认 Playwright。普通截图复用上游资源物化、错误策略校验、嵌套 CSS 发布和浏览器资源路由，遵循 `file` / `memory` / `filehost` / `passthrough` / `error` 及 `resource_resolve_mode`；filehost 租约在成功、异常和取消退出时释放，请求授权只应用于对应发布 URL。显式保留旧视口、`full_page=True` 和毫秒 `screenshot_timeout`，不能把视口高度直接映射为新版高层 API 的裁剪高度，也不能把截图超时偷换成总操作预算。渲染函数仍返回 `bytes` 或有序 `list[bytes]`；缓存收集、资源就绪与 DOM 分页不进入兼容模块，其自定义页面流程保持原有行为。
+`compact.py` 是唯一 htmlrender 兼容边界，支持最低 0.6.5 至 0.8.x，统一提供模板生成、普通截图和自定义页面接口。0.8.x 使用插件私有 Application 授权 `RES_DIR`、`CACHE_DIR`，按上游资源策略处理本地资源；可复用共享 Playwright，但不得由插件关闭。响应缓存、资源就绪等待和 DOM 分页保留在各自业务模块。
 
-适配不抬高 htmlrender 最低版本，不在运行错误后重试另一代 API，不替换全局 Application、不改写上游配置或全局授权。0.8.x 使用插件自带资源无需用户填写 Provider 或目录权限；用户显式授权和已有共享浏览器设置继续有效。shutdown 开始即关闭新请求入口，仅清理本插件创建的私有应用，不关闭借用的共享浏览器，也不将关闭状态重置为“尚未初始化”；关闭前从未渲染、清理仍在等待和清理已完成时都拒绝新模板及页面请求。文件 URI 使用 `Path.as_uri()`，避免 Windows 路径和特殊字符被误解析。`cached_template_to_pic()` 的独立默认截图超时仍为 30000 毫秒，具体模板由 `render.py` 继续显式传入 `config.render_timeout`。
-
-浏览器下载安装和安装环境管理由 htmlrender 上游负责，`compact.py` 不包装、替换或修补上游安装器。htmlrender 0.8.1 的自动安装目录错配问题暂时保留，不作为本插件的兼容层修复目标；接口适配、插件资源作用域及共享浏览器复用继续保留。
+兼容层不得修改全局 Application、全局授权或浏览器安装流程，也不在运行错误后切换 API 分支。插件关闭后拒绝新渲染请求；文件 URI 统一使用 `Path.as_uri()`。
 
 主要函数：
 
@@ -401,7 +399,7 @@ class Config(BaseModel):
 
 模板位于 `resources/templates/`，过滤器位于 `filters.py`。Tailwind 输出 CSS 为 `nonebot_plugin_skland/resources/templates/index.css`。
 
-`ArkCard.recruit_complete_time` 直接依赖 `filters.format_timestamp`，schema 不反向导入 `render.py`。背景选择位于 `utils/background.py`，不混入渲染入口。
+`ArkCard.recruit_complete_time` 直接依赖 `filters.format_timestamp`，schema 不反向导入 `render.py`。背景选择位于 `utils/background.py`，本地来源返回 `Path`、远程来源返回 URL；渲染入口将本地路径转换为 `file://` URI，消息和 Argot 则保留真实路径，禁止跨边界复用同一种字符串表示。
 
 账号角色卡的纹理、阴影和字体样式集中于 `tailwind.css` 的 `bound-roles-*` 类，终末地抽卡复用相同主题类而不更改角色卡样式。账号角色卡仍沿用 706px 视口、1.5 倍 PNG 和全局截图超时，不额外请求角色详情或远程图片。
 
@@ -473,7 +471,7 @@ uv run pytest -s tests/test_skland_api.py
 
 测试说明：
 
-- `tests/conftest.py` 使用 nonebug 初始化 NoneBot，并加载 `pyproject.toml` 中配置的插件。测试配置不加载项目 dotenv 配置项、不打印完整配置，localstore 使用当前 pytest 临时目录；htmlrender 0.8 仅预授权用于测试临时模板的 basetemp，不能替生产逻辑预授权仓库资源，0.7 显式选择 Playwright，纯模板测试不启动浏览器。
+- `tests/conftest.py` 使用 nonebug 初始化 NoneBot，并加载 `pyproject.toml` 中配置的插件。测试配置忽略项目 dotenv，localstore 使用 pytest 临时目录；htmlrender 本地授权仅覆盖测试临时目录，禁止通过测试配置绕过生产资源授权。
 - 数据库测试使用内存 SQLite：`sqlite+aiosqlite://`。
 - `make_user_session` fixture 将真实 `UserSession.user` 加入命令使用的同一个 SQLAlchemy session；解绑、缺少默认角色和签到选择失败的回归测试覆盖事务结束后用户 ORM 属性过期的行为，不能只用普通整数模拟 `user_id`。
 - `tests/test_auth.py` 覆盖有界重试、缺少 token 时零刷新请求及刷新失败传播；`tests/test_player_data.py` 覆盖真实缓存中并发等待者分别刷新凭证与成功结果合并。
@@ -482,8 +480,8 @@ uv run pytest -s tests/test_skland_api.py
 - `tests/test_resource_updates.py` 覆盖手动/定时互斥、独立游戏失败、取消释放、关闭任务、09:00 时区边界、旧快捷指令缓存迁移为数据更新，以及用户回复的状态图标和终末地更新/未变化时的卡池数量。
 - `tests/test_ef_gacha_joint_pool.py` 覆盖终末地联合寻访分类与统计；`tests/test_ef_gacha_view.py` 覆盖免费/付费间隔隔离、多金事件完整性及分类切片不改变累计统计；`tests/test_ef_gacha_command.py` 覆盖默认同步、去重、先保存再渲染、显式缓存回退、失败零部分写入、选角身份及有序发送。
 - `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、实际模板中的已拥有/未拥有干员，以及分页发送。
-- `tests/test_image_cache.py` 使用有效微型 PNG，覆盖配置开关、浏览器半身图响应落盘、本地复用、资源就绪前不得截图、等待超时、未知 URL 跳过与失败状态/错误 MIME 忽略。
-- `tests/test_compact.py` 通过真实 htmlrender 模板入口覆盖同名模板变量不被吞作渲染选项、自定义过滤器、模板错误原始原因、私有授权隔离及关闭状态；测试隔离单独恢复模块状态，不通过生产关闭函数重启应用。真实 Chromium/CDP 回归禁用浏览器 `file://` 访问，验证 `memory` 与 `filehost` 下嵌套 CSS、图片、字体和全页 PNG，保留共享浏览器及其授权边界，并验证 filehost 请求授权不泄露到无关 URL；`error` 在接触浏览器前拒绝本地资源。浏览器回归只使用已安装的 Chromium，缺少可执行文件时跳过，不自动安装；JPEG 与实际角色卡另用运行场景验证，不以参数转发或 JS 源码断言代替。
+- `tests/test_image_cache.py` 覆盖配置开关、浏览器半身图响应落盘、本地复用、资源就绪与等待超时，以及失败响应不进入缓存。
+- `tests/test_compact.py` 覆盖支持版本的模板渲染、资源授权和生命周期。真实 Chromium 回归验证 `memory`、`filehost` 策略下普通截图与自定义页面均不依赖浏览器读取本地文件，并保留文档内 fragment 引用；测试仅使用已安装的 Chromium，缺失时跳过且不自动安装。
 - `tests/test_qrcode.py` 覆盖头像 URL 限制、图片下载校验、无头像降级、二维码原始像素保持、群聊发起者标记及扫码绑定流程。
 - `tests/test_account_management.py` 覆盖多账号所有权、分游戏默认角色、角色同步、账号操作互斥、临时选角与角色卡序号一致、默认映射不变、按选定角色导入记录，以及缺少默认角色和跨用户临时选角时的隐私/事务边界。
 - `tests/test_bound_roles.py` 覆盖 binding API 规范化、角色卡投影、序号、默认徽标、两游戏玩家 UID 选择、内部 ID 隐藏、昵称转义、四种展示模式及空态/不可用角色。

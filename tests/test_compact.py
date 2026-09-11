@@ -58,7 +58,7 @@ async def isolated_compact_application(app, monkeypatch):
 def htmlrender_08(app):
     import nonebot_plugin_htmlrender as htmlrender
 
-    if hasattr(htmlrender, "get_new_page"):
+    if not hasattr(htmlrender, "get_default_application"):
         pytest.skip("Scoped Application resources require htmlrender 0.8")
     return htmlrender
 
@@ -82,6 +82,39 @@ async def remote_browser(htmlrender_08, tmp_path):
             yield f"http://127.0.0.1:{port}"
         finally:
             await context.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("release", "expected"),
+    [("0.6.5", False), ("0.7.7", False), ("0.8.0", True), ("1.0.0", True)],
+)
+async def test_htmlrender_version_gate_prefers_distribution_metadata(app, monkeypatch, release, expected):
+    from nonebot_plugin_skland import compact
+
+    monkeypatch.setattr(compact, "version", lambda _: release)
+    monkeypatch.delattr(compact._htmlrender, "get_default_application", raising=False)
+
+    assert compact._uses_application_api() is expected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("application_api_available", [False, True])
+async def test_htmlrender_version_gate_falls_back_to_module_capability(app, monkeypatch, application_api_available):
+    from importlib.metadata import PackageNotFoundError
+
+    from nonebot_plugin_skland import compact
+
+    def unavailable(_: str) -> str:
+        raise PackageNotFoundError("nonebot-plugin-htmlrender")
+
+    monkeypatch.setattr(compact, "version", unavailable)
+    if application_api_available:
+        monkeypatch.setattr(compact._htmlrender, "get_default_application", object(), raising=False)
+    else:
+        monkeypatch.delattr(compact._htmlrender, "get_default_application", raising=False)
+
+    assert compact._uses_application_api() is application_api_available
 
 
 @pytest.mark.asyncio
@@ -125,6 +158,48 @@ async def test_template_failure_preserves_the_original_error(app, tmp_path):
     while cause.__cause__ is not None:
         cause = cause.__cause__
     assert isinstance(cause, ZeroDivisionError)
+
+
+@pytest.mark.asyncio
+async def test_local_background_paths_are_preserved_for_messages(app, tmp_path, monkeypatch):
+    from pathlib import Path
+
+    from nonebot_plugin_alconna import Text, Image
+
+    from nonebot_plugin_skland.config import CustomSource, config
+    from nonebot_plugin_skland.utils.message import build_background_argot_segment
+    from nonebot_plugin_skland.utils.background import (
+        background_to_uri,
+        get_background_image,
+        get_rogue_background_image,
+    )
+
+    monkeypatch.setattr(config, "background_source", "default")
+    monkeypatch.setattr(config, "rogue_background_source", "rogue")
+    backgrounds = (
+        await get_background_image("ark"),
+        await get_background_image("endfield"),
+        await get_rogue_background_image("rogue_1"),
+    )
+    assert all(isinstance(background, Path) for background in backgrounds)
+    for background in backgrounds:
+        assert isinstance(background, Path)
+        assert background.is_file()
+        assert background_to_uri(background) == background.as_uri()
+        segment = build_background_argot_segment(background)
+        assert isinstance(segment, Image)
+        assert segment.path == background
+
+    custom_background = tmp_path / "background #1.png"
+    custom_background.write_bytes(b"image")
+    assert CustomSource(uri=custom_background).resolve() == custom_background.resolve()
+
+    remote_segments = build_background_argot_segment("https://example.com/background.png")
+    assert isinstance(remote_segments, list)
+    assert isinstance(remote_segments[0], Text)
+    assert remote_segments[0].text == "https://example.com/background.png"
+    assert isinstance(remote_segments[1], Image)
+    assert remote_segments[1].url == "https://example.com/background.png"
 
 
 @pytest.mark.asyncio
@@ -265,6 +340,9 @@ async def test_shutdown_rejects_late_render_requests(htmlrender_08, tmp_path, in
     with pytest.raises(ProviderLifecycleError):
         await compact.html_to_pic("<p>late screenshot</p>")
     with pytest.raises(ProviderLifecycleError):
+        async with compact.open_html_page("<p>late page</p>"):
+            pytest.fail("Shutdown must reject a new prepared page")
+    with pytest.raises(ProviderLifecycleError):
         async with compact.get_new_page():
             pytest.fail("Shutdown must reject a new browser page")
 
@@ -302,8 +380,9 @@ async def test_remote_error_policy_rejects_before_browser_access(htmlrender_08, 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("policy", "shared"), [("memory", False), ("memory", True), ("filehost", True)])
+@pytest.mark.parametrize("surface", ["html_to_pic", "open_html_page"])
 async def test_remote_resources_render_without_browser_filesystem(
-    htmlrender_08, tmp_path, monkeypatch, remote_browser, policy, shared
+    htmlrender_08, tmp_path, monkeypatch, remote_browser, policy, shared, surface
 ):
     from io import BytesIO
     from contextlib import AsyncExitStack
@@ -396,15 +475,27 @@ async def test_remote_resources_render_without_browser_filesystem(
                 set_default_application(shared_application)
             html = (
                 '<link rel="stylesheet" href="main.css">'
+                '<svg style="position:absolute;width:0;height:0"><filter id="fixture-filter">'
+                "<feComponentTransfer/></filter></svg>"
+                "<div style=\"display:none;filter:url('#fixture-filter')\"></div>"
                 '<div class="image"></div><div class="tail"></div><span class="label">Fixture</span>' + outside_image
             )
-            result = await compact.html_to_pic(
-                html,
-                template_path=assets.as_uri(),
-                viewport={"width": 160, "height": 10},
-                device_scale_factor=1.5,
-                screenshot_timeout=45_000,
-            )
+            if surface == "html_to_pic":
+                result = await compact.html_to_pic(
+                    html,
+                    template_path=assets.as_uri(),
+                    viewport={"width": 160, "height": 10},
+                    device_scale_factor=1.5,
+                    screenshot_timeout=45_000,
+                )
+            else:
+                async with compact.open_html_page(
+                    html,
+                    template_path=assets.as_uri(),
+                    viewport={"width": 160, "height": 10},
+                    device_scale_factor=1.5,
+                ) as page:
+                    result = await page.screenshot(full_page=True, type="png", timeout=45_000)
             with Image.open(BytesIO(result)) as rendered:
                 assert rendered.format == "PNG"
                 assert rendered.size == (240, 360)

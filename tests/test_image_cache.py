@@ -67,10 +67,19 @@ class FakePage:
 
 def fake_page_context(page: FakePage):
     @asynccontextmanager
-    async def get_page(*args: Any, **kwargs: Any) -> AsyncIterator[FakePage]:
+    async def open_page(
+        html: str,
+        *,
+        wait_until: str,
+        before_load: Any = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[FakePage]:
+        if before_load is not None:
+            before_load(page)
+        await page.set_content(html, wait_until=wait_until)
         yield page
 
-    return get_page
+    return open_page
 
 
 @pytest.mark.asyncio
@@ -100,7 +109,7 @@ async def test_cached_template_uses_remote_portraits_then_local_files(app, tmp_p
         [FakeRequest(skin_url, FakeResponse(tiny_png)), FakeRequest(char_url, FakeResponse(tiny_png))],
         tiny_png,
     )
-    monkeypatch.setattr(image_cache, "get_new_page", fake_page_context(page))
+    monkeypatch.setattr(image_cache, "open_html_page", fake_page_context(page))
     local_renderer = mocker.patch.object(image_cache, "html_to_pic", new=mocker.AsyncMock(return_value=tiny_png))
 
     render_kwargs = {
@@ -180,7 +189,7 @@ async def test_cached_template_skips_failed_portrait_responses(
         [FakeRequest(skin_url, FakeResponse(b"not-an-image", status=status, content_type=content_type))],
         tiny_png,
     )
-    monkeypatch.setattr(image_cache, "get_new_page", fake_page_context(page))
+    monkeypatch.setattr(image_cache, "open_html_page", fake_page_context(page))
 
     result = await image_cache.cached_template_to_pic(
         template_path=str(template_path),
@@ -206,7 +215,7 @@ async def test_disabled_cache_keeps_portraits_remote_without_writing_files(app, 
     template.write_text('<img src="{{ skin_id | portrait_url }}">', encoding="utf-8")
     skin_url = "https://web.hycdn.cn/arknights/game/assets/char_skin/portrait/char_290_vigna%40summer%231.png"
     page = FakePage([FakeRequest(skin_url, FakeResponse(tiny_png))], tiny_png)
-    monkeypatch.setattr(image_cache, "get_new_page", fake_page_context(page))
+    monkeypatch.setattr(image_cache, "open_html_page", fake_page_context(page))
 
     await image_cache.cached_template_to_pic(
         template_path=str(tmp_path),
@@ -241,7 +250,7 @@ async def test_cached_template_waits_until_resources_are_ready(app, tmp_path, mo
             return await super().screenshot(**kwargs)
 
     page = LoadingPage([], tiny_png)
-    monkeypatch.setattr(image_cache, "get_new_page", fake_page_context(page))
+    monkeypatch.setattr(image_cache, "open_html_page", fake_page_context(page))
     rendering = asyncio.create_task(
         image_cache.cached_template_to_pic(
             template_path=str(tmp_path),
@@ -269,4 +278,4 @@ async def test_page_resource_wait_respects_timeout(app):
             await asyncio.Event().wait()
 
     with pytest.raises(asyncio.TimeoutError):
-        await wait_for_page_resources(SlowPage(), 1)
+        await wait_for_page_resources(SlowPage(), 1)  # pyright: ignore[reportArgumentType]

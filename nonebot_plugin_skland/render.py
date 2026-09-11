@@ -1,4 +1,5 @@
 from datetime import datetime
+from collections.abc import Callable
 
 from .image_cache import wait_for_page_resources
 from .config import RES_DIR, TEMPLATES_DIR, config
@@ -9,6 +10,7 @@ from .schemas import (
     Clue,
     Status,
     ArkCard,
+    HelpView,
     RogueData,
     EfGachaView,
     EndfieldCard,
@@ -79,6 +81,22 @@ async def render_bound_roles_card(props: BoundRolesCard) -> bytes:
         },
         device_scale_factor=1.5,
         screenshot_timeout=config.render_timeout,
+        type="png",
+    )
+
+
+async def render_help(props: HelpView, *, layout: Callable[[str, bool], str]) -> bytes:
+    return await template_to_pic(
+        template_path=str(TEMPLATES_DIR),
+        template_name="help_overview.html.jinja2" if props.variant == "overview" else "help_detail.html.jinja2",
+        templates={"props": props, "layout": layout},
+        pages={
+            "viewport": {"width": 706, "height": 1},
+            "base_url": TEMPLATES_DIR.as_uri(),
+        },
+        device_scale_factor=1.5,
+        screenshot_timeout=config.render_timeout,
+        readiness="resources",
         type="png",
     )
 

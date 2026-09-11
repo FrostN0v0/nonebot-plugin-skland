@@ -1,0 +1,50 @@
+{% autoescape true %}
+{% from 'help_macros.html.jinja2' import help_header, help_section, help_footer %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ props.name }} · 功能总览</title>
+  <style>{% include 'index.css' %}</style>
+</head>
+<body class="skland-help-body">
+<main class="bound-roles-dossier skland-help-page skland-help-overview">
+  {{ help_header(props, '功能总览', '账号、游戏数据与图片交互，一份档案快速查阅') }}
+  <div class="skland-help-content">
+    <aside class="skland-help-intro">
+      <span class="skland-help-intro-label">阅读指引</span>
+      <div><p>按栏目查找功能，使用原编号或功能名称查看完整用法</p><p>游戏查询使用对应游戏的默认角色；多角色账号可先确认当前选择</p></div>
+    </aside>
+    {% if props.function_count %}
+    {% for section in props.sections if section.category == 'account' %}
+    {{ help_section(section, props, layout) }}
+    {% endfor %}
+    <div class="skland-help-games">
+      {% for categories in [['arknights'], ['endfield', 'interaction']] %}
+      {% set sections = props.sections | selectattr('category', 'in', categories) | list %}
+      {% if sections %}
+      <div class="skland-help-game-column">
+        {% for section in sections %}{{ help_section(section, props, layout) }}{% endfor %}
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% for category in ['admin', 'other'] %}
+    {% for section in props.sections if section.category == category %}
+    {{ help_section(section, props, layout) }}
+    {% endfor %}
+    {% endfor %}
+    {% else %}
+    <section class="bound-roles-account skland-help-empty">
+      <span class="skland-help-empty-mark" aria-hidden="true">—</span>
+      <h2>暂无可见功能</h2>
+      <p>当前菜单没有可展示的条目，请联系机器人管理员确认菜单配置或访问权限</p>
+    </section>
+    {% endif %}
+  </div>
+  {{ help_footer(props) }}
+</main>
+</body>
+</html>
+{% endautoescape %}

@@ -1,6 +1,7 @@
 from .cred import CRED as CRED
 from .binding import Role as Role
 from .arknights import Clue as Clue
+from .help import HelpView as HelpView
 from .sign import SignGame as SignGame
 from .arknights import Avatar as Avatar
 from .arknights import Status as Status

@@ -39,7 +39,7 @@ nonebot_plugin_skland/
 ├── hook.py              # 启动/关闭钩子：加载数据、注册/持久化快捷指令、可选资源检查
 ├── tasks.py             # APScheduler：每日签到与 09:00 数据资源更新
 ├── config.py            # Pydantic 配置、资源/缓存/数据目录常量
-├── extras.py            # NoneBot 插件商店/帮助菜单 extra 数据
+├── extras.py            # 单一帮助目录、命令示例与 PicMenu 元数据
 ├── model.py             # nonebot-plugin-orm 模型：SkUser、Character、CharacterDefault、GachaRecord
 ├── account.py           # 多账号角色快照、默认角色投影、角色同步与账号操作互斥
 ├── db_handler.py        # 账号、角色、默认角色与抽卡记录查询/写入契约
@@ -58,6 +58,9 @@ nonebot_plugin_skland/
 │   ├── gacha.py         # History fetching, grouping, and Heybox conversion
 │   ├── resources.py     # 启动、手动、定时数据更新互斥与汇总反馈
 │   └── sign.py          # Signing, ordered cache persistence, filtering, and formatting
+├── integrations/
+│   ├── __init__.py      # 可选集成包边界，不聚合导出
+│   └── picmenu.py       # 已加载 PicMenu Next 时注册专属帮助模板
 ├── utils/
 │   ├── __init__.py      # Package boundary without implicit exports
 │   ├── background.py    # Configured background selection
@@ -90,6 +93,7 @@ nonebot_plugin_skland/
 │   ├── binding.py       # 森空岛 wire model、确认快照与绑定角色卡 DTO
 │   ├── cred.py          # CRED 凭证模型
 │   ├── sign.py          # Shared SignResult and sign-cache contracts
+│   ├── help.py          # 帮助目录、可见项分组与编号投影
 │   ├── arknights/
 │   │   ├── card.py      # ArkCard 角色卡片结构
 │   │   ├── sign.py      # Arknights sign API response
@@ -117,6 +121,9 @@ nonebot_plugin_skland/
         ├── operator_roster.html.jinja2
         ├── operator_roster_macros.html.jinja2
         ├── bound_roles.html.jinja2
+        ├── help_overview.html.jinja2
+        ├── help_detail.html.jinja2
+        ├── help_macros.html.jinja2
         ├── endfield_card.html.jinja2
         ├── gacha.html.jinja2
         ├── gacha_macros.html.jinja2
@@ -183,6 +190,16 @@ skland efwar [target] [-r|--role <index>] [-s|--season <season>] [-w|--week <wee
 `森空岛角色` 精确匹配 `skland char`；`切换方舟角色 <index>` / `切换终末地角色 <index>` 分别映射到 `skland char set ark <index>` / `skland char set ef <index>`，使用 `fuzzy=True` 接收序号、`compact=False` 要求空格分隔，并沿用 Bot 的命令前缀。内置快捷指令在加载缓存后注册。
 
 个人签到快捷指令保留裸命令签到全部个人角色的行为；追加选项时由独立的带空白前缀规则转发到 `sign`，支持 `-r` / `--role`，不会隐式叠加 `--all`。签到详情快捷指令也允许追加选角参数。其他按角色查询的中文快捷指令继续透传参数。
+
+### 图片帮助
+
+- `extras.HELP_ENTRIES` 是帮助内容的单一来源，通过 `HelpEntry.to_menu_data()` 生成标准 `menu_data`；保留 25 项功能，管理项使用 `pmn_hidden`。`HELP_PREFIX` 从 Bot 的 `command_start` 选择一个可用前缀，暗语保持不带命令前缀。
+- `hook.startup()` 首先调用 `integrations.picmenu.register_picmenu_templates()`；只有 PicMenu Next 已加载时才 `require` 并导入其接口，未安装或未加载时不影响 Skland。注册幂等，不更改依赖、不替换全局首页、不启用 Alconna 全局帮助接管。
+- 插件声明 `pmn.template="skland"` 并开启功能模板继承，分别注册总览和通用详情回调；方舟干员通过 `pmn_template="skland_roster"` 使用同一详情模板的速查变体。
+- `schemas/help.py` 的 `HelpView` 只处理 PicMenu 实际传入的可见列表与功能正文，按当前列表生成用户可见编号后再分组；未知外部条目归入其他功能，无编号的 Alconna 临时帮助不编造序号。不修改共享菜单模型，也不从原目录恢复已过滤条目。
+- Markdown 和 `plugin:self,...` 资源解析复用 PicMenu 的 `build_base_render_kwargs`、`build_default_prp_processor` 与 data URL 转换器；标题及普通文字显式转义。`render.render_help()` 沿用现有 `compact` 边界、资源就绪等待、706px 视口、1.5 倍 PNG 和全局截图超时；`skland-help-*` 样式集中于 Tailwind，不修改其他卡片样式。
+- 图片帮助的中文条目、列表及分行说明不使用句末句号；段内多句通过 Markdown 硬换行保持分隔，不在渲染器中全局替换标点，也不修改命令、URL 或版本号中的点号。
+- 入口为 `帮助 森空岛` 与 `帮助 森空岛 <功能名称或编号>`，前缀遵循 Bot 配置。`-H` 仅控制菜单可见性，不能代替命令权限；限制普通帮助入口查看隐藏项需配置 `PMN_ONLY_SUPERUSER_SEE_HIDDEN=True`。`sk box --help` 接管产生的正文仍来自 Alconna，不自动映射到手写的方舟干员说明。
 
 ## 核心实现说明
 

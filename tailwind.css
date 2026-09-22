@@ -198,6 +198,128 @@
   .bound-roles-hatch {
     background: repeating-linear-gradient(120deg, transparent 0 9px, rgb(255 255 255 / 14%) 9px 11px);
   }
+
+  .skland-help-body { margin: 0; background: #111; }
+  .skland-help-page {
+    --skland-help-accent: #7a898f;
+    box-sizing: border-box;
+    width: 706px;
+    color: #20272b;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .skland-help-page *, .skland-help-page *::before, .skland-help-page *::after { box-sizing: border-box; }
+  .skland-help-header { position: relative; padding: 25px 28px 23px; overflow: hidden; color: #fff; }
+  .skland-help-hatch { position: absolute; top: -35px; right: -30px; width: 170px; height: 230px; transform: rotate(-14deg); opacity: .35; }
+  .skland-help-header-content { position: relative; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+  .skland-help-heading { flex: 1; min-width: 0; }
+  .skland-help-eyebrow { display: flex; align-items: center; gap: 8px; color: #c4cccf; font-size: 11px; letter-spacing: .16em; }
+  .skland-help-eyebrow span { width: 6px; height: 6px; background: #23bafc; }
+  .skland-help-heading h1 { margin: 10px 0 7px; font-size: 30px; font-weight: 700; line-height: 1.3; letter-spacing: .06em; }
+  .skland-help-heading > p { margin: 0; color: #c4cccf; font-size: 12px; line-height: 1.6; }
+  .skland-help-stamp { display: flex; flex-direction: column; align-items: flex-end; width: 134px; min-width: 0; padding-left: 15px; border-left: 1px solid rgb(255 255 255 / 18%); text-align: right; }
+  .skland-help-stamp-label { max-width: 100%; color: #c4cccf; font-size: 11px; }
+  .skland-help-version { max-width: 100%; margin-top: 2px; font-family: Bender, sans-serif; font-size: 12px; color: #aebbc2; }
+  .skland-help-stamp strong { margin: 6px 0 0; font-family: Akrobat, sans-serif; font-size: 38px; font-weight: 700; line-height: 1; }
+  .skland-help-rule { display: flex; height: 5px; }
+  .skland-help-rule span:first-child { width: 28px; background: #879297; }
+  .skland-help-rule span:nth-child(2) { flex: 1; background: #23bafc; }
+  .skland-help-rule span:last-child { flex: 1; background: #e3d600; }
+  .skland-help-content { display: grid; gap: 16px; padding: 20px 28px 0; }
+  .skland-help-intro { display: flex; align-items: flex-start; gap: 14px; padding: 0 0 15px; border-bottom: 1px solid rgb(32 39 43 / 20%); }
+  .skland-help-intro-label { flex-shrink: 0; padding-left: 9px; border-left: 3px solid #7a898f; font-size: 12px; font-weight: 700; }
+  .skland-help-intro > div { min-width: 0; }
+  .skland-help-intro p { margin: 0; font-size: 12px; color: #4e5a60; }
+  .skland-help-intro p + p { margin-top: 3px; }
+  .skland-help-section { min-width: 0; align-self: start; border: 1px solid rgb(255 255 255 / 45%); background: rgb(245 246 240 / 83%); }
+  .skland-help-section-heading { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 58px; padding: 9px 13px; border-top: 3px solid var(--skland-help-accent); background: #2a3237; color: #fff; }
+  .skland-help-section-heading > div { position: relative; z-index: 1; min-width: 0; }
+  .skland-help-section-subtitle { display: block; color: #b8c4c9; font-family: Bender, "Microsoft YaHei", sans-serif; font-size: 10px; line-height: 1.3; letter-spacing: .1em; }
+  .skland-help-section-heading h2 { margin: 3px 0 0; font-size: 16px; font-weight: 700; line-height: 1.4; }
+  .skland-help-wordmark { position: absolute; right: 12px; width: 86px; object-fit: contain; filter: brightness(0) invert(1); opacity: .16; }
+  .skland-help-wordmark-arknights { height: 29px; }
+  .skland-help-wordmark-endfield { height: 18px; }
+  .skland-help-category-arknights { --skland-help-accent: #23bafc; }
+  .skland-help-category-endfield { --skland-help-accent: #e3d600; }
+  .skland-help-category-admin { --skland-help-accent: #a69989; }
+  .skland-help-games { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; }
+  .skland-help-games:empty { display: none; }
+  .skland-help-games > :only-child { grid-column: 1 / -1; }
+  .skland-help-game-column { display: grid; gap: 16px; min-width: 0; }
+  .skland-help-category-admin .skland-help-items { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .skland-help-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0 13px; column-gap: 20px; }
+  .skland-help-games .skland-help-items { grid-template-columns: minmax(0, 1fr); }
+  .skland-help-item { display: flex; align-items: flex-start; gap: 8px; min-width: 0; padding: 10px 0; border-top: 1px solid rgb(32 39 43 / 12%); }
+  .skland-help-item-index { width: 23px; flex-shrink: 0; padding-top: 1px; font-family: Akrobat, sans-serif; font-size: 22px; line-height: 1; color: #78858a; }
+  .skland-help-item-content { min-width: 0; flex: 1; }
+  .skland-help-item h3 { margin: 0; font-size: 14px; font-weight: 700; line-height: 1.45; }
+  .skland-help-item-brief { margin-top: 3px; color: #455159; font-size: 12px; line-height: 1.5; }
+  .skland-help-condition { display: flex; align-items: flex-start; gap: 7px; margin-top: 5px; font-size: 12px; line-height: 1.45; color: #5a686f; }
+  .skland-help-condition > span { flex-shrink: 0; padding-left: 6px; border-left: 2px solid var(--skland-help-accent); color: #667279; }
+  .skland-help-condition > div { flex: 1; min-width: 0; }
+  .skland-help-section-empty { grid-column: 1 / -1; margin: 0; padding: 20px 0; color: #617078; font-size: 12px; }
+  .skland-help-empty { padding: 32px 24px; background: rgb(245 246 240 / 83%); text-align: center; }
+  .skland-help-empty-mark { color: #7a898f; font-family: Akrobat, sans-serif; font-size: 42px; }
+  .skland-help-empty h2 { margin: 0; font-size: 20px; font-weight: 700; }
+  .skland-help-empty p { margin: 12px 0 0; color: #5a686f; }
+  .skland-help-footer { padding: 18px 28px 20px; }
+  .skland-help-navigation { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0 0; border-top: 1px solid rgb(32 39 43 / 24%); }
+  .skland-help-navigation > span { flex-shrink: 0; font-size: 12px; font-weight: 700; }
+  .skland-help-navigation > div { min-width: 0; flex: 1; }
+  .skland-help-navigation code { font-family: Consolas, "Microsoft YaHei", monospace; font-size: 13px; white-space: pre-wrap; }
+  .skland-help-visibility { margin: 8px 0 0; color: #5a686f; font-size: 11px; }
+  .skland-help-credit { margin: 17px 0 0; text-align: center; font-family: Bender, sans-serif; color: #5a686f; font-size: 11px; letter-spacing: .04em; }
+  .skland-help-command-panel { min-width: 0; padding: 16px 18px; border-left: 4px solid var(--skland-help-accent); background: #283238; color: #eef4f5; }
+  .skland-help-panel-label { color: #b6c6ce; font-size: 11px; letter-spacing: .1em; }
+  .skland-help-command { margin-top: 8px; font-family: Bender, "Microsoft YaHei", sans-serif; font-size: 18px; line-height: 1.6; }
+  .skland-help-command-panel .skland-help-condition { margin-top: 12px; color: #c2d0d5; }
+  .skland-help-command-panel .skland-help-condition > span, .skland-help-command-panel .skland-help-muted { color: #b6c6ce; }
+  .skland-help-summary { min-width: 0; padding: 0 3px; }
+  .skland-help-summary h2 { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: #526169; }
+  .skland-help-summary > .skland-help-prose { font-size: 14px; line-height: 1.7; }
+  .skland-help-detail-panel { min-width: 0; padding: 17px 18px 20px; background: rgb(245 246 240 / 90%); }
+  .skland-help-detail-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 12px; margin-bottom: 15px; border-bottom: 1px solid rgb(32 39 43 / 20%); }
+  .skland-help-detail-heading h2 { margin: 0; padding-left: 9px; border-left: 3px solid var(--skland-help-accent); font-size: 17px; font-weight: 700; }
+  .skland-help-detail-heading > span { font-family: Akrobat, sans-serif; font-size: 13px; letter-spacing: .08em; color: #77868e; }
+  .skland-help-detail-prose { font-size: 14px; line-height: 1.75; }
+  .skland-help-muted { margin: 7px 0 0; color: #5a686f; font-size: 13px; }
+  .skland-help-prose { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+  .skland-help-prose > :first-child { margin-top: 0; }
+  .skland-help-prose > :last-child { margin-bottom: 0; }
+  .skland-help-prose p { margin: .55em 0; }
+  .skland-help-prose h1, .skland-help-prose h2, .skland-help-prose h3, .skland-help-prose h4, .skland-help-prose h5, .skland-help-prose h6 { margin: 1.2em 0 .45em; font-weight: 700; line-height: 1.5; }
+  .skland-help-prose h1 { font-size: 1.4em; }
+  .skland-help-prose h2 { font-size: 1.2em; padding-bottom: .25em; border-bottom: 1px solid rgb(32 39 43 / 16%); }
+  .skland-help-prose h3 { font-size: 1.08em; }
+  .skland-help-prose h4, .skland-help-prose h5, .skland-help-prose h6 { font-size: 1em; }
+  .skland-help-prose ul, .skland-help-prose ol { margin: .65em 0; padding-left: 1.55em; }
+  .skland-help-prose ul { list-style-type: disc; }
+  .skland-help-prose ol { list-style-type: decimal; }
+  .skland-help-prose li { min-width: 0; padding-left: .1em; margin: .25em 0; }
+  .skland-help-prose li > ul, .skland-help-prose li > ol { margin: .25em 0; }
+  .skland-help-prose li > ul { list-style-type: circle; }
+  .skland-help-prose li > p { margin: .3em 0; }
+  .skland-help-prose a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  .skland-help-prose strong { font-weight: 700; }
+  .skland-help-prose em { font-style: italic; }
+  .skland-help-prose code, .skland-help-prose kbd { padding: .1em .3em; background: rgb(112 131 142 / 14%); font-family: Consolas, "Microsoft YaHei", monospace; font-size: .94em; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .skland-help-prose pre { max-width: 100%; margin: .8em 0; padding: 12px 13px; border-left: 3px solid var(--skland-help-accent); background: rgb(112 131 142 / 12%); white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; }
+  .skland-help-prose pre code { padding: 0; background: transparent; white-space: inherit; }
+  .skland-help-prose blockquote { margin: .8em 0; padding: 8px 12px; border-left: 3px solid var(--skland-help-accent); background: rgb(112 131 142 / 8%); color: inherit; }
+  .skland-help-prose blockquote > :first-child { margin-top: 0; }
+  .skland-help-prose blockquote > :last-child { margin-bottom: 0; }
+  .skland-help-prose table { width: 100%; max-width: 100%; margin: .8em 0; border-collapse: collapse; table-layout: fixed; font-size: .92em; }
+  .skland-help-prose th, .skland-help-prose td { min-width: 0; padding: 7px 8px; border: 1px solid rgb(112 131 142 / 28%); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+  .skland-help-prose th { background: rgb(112 131 142 / 16%); font-weight: 700; }
+  .skland-help-prose img, .skland-help-prose svg, .skland-help-prose video { max-width: 100%; height: auto; object-fit: contain; }
+  .skland-help-prose figure { max-width: 100%; margin: .8em 0; }
+  .skland-help-prose hr { margin: 1em 0; border: 0; border-top: 1px solid rgb(112 131 142 / 28%); }
+  .skland-help-prose .task-list-item { list-style: none; }
+  .skland-help-prose .task-list-item-checkbox { margin-right: .4em; }
+  .skland-help-roster .skland-help-detail-prose > ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; padding: 0; list-style: none; }
+  .skland-help-roster .skland-help-detail-prose > ul > li { margin: 0; padding: 10px 12px; border-top: 2px solid var(--skland-help-accent); background: rgb(112 131 142 / 9%); }
+  .skland-help-roster .skland-help-detail-prose > ul > li:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .ef-page { box-sizing: border-box; width: 800px; }
   .ef-source { position: absolute; left: -10000px; top: 0; width: 248px; visibility: hidden; }
   .ef-pool { min-width: 0; }

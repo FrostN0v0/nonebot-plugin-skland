@@ -200,6 +200,23 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 > [!NOTE]
 > 记得使用[命令前缀](https://nonebot.dev/docs/appendices/config#command-start-%E5%92%8C-command-separator)哦
 
+### 图片帮助（可选）
+
+Bot 同时安装并加载 [nonebot-plugin-picmenu-next](https://github.com/lgc-NB2Dev/nonebot-plugin-picmenu-next) 后，Skland 会在启动时注册专属帮助模板。接入使用 PicMenu Next 0.5 系列的模板接口，不会主动加载 PicMenu，也不会替换机器人的全局帮助首页。
+
+```text
+帮助 森空岛
+帮助 森空岛 方舟干员
+帮助 森空岛 终末地抽卡记录
+帮助 -H 森空岛
+```
+
+命令需要使用当前 Bot 的命令前缀；图片中的示例会选用配置中的一个可用前缀。总览按账号、明日方舟、终末地和图片交互分组，详情页优先展示常用示例，方舟干员提供筛选速查布局。也可以按当前图片中的功能编号查询详情。
+
+管理功能默认隐藏，`-H` 显示隐藏项；隐藏不是命令权限校验。若希望仅超管能通过普通帮助入口查看隐藏项，在 Bot 配置中设置 `PMN_ONLY_SUPERUSER_SEE_HIDDEN=True`，实际管理命令仍沿用原有超管权限。
+
+Skland 不自动开启 `PMN_ALCONNA_GLOBAL_EXT`。由 Bot 管理者开启后，`sk box --help` 等 Alconna 帮助可以使用相同主题，但正文仍由 Alconna 按当前子命令生成，不等同于手写的中文功能说明。未加载 PicMenu 时仍可使用 `skland --help`。
+
 ### 🪧 指令总览
 
 <details open>
@@ -536,6 +553,17 @@ Bot: skland::skland 的快捷指令: "查战绩" 添加成功
 > 本插件支持 cred 和 token 两种手动绑定方式，也支持二维码绑定；三种方式都会在保存前展示角色列表并要求命令发起者确认。token、cred 和二维码登录结果均属于敏感凭证，请勿交给不信任的 Bot 所有者。
 
 ### 📸 效果图
+
+<details>
+<summary>森空岛图片帮助</summary>
+
+![帮助总览](docs/help_overview.png)
+
+![方舟干员筛选速查](docs/help_roster.png)
+
+![终末地抽卡功能说明](docs/help_detail.png)
+
+</details>
 
 <details id="效果图">
   <summary>🔮 游戏信息</summary>

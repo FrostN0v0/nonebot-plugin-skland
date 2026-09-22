@@ -4,6 +4,7 @@ from nonebot_plugin_alconna import command_manager
 from .config import CACHE_DIR, config
 from .download import download_img_resource
 from .services.resources import update_data_resources
+from .integrations.picmenu import register_picmenu_templates
 from .exception import RequestException, ResourceUpdateInProgress
 
 driver = get_driver()
@@ -13,6 +14,7 @@ from .matcher import skland, skland_command
 
 @driver.on_startup
 async def startup():
+    register_picmenu_templates()
     try:
         await update_data_resources(refresh_metadata=False)
     except ResourceUpdateInProgress:

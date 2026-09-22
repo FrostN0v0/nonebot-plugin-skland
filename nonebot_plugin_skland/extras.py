@@ -1,451 +1,401 @@
+from nonebot import get_driver
+
+from .schemas.help import HelpEntry, HelpCategory
+
+HELP_PREFIX = min(get_driver().config.command_start, key=lambda value: (len(value), value), default="")
+
+HELP_ENTRIES = (
+    HelpEntry(
+        func="扫码绑定",
+        category="account",
+        command="扫码绑定",
+        brief_des="用森空岛 App 扫码，确认角色后完成绑定",
+        condition="群聊 / 私聊 · 推荐",
+        examples=("扫码绑定", "sk qrcode"),
+        detail_des=(
+            "### 三步完成绑定\n\n"
+            "1. 使用森空岛 App 扫描机器人发送的二维码\n"
+            "2. 核对返回的账号角色卡片\n"
+            "3. 由命令发起者回复 **确认**，保存或更新这个账号\n\n"
+            "> 二维码约 100 秒后撤回  \n> 插件无法验证扫码者身份，请只确认自己的账号  \n> "
+            "未确认、取消或超时均不会保存绑定"
+        ),
+    ),
+    HelpEntry(
+        func="森空岛绑定",
+        category="account",
+        command="森空岛绑定 <token|cred>",
+        brief_des="通过凭证新增账号，或更新已有账号",
+        condition="仅私聊 · 确认后保存",
+        examples=("森空岛绑定 <token|cred>", "sk bind <token|cred> -u"),
+        detail_des=(
+            "### 新增与更新\n\n"
+            "同一用户可以绑定多个森空岛账号  \n插件先展示账号的完整角色列表，"
+            "只有命令发起者回复 **确认** 后才保存\n\n"
+            "- 不带 `-u`：新增一个森空岛账号\n"
+            "- 带 `-u`：更新凭证识别出的既有账号，不通过角色序号指定账号\n\n"
+            "### 凭证安全\n\n"
+            "不要在群聊发送 token、cred 或包含凭证的截图  \n"
+            "也可以使用无需手动复制凭证的扫码绑定\n\n"
+            "[token / cred 获取说明](https://docs.qq.com/doc/p/2f705965caafb3ef342d4a979811ff3960bb3c17)"
+        ),
+    ),
+    HelpEntry(
+        func="账号角色管理",
+        category="account",
+        command="森空岛角色",
+        brief_des="查看角色序号，分别选择两游戏的默认角色",
+        condition="已绑定用户",
+        examples=("森空岛角色", "切换方舟角色 2", "切换终末地角色 1", "角色更新"),
+        detail_des=(
+            "### 角色与账号\n\n"
+            "角色卡展示本人全部账号和角色  \n明日方舟、终末地各自维护一个插件默认角色，"
+            "角色编号也按游戏独立生成，以最新卡片为准\n\n"
+            "| 操作 | 标准子命令 |\n| --- | --- |\n"
+            "| 查看全部角色 | `sk char` |\n"
+            "| 切换方舟默认角色 | `sk char set ark <序号>` |\n"
+            "| 切换终末地默认角色 | `sk char set ef <序号>` |\n"
+            "| 同步账号角色 | `sk char update` |\n\n"
+            "### 只想查一次其他角色？\n\n"
+            "在支持选角的查询后追加 `-r <序号>` 即可，不需要先修改默认角色  \n"
+            "临时选角只能选择自己的角色，不能与查询他人混用"
+        ),
+    ),
+    HelpEntry(
+        func="森空岛解绑",
+        category="account",
+        command="森空岛解绑",
+        brief_des="按账号选择解绑，保留其他账号的记录",
+        condition="已绑定用户 · 二次确认",
+        examples=("森空岛解绑", "sk unbind"),
+        detail_des=(
+            "### 选择后再确认\n\n"
+            "1. 按角色卡上的 **账号序号** 选择一个账号，或回复 **全部**\n"
+            "2. 核对将要删除的账号，回复 **确认**\n\n"
+            "> 会删除所选账号及其角色、抽卡记录  \n> 删除当前默认角色后不会自动切换到其他账号，"
+            "需要重新选择默认角色  \n> 取消或超时不执行删除"
+        ),
+    ),
+    HelpEntry(
+        func="方舟角色卡片",
+        category="arknights",
+        command="sk",
+        brief_des="理智、基建、招募与角色状态一图查看",
+        condition="角色已绑定 · 支持查询他人",
+        examples=("sk", "sk -r 2", "sk @某人"),
+        detail_des=(
+            "### 查询目标\n\n"
+            "- 不带参数：查看本人默认明日方舟角色\n"
+            "- `-r <序号>` / `--role <序号>`：临时查看自己的其他方舟角色，不修改默认\n"
+            "- `@某人` 或 QQ 号：查看对方绑定的默认角色，不支持替对方临时选角\n\n"
+            "### 图片还可以做什么\n\n"
+            "回复卡片发送 `background` 获取背景；回复支持线索的角色卡发送 `clue` 查看线索板"
+        ),
+    ),
+    HelpEntry(
+        func="明日方舟签到",
+        category="arknights",
+        command="明日方舟签到",
+        brief_des="签到本人全部方舟角色，也可按序号选择",
+        condition="已绑定用户",
+        examples=("明日方舟签到", "明日方舟签到 -r 2", "sk arksign sign --all"),
+        detail_des=(
+            "### 签到范围\n\n"
+            "裸快捷指令签到本人全部方舟角色  \n追加 `-r <序号>` 时仅签到所选角色\n\n"
+            "标准命令 `arksign sign --all` 的 `--all` 指 **本人的全部角色**，不是机器人全部用户  \n"
+            "`-r` 与 `--all` 不可同时使用\n\n"
+            "> 每天 00:15 自动执行方舟签到，通常无需手动操作  \n> 结果可通过「签到详情」查看"
+        ),
+    ),
+    HelpEntry(
+        func="签到详情",
+        category="arknights",
+        command="签到详情",
+        brief_des="查看方舟签到结果和失败原因",
+        condition="已绑定用户",
+        examples=("签到详情", "签到详情 -r 2", "sk arksign status"),
+        detail_des=(
+            "### 查看范围\n\n"
+            "默认展示本人全部方舟角色的缓存签到结果  \n追加 `-r <序号>` 仅查看该角色，"
+            "不修改默认角色\n\n"
+            "> 这里的 `status --all` 是超管查看机器人全部用户的入口，与个人选角互斥"
+        ),
+    ),
+    HelpEntry(
+        func="方舟干员",
+        category="arknights",
+        command="方舟干员 [筛选词]",
+        brief_des="按星级、职业、潜能或练度筛选干员",
+        condition="角色已绑定 · 筛选词用空格分隔",
+        examples=("方舟干员 6星 近卫 满潜", "方舟干员 未拥有 5-6星", "方舟干员 -r 2 练度"),
+        template="skland_roster",
+        detail_des=(
+            "### 自然筛选速查\n\n"
+            "- **持有状态**：`持有` / `已拥有`、`未拥有` / `缺干员`、`全部` / `图鉴`\n"
+            "- **星级**：`6星`、`5-6星`；裸数字不作为星级\n"
+            "- **职业**：先锋、近卫、重装、狙击、术师、医疗、辅助、特种\n"
+            "- **职业分支**：直接输入中文名，如 `铁卫`、`收割者`、`医师`\n"
+            "- **部署位置**：`近战` / `近战位`、`远程` / `远程位`\n"
+            "- **性别**：`男` / `男性`、`女` / `女性`、`其他` / `未知`\n"
+            "- **势力 / 种族**：直接输入目录中文名，如 `罗德岛`、`炎`、`萨卡兹`\n"
+            "- **潜能**：`满潜`、`潜6`、`潜能6`、`潜3-6`，范围为 1–6\n"
+            "- **排序**：`实装`、`获取` / `最近`、`练度`\n"
+            "- **名称**：名称或代号片段，也可输入 `名字:阿米娅`\n\n"
+            "### 组合规则\n\n"
+            "同一维度取 **或**，不同维度取 **且**；不要把多个筛选词连写  \n"
+            "查询他人时，将 @ 或 QQ 号放在筛选词之前  \n未拥有模式不支持潜能、获取或练度条件\n\n"
+            "### 高级选项\n\n"
+            "| 维度 | 选项 |\n| --- | --- |\n"
+            "| 角色 / 星级 | `-r` / `--role`；`-ra` / `--rarity` |\n"
+            "| 持有 / 职业 / 分支 | `-o`；`-p`；`-b` |\n"
+            "| 位置 / 性别 | `--position`；`--gender` |\n"
+            "| 势力 / 种族 | `-f`；`--race` |\n"
+            "| 潜能 / 排序 / 名称 | `--potential`；`-s`；`-n` |\n\n"
+            "> 选角是 `-r`，星级是 `-ra`  \n> 自然筛选与高级选项可组合使用"
+        ),
+    ),
+    HelpEntry(
+        func="肉鸽战绩",
+        category="arknights",
+        command="水月肉鸽",
+        brief_des="查看各集成战略主题的生涯与历史战绩",
+        condition="角色已绑定 · 支持查询他人",
+        examples=("水月肉鸽", "树海肉鸽 -r 2", "sk rogue @某人 --topic 萨米"),
+        detail_des=(
+            "### 六个主题\n\n"
+            "快捷指令支持 **傀影肉鸽、水月肉鸽、萨米肉鸽、萨卡兹肉鸽、界园肉鸽、树海肉鸽**\n\n"
+            "标准命令使用 `--topic <主题>`；树海对应的主题参数是 `黑流树海`  \n"
+            "追加 `-r <序号>` 可临时选择自己的方舟角色\n\n"
+            "### 继续查看单局\n\n"
+            "回复战绩图片，发送「战绩详情 <ID>」查看指定一局；收藏记录使用「收藏战绩详情 <ID>」"
+        ),
+    ),
+    HelpEntry(
+        func="战绩详情",
+        category="arknights",
+        command="战绩详情 <ID>",
+        brief_des="查看肉鸽单局详情与收藏记录",
+        condition="回复战绩图片，或显式选角",
+        examples=("战绩详情 1", "收藏战绩详情 1", "sk rginfo 1 -r 2"),
+        detail_des=(
+            "### 图片与角色\n\n"
+            "- 不带 `-r`：需要回复战绩图片，读取这张图片携带的缓存记录\n"
+            "- 带 `-r <序号>`：获取所选角色的新数据；有引用图片时沿用其主题，否则使用角色当前主题\n"
+            "- `-f` / `--favored`：查询收藏记录，对应「收藏战绩详情」快捷指令\n\n"
+            "ID 使用战绩图片中显示的记录编号"
+        ),
+    ),
+    HelpEntry(
+        func="方舟抽卡记录",
+        category="arknights",
+        command="方舟抽卡记录",
+        brief_des="查看方舟寻访统计与卡池出货记录",
+        condition="角色已绑定 · 支持查询他人",
+        examples=("方舟抽卡记录", "方舟抽卡记录 -r 2", "sk gacha -b 1 -l 3"),
+        detail_des=(
+            "### 展示范围\n\n"
+            "`-b <起点>` / `--begin` 与 `-l <数量>` / `--limit` 按 **卡池序号** 控制展示，"
+            "不是抽数或日期  \n中文快捷指令默认展示 3 个卡池\n\n"
+            "`-r <序号>` 使用自己的指定方舟角色及其账号，不修改默认角色；不带选角时可通过 @ 查询他人\n\n"
+            "历史记录也可以通过「导入抽卡记录」从小黑盒补充"
+        ),
+    ),
+    HelpEntry(
+        func="导入抽卡记录",
+        category="arknights",
+        command="导入抽卡记录 <链接>",
+        brief_des="将小黑盒导出的寻访记录导入对应角色",
+        condition="已绑定用户 · 玩家 UID 须一致",
+        examples=("导入抽卡记录 <链接>", "sk import <链接> -r 2"),
+        detail_des=(
+            "### 导出与导入\n\n"
+            "滑动至小黑盒抽卡分析页底部，打开 **数据管理**，导出数据并复制链接  \n"
+            "将链接作为命令参数发送给机器人\n\n"
+            "默认导入本人默认方舟角色；追加 `-r <序号>` 指定其他角色  \n"
+            "文件中的玩家 UID 必须与所选角色一致"
+        ),
+    ),
+    HelpEntry(
+        func="终末地角色卡片",
+        category="endfield",
+        command="ef",
+        brief_des="查看终末地角色面板与养成状态",
+        condition="角色已绑定 · 支持查询他人",
+        examples=("ef", "ef -r 2 -s", "sk efcard @某人 -a"),
+        detail_des=(
+            "### 显示选项\n\n"
+            "| 参数 | 作用 |\n| --- | --- |\n"
+            "| `-r` / `--role <序号>` | 临时选择自己的终末地角色 |\n"
+            "| `-a` / `--all` | 展示全部角色，不使用默认的森空岛配置过滤 |\n"
+            "| `-s` / `--simple` | 使用简化背景 |\n\n"
+            "快捷指令 `ef` 与 `zmd` 均可使用  \n不带选角时支持通过 @ 或 QQ 号查询他人的默认角色"
+        ),
+    ),
+    HelpEntry(
+        func="终末地签到",
+        category="endfield",
+        command="终末地签到",
+        brief_des="签到本人全部终末地角色",
+        condition="已绑定用户",
+        examples=("终末地签到", "终末地签到 -r 2", "sk efsign sign --all"),
+        detail_des=(
+            "### 签到范围\n\n"
+            "裸快捷指令签到本人全部终末地角色  \n追加 `-r <序号>` 时仅签到所选角色  \n"
+            "`efsign sign --all` 也只签到 **本人** 全部角色；`-r` 与 `--all` 不可同时使用\n\n"
+            "> 每天 00:20 自动执行终末地签到，结果可通过「终末地签到详情」查看"
+        ),
+    ),
+    HelpEntry(
+        func="终末地签到详情",
+        category="endfield",
+        command="终末地签到详情",
+        brief_des="查看终末地签到结果和失败原因",
+        condition="已绑定用户",
+        examples=("终末地签到详情", "终末地签到详情 -r 2", "sk efsign status"),
+        detail_des=(
+            "默认展示本人全部终末地角色的缓存签到结果  \n追加 `-r <序号>` 仅查看对应角色\n\n"
+            "> `status --all` 是超管查看机器人全部用户的入口，不能与个人选角同时使用"
+        ),
+    ),
+    HelpEntry(
+        func="战争回响",
+        category="endfield",
+        command="战争回响",
+        brief_des="查看赛季荣勋、轮换战绩与通关编队",
+        condition="角色已绑定 · 支持查询他人",
+        examples=("战争回响", "战争回响 -s -1", "sk efwar -r 2 -s 1 -w 2"),
+        detail_des=(
+            "### 赛季与轮换\n\n"
+            "| 参数 | 作用 |\n| --- | --- |\n"
+            "| `-s` / `--season <序号>` | 正数按卡片赛季序号选择；负数从当前赛季回溯 |\n"
+            "| `-w` / `--week <序号>` | 按卡片轮换序号选择 |\n"
+            "| `-r` / `--role <序号>` | 临时选择自己的终末地角色 |\n\n"
+            "不带参数展示当前赛季与当前轮换  \n`-s -1` 表示上一赛季"
+        ),
+    ),
+    HelpEntry(
+        func="终末地抽卡记录",
+        category="endfield",
+        command="终末地抽卡记录",
+        brief_des="自动更新历史，查看角色池与武器池统计",
+        condition="角色已绑定 · 更新需要 token",
+        examples=("终末地抽卡记录", "终末地抽卡记录 -r 2", "sk efgacha -b 1 -l 3"),
+        detail_des=(
+            "### 一条命令完成更新与查看\n\n"
+            "自动获取最新记录，去重保存后再展示，无需额外更新指令或 `-u`  \n"
+            "追加 `-r <序号>` 临时选择自己的终末地角色\n\n"
+            "### 卡池与分页\n\n"
+            "`-b` / `--begin` 与 `-l` / `--limit` 分别对 **限定、武器、新手、常驻、联合寻访**"
+            "各类别的卡池切片，不改变累计统计  \n长记录会自动分图，累计统计只在首页显示\n\n"
+            "> 接口不可用或账号未保存 token 时，仅在已有本地记录的情况下展示缓存，"
+            "并明确标记本次未更新；没有本地记录则提示原因"
+        ),
+    ),
+    HelpEntry(
+        func="暗语",
+        category="interaction",
+        command="background / clue",
+        brief_des="回复卡片，获取背景原图或线索板",
+        condition="回复支持此功能的插件图片",
+        examples=("background", "clue"),
+        use_prefix=False,
+        detail_des=(
+            "| 回复内容 | 对应图片 | 结果 |\n| --- | --- | --- |\n"
+            "| `background` | 带背景的插件卡片 | 获取背景图片 |\n"
+            "| `clue` | 支持线索的方舟角色卡片 | 展示线索板 |\n\n"
+            "先引用机器人发送的图片，再发送对应单词  \n并非每一类卡片都提供全部暗语，"
+            "引用信息过期后请重新查询卡片"
+        ),
+    ),
+    HelpEntry(
+        func="全体签到",
+        category="admin",
+        command="全体签到",
+        brief_des="签到机器人全部用户的方舟角色",
+        condition="仅超级用户",
+        examples=("全体签到", "sk arksign all"),
+        detail_des="面向所有绑定到机器人的用户执行方舟签到，不是个人全部角色签到  \n结果可通过「全体签到详情」查看",
+    ),
+    HelpEntry(
+        func="全体签到详情",
+        category="admin",
+        command="全体签到详情",
+        brief_des="汇总机器人全部方舟签到结果",
+        condition="仅超级用户",
+        examples=("全体签到详情", "sk arksign status --all"),
+        detail_des="查看所有用户的方舟签到缓存结果  \n`--all` 与 `-r` / `--role` 互斥",
+    ),
+    HelpEntry(
+        func="终末地全体签到",
+        category="admin",
+        command="终末地全体签到",
+        brief_des="签到机器人全部用户的终末地角色",
+        condition="仅超级用户",
+        examples=("终末地全体签到", "sk efsign all"),
+        detail_des="面向所有绑定到机器人的用户执行终末地签到  \n个人签到请使用「终末地签到」",
+    ),
+    HelpEntry(
+        func="终末地全体签到详情",
+        category="admin",
+        command="终末地全体签到详情",
+        brief_des="汇总机器人全部终末地签到结果",
+        condition="仅超级用户",
+        examples=("终末地全体签到详情", "sk efsign status --all"),
+        detail_des="查看所有用户的终末地签到缓存结果  \n`--all` 与 `-r` / `--role` 互斥",
+    ),
+    HelpEntry(
+        func="全体角色更新",
+        category="admin",
+        command="全体角色更新",
+        brief_des="逐账号同步机器人全部用户的角色",
+        condition="仅超级用户",
+        examples=("全体角色更新", "sk char update --all"),
+        detail_des="逐个森空岛账号同步角色  \n单个账号失败不会回滚其他已成功账号；不会自动替用户更改已选择的默认角色",
+    ),
+    HelpEntry(
+        func="资源更新",
+        category="admin",
+        command="资源更新",
+        brief_des="更新游戏与卡池数据，不额外下载图片",
+        condition="仅超级用户",
+        examples=("资源更新", "sk sync --data --force", "sk sync --img --force --update"),
+        detail_des=(
+            "### 数据与图片分开更新\n\n"
+            "快捷指令仅更新数据；裸 `sk sync` 同时更新图片与数据\n\n"
+            "| 选项 | 作用 |\n| --- | --- |\n"
+            "| `--data` | 仅更新游戏数据与卡池数据 |\n"
+            "| `--img` | 仅更新干员立绘、技能图标等图片 |\n"
+            "| `--force` | 忽略版本检查，强制检查更新 |\n"
+            "| `--update` | 下载图片时覆盖已有文件 |\n\n"
+            "选项可组合使用  \n每天 09:00 自动更新数据，沿用 APScheduler 时区，默认 Asia/Shanghai；"
+            "可设置 `skland__auto_update_resources=False` 关闭\n\n"
+            "> 下载或校验失败保留旧数据  \n> 图片下载是可选操作，不包含在每日数据任务中"
+        ),
+    ),
+    HelpEntry(
+        func="自定义指令",
+        category="admin",
+        command="sk --shortcut",
+        brief_des="为常用操作添加自己的快捷指令",
+        condition="仅超级用户 · Alconna 快捷指令",
+        examples=(
+            'sk --shortcut {prefix}兔兔签到 "{prefix}sk arksign sign --all"',
+            "sk --shortcut list",
+            "sk --shortcut delete {prefix}兔兔签到",
+        ),
+        detail_des=(
+            "### 添加、查看与删除\n\n"
+            "添加时依次填写快捷指令与目标命令；包含空格的内容需要用引号包裹  \n"
+            "`list` 列出快捷指令，`delete <快捷指令>` 删除指定条目\n\n"
+            "> 自定义快捷指令不会自动补上 Bot 的命令前缀，注册时需要填写完整触发词  \n> "
+            "示例已按当前 Bot 的一个可用前缀展示"
+        ),
+    ),
+)
+
+HELP_CATEGORIES: dict[str, HelpCategory] = {entry.func: entry.category for entry in HELP_ENTRIES}
+
 extra_data = {
-    "menu_data": [
-        {
-            "func": "森空岛绑定",
-            "trigger_method": "私聊",
-            "trigger_condition": "**森空岛绑定** | `skland bind`",
-            "brief_des": "森空岛绑定 <token|cred>",
-            "detail_des": (
-                "- **绑定账号**\n\n"
-                "```bash\n"
-                "skland bind <token|cred>\n"
-                "skland bind -u <token|cred>\n"
-                "```\n\n"
-                " **快捷指令** ：`森空岛绑定`\n\n"
-                "同一用户可以绑定多个森空岛账号。插件会先展示该账号的角色列表，仅在命令发起者回复「确认」后保存。\n"
-                "`-u` 只更新由凭证识别出的既有账号；不带 `-u` 时新增账号。\n"
-                "其中 `token` 和 `cred` 的获取可以参考 `https://docs.qq.com/doc/p/2f705965caafb3ef342d4a979811ff3960bb3c17`。\n"
-            ),
-        },
-        {
-            "func": "扫码绑定",
-            "trigger_method": "无限制",
-            "trigger_condition": "**扫码绑定** | `skland qrcode`",
-            "brief_des": "森空岛扫码绑定",
-            "detail_des": (
-                "- **扫码绑定**\n\n"
-                "```bash\n"
-                "skland qrcode\n"
-                "```\n\n"
-                " **快捷指令** ：`扫码绑定`\n\n"
-                "在约两分钟内使用森空岛 App 扫码。扫码完成后插件会展示角色列表，"
-                "只有命令发起者确认后才会保存或更新对应账号。\n"
-            ),
-        },
-        {
-            "func": "森空岛解绑",
-            "trigger_method": "无限制",
-            "trigger_condition": "**森空岛解绑** | `skland unbind`",
-            "brief_des": "解绑森空岛账号",
-            "detail_des": (
-                "- **解绑账号**\n\n"
-                "```bash\n"
-                "skland unbind\n"
-                "```\n\n"
-                " **快捷指令** ：`森空岛解绑`\n\n"
-                "先按卡片序号选择一个账号或回复「全部」，再进行第二次确认。只删除所选账号及其角色、抽卡记录；删除默认角色后需要重新选择。\n"
-            ),
-        },
-        {
-            "func": "skland",
-            "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**skland**",
-            "brief_des": "查询明日方舟角色信息卡片",
-            "detail_des": (
-                "- **查询明日方舟角色信息**\n\n"
-                "```bash\n"
-                "skland\n"
-                "skland -r <index>\n"
-                "skland <target>\n"
-                "```\n\n"
-                "默认查询插件中选择的明日方舟角色；`-r` / `--role` 按最新 `sk char` 的方舟角色序号临时查询自己的角色，"
-                "不会修改默认角色。始终使用选中角色所属森空岛账号的凭证访问接口。"
-            ),
-        },
-        {
-            "func": "明日方舟签到",
-            "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**明日方舟签到** | `skland arksign sign --all`",
-            "brief_des": "签到绑定的明日方舟账号。",
-            "detail_des": (
-                "- **明日方舟签到**\n\n"
-                "```bash\n"
-                "skland arksign sign --all\n"
-                "```\n\n"
-                " **快捷指令** ：`明日方舟签到`\n\n"
-                "追加 `-r <序号>` 时只签到所选角色，不带参数时仍签到本人全部角色。\n\n"
-                "签到绑定森空岛账号下的所有明日方舟角色。\n\n"
-                "- **按角色序号签到**\n\n"
-                "```bash\n"
-                "skland arksign sign -r <index>\n"
-                "```\n\n"
-                "`-r` / `--role` 按方舟角色序号签到，不改默认；不可与 `--all` 同用。\n\n"
-                "> **注意：** 一般不需要进行手动签到，插件会在每天的00:15以后自动签到。"
-            ),
-        },
-        {
-            "func": "签到详情",
-            "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**签到详情** | `skland arksign status`",
-            "brief_des": "查看绑定角色的自动签到状态。",
-            "detail_des": (
-                "- **签到详情**\n\n"
-                "```bash\n"
-                "skland arksign status\n"
-                "```\n\n"
-                " **快捷指令** ：`签到详情`\n\n"
-                "查看本人全部角色的签到详情；可追加 `-r <序号>` 仅查看对应角色，不可与 `--all` 同用。"
-            ),
-        },
-        {
-            "func": "全体签到",
-            "trigger_method": "**超级用户**",
-            "trigger_condition": "**全体签到** | `skland arksign all`",
-            "brief_des": "签到所有绑定到bot的明日方舟账号。",
-            "detail_des": (
-                "- **全体签到**\n\n"
-                "```bash\n"
-                "skland arksign all\n"
-                "```\n\n"
-                " **快捷指令** ：`全体签到`\n\n"
-                "签到所有绑定到bot的明日方舟账号。\n\n"
-            ),
-        },
-        {
-            "func": "全体签到详情",
-            "trigger_method": "**超级用户**",
-            "trigger_condition": "**全体签到详情** | `skland arksign status --all`",
-            "brief_des": "查看所有绑定角色的签到状态。",
-            "detail_des": (
-                "- **全体签到详情**\n\n"
-                "```bash\n"
-                "skland arksign status --all\n"
-                "```\n\n"
-                " **快捷指令** ：`全体签到详情`\n\n"
-                "查看所有绑定角色的签到状态。\n\n"
-            ),
-        },
-        {
-            "func": "终末地签到",
-            "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**终末地签到** | `skland efsign sign --all`",
-            "brief_des": "签到绑定的终末地账号。",
-            "detail_des": (
-                "- **终末地签到**\n\n"
-                "```bash\n"
-                "skland efsign sign --all\n"
-                "```\n\n"
-                " **快捷指令** ：`终末地签到`\n\n"
-                "追加 `-r <序号>` 时只签到所选角色，不带参数时仍签到本人全部角色。\n\n"
-                "签到绑定森空岛账号下的所有终末地角色。\n\n"
-                "- **按角色序号签到**\n\n"
-                "```bash\n"
-                "skland efsign sign -r <index>\n"
-                "```\n\n"
-                "`-r` / `--role` 按终末地角色序号签到，不改默认；不可与 `--all` 同用。\n\n"
-                "> **注意：** 一般不需要进行手动签到，插件会在每天的00:20以后自动签到。"
-            ),
-        },
-        {
-            "func": "终末地签到详情",
-            "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**终末地签到详情** | `skland efsign status`",
-            "brief_des": "查看绑定角色的终末地自动签到状态。",
-            "detail_des": (
-                "- **终末地签到详情**\n\n"
-                "```bash\n"
-                "skland efsign status\n"
-                "```\n\n"
-                " **快捷指令** ：`终末地签到详情`\n\n"
-                "查看本人全部终末地角色的签到详情；可追加 `-r <序号>` 仅查看对应角色，不可与 `--all` 同用。"
-            ),
-        },
-        {
-            "func": "终末地全体签到",
-            "trigger_method": "**超级用户**",
-            "trigger_condition": "**终末地全体签到** | `skland efsign all`",
-            "brief_des": "签到所有绑定到bot的终末地账号。",
-            "detail_des": (
-                "- **终末地全体签到**\n\n"
-                "```bash\n"
-                "skland efsign all\n"
-                "```\n\n"
-                " **快捷指令** ：`终末地全体签到`\n\n"
-                "签到所有绑定到bot的终末地账号。\n\n"
-            ),
-        },
-        {
-            "func": "终末地全体签到详情",
-            "trigger_method": "**超级用户**",
-            "trigger_condition": "**终末地全体签到详情** | `skland efsign status --all`",
-            "brief_des": "查看所有绑定角色的终末地签到状态。",
-            "detail_des": (
-                "- **终末地全体签到详情**\n\n"
-                "```bash\n"
-                "skland efsign status --all\n"
-                "```\n\n"
-                " **快捷指令** ：`终末地全体签到详情`\n\n"
-                "查看所有绑定角色的终末地签到状态。\n\n"
-            ),
-        },
-        {
-            "func": "终末地角色卡片",
-            "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**ef** | `skland efcard`",
-            "brief_des": "查询终末地角色信息卡片。",
-            "detail_des": (
-                "- **终末地角色卡片**\n\n"
-                "```bash\n"
-                "skland efcard [@某人 | QQ号]\n"
-                "skland efcard -r <index>\n"
-                "```\n\n"
-                " **快捷指令** ：`ef`\n\n"
-                "查询终末地角色信息卡片。\n\n"
-                "**可选参数：**\n"
-                "- `-r <序号>` / `--role <序号>`：按终末地角色序号临时查询自己，不改默认\n"
-                "- `-a` / `--all`：展示所有角色（默认按森空岛配置过滤）\n"
-                "- `-s` / `--simple`：使用简化背景\n"
-            ),
-        },
-        {
-            "func": "战争回响",
-            "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**战争回响** | `skland efwar`",
-            "brief_des": "查询战争回响赛季、荣勋与轮换战绩。",
-            "detail_des": (
-                "- **战争回响**\n\n"
-                "```bash\n"
-                "skland efwar [-r <index>] [-s <season>] [-w <week>]\n"
-                "```\n\n"
-                " **快捷指令** ：`战争回响`\n\n"
-                "默认展示当前赛季和当前轮换；"
-                "`-s` 正数使用卡片中的赛季序号，负数从当前赛季回溯（`-1` 为上一赛季）；"
-                "`-w` 使用轮换序号，`-r` 临时选择自己的终末地角色。"
-            ),
-        },
-        {
-            "func": "<傀影|水月|萨米|萨卡兹|界园|树海>肉鸽",
-            "trigger_method": "**无限制**",
-            "trigger_condition": "**<傀影|水月|萨米|萨卡兹|界园|树海>肉鸽** | `skland rogue --topic <主题>`",
-            "brief_des": "查询指定主题的肉鸽战绩。",
-            "detail_des": (
-                "- **<傀影|水月|萨米|萨卡兹|界园|树海>肉鸽**\n\n"
-                "```bash\n"
-                "skland rogue --topic <topic> [-r <index>]\n"
-                "```\n\n"
-                " **快捷指令**：`<傀影|水月|萨米|萨卡兹|界园|树海>肉鸽`\n\n"
-                "查询指定主题的肉鸽战绩。\n\n"
-                "可追加 `-r <序号>` 临时选择自己的角色；不带选角参数时支持通过 @ 查询他人的默认角色。"
-            ),
-        },
-        {
-            "func": "战绩详情",
-            "trigger_method": "**回复一条战绩图片消息或使用 -r 选角**",
-            "trigger_condition": "**战绩详情** | `skland rginfo <id>`",
-            "brief_des": "查询单局肉鸽战绩详情。",
-            "detail_des": (
-                "- **战绩详情**`\n"
-                "```bash\n"
-                "skland rginfo <id> [-r <index>]\n"
-                "```\n\n"
-                " **快捷指令** ：`战绩详情`\n\n"
-                "查询指定战绩图中指定id的肉鸽战绩详情。\n\n"
-                "> 不带 `-r` 时需回复战绩图；带 `-r` 时查询自己的指定角色，有回复时沿用该图主题，否则使用当前主题。\n"
-                "- **收藏战绩详情**\n"
-                "```bash\n"
-                "skland rginfo <id> -f [-r <index>]\n"
-                "```\n\n"
-                " **快捷指令** ：`收藏战绩详情`\n\n"
-                "查询指定战绩图中指定id的收藏战绩详情。\n\n"
-                "> 收藏详情同样支持追加 `-r <序号>`。"
-            ),
-        },
-        {
-            "func": "方舟抽卡记录",
-            "trigger_method": "**无限制**",
-            "trigger_condition": "**方舟抽卡记录** | `skland gacha`",
-            "brief_des": "查询绑定到bot的明日方舟账号的抽卡记录。",
-            "detail_des": (
-                "- **方舟抽卡记录**\n\n"
-                "```bash\n"
-                "skland gacha [-r <index>] [-b <begin>] [-l <limit>]\n"
-                "```\n\n"
-                " **快捷指令** ：`方舟抽卡记录`\n\n"
-                "查询默认角色的抽卡记录；可追加 `-r <序号>` 使用对应角色及其所属账号，不修改默认角色。"
-            ),
-        },
-        {
-            "func": "方舟干员",
-            "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**方舟干员** | `skland box`",
-            "brief_des": "使用中文筛选词查询持有干员、未拥有干员或完整图鉴。",
-            "detail_des": (
-                "- **方舟干员**\n\n"
-                "直接在快捷指令后追加筛选词，例如：`方舟干员 6星 近卫 满潜`、"
-                "`方舟干员 未拥有 5-6星`、`方舟干员 @某人 远程 女 最近`。\n\n"
-                "选角使用 `-r` / `--role`，星级使用 `-ra` / `--rarity` 或自然筛选词；例 `方舟干员 -r 2 -ra 6`。\n\n"
-                "**可直接使用的筛选词：**\n\n"
-                "- 持有状态：`持有` / `已拥有`；`未拥有` / `未持有` / `缺失` / `缺干员`；"
-                "`全部` / `图鉴`\n"
-                "- 星级：`6星` / `6★` / `5-6星`\n"
-                "- 职业：`先锋` / `近卫` / `重装` / `狙击` / `术师` / `医疗` / `辅助` / `特种`；"
-                "职业分支可直接写 `铁卫` / `收割者` / `医师` 等中文名\n"
-                "- 部署位置：`近战` / `近战位`；`远程` / `远程位`\n"
-                "- 性别：`男` / `男性`；`女` / `女性` / `女士`；`其他` / `未知`\n"
-                "- 势力与种族：直接写 `罗德岛` / `炎` / `萨卡兹` 等目录中文名\n"
-                "- 潜能：`满潜`（潜能 6）/ `潜6` / `潜能6` / `6潜` / `潜3-6` / `潜能3-6` / `3-6潜`\n"
-                "- 排序：`实装` / `实装顺序`；`获取` / `最近` / `最近获得` / `获取顺序`；"
-                "`练度` / `练度排序`\n"
-                "- 名称：直接输入干员名称或代号片段，或使用 `名字:阿米娅` / `名称:阿米娅`\n\n"
-                "同一维度内为“或”，不同维度之间为“且”；筛选词之间必须使用空格。"
-                "查询他人时将 @ 或 QQ 号放在筛选词之前。\n\n"
-                "高级语法：`skland box [target] [filters ...] [options]`。"
-            ),
-        },
-        {
-            "func": "终末地抽卡记录",
-            "trigger_method": "**无限制**",
-            "trigger_condition": "**终末地抽卡记录** | `skland efgacha`",
-            "brief_des": "获取、保存并展示终末地角色的最新抽卡记录。",
-            "detail_des": (
-                "- **终末地抽卡记录**\n\n"
-                "```bash\n"
-                "skland efgacha [-r <index>] [-b <begin>] [-l <limit>]\n"
-                "```\n\n"
-                " **快捷指令** ：`终末地抽卡记录`\n\n"
-                "自动获取最新记录，去重保存后渲染；追加 `-r <序号>` 可临时选择自己的角色。\n"
-                "`-b` / `-l` 只控制各类别卡池展示范围（限定/武器/联合/常驻/新手分别切片）。\n"
-                "沿用终末地角色卡主题，三列固定为限定、武器、新手/常驻/联合；同类按时间倒序，原列续页，累计统计仅首页显示。\n\n"
-                "> 接口不可用或未保存 token 时，有本地记录会明确标记为未更新的缓存；没有记录则提示原因。"
-            ),
-        },
-        {
-            "func": "导入抽卡记录",
-            "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**导入抽卡记录** | `skland import`",
-            "brief_des": "导入小黑盒明日方舟抽卡记录。",
-            "detail_des": (
-                "- **导入抽卡记录**\n\n"
-                "```bash\n"
-                "skland import <url> [-r <index>]\n"
-                "```\n\n"
-                " **快捷指令** ：`导入抽卡记录`\n\n"
-                "可用 `-r <序号>` 指定导入角色；文件中的玩家 UID 必须与所选角色一致。\n"
-                "请滑动至小黑盒抽卡分析页底部，点击`数据管理`导出数据并复制链接"
-            ),
-        },
-        {
-            "func": "账号角色管理",
-            "trigger_method": "**已绑定用户**",
-            "trigger_condition": "**森空岛角色** | **切换方舟角色** | **切换终末地角色** | `sk char` | **角色更新**",
-            "brief_des": "查看全部账号角色、切换默认角色并同步角色。",
-            "detail_des": (
-                "- **账号角色管理**\n\n"
-                "```bash\n"
-                "skland char\n"
-                "skland char set ark <index>\n"
-                "skland char set ef <index>\n"
-                "skland char update\n"
-                "```\n\n"
-                " **快捷指令** ：`森空岛角色`、`切换方舟角色 <序号>`、`切换终末地角色 <序号>`。\n\n"
-                "`skland char` 返回全部森空岛账号及其角色卡片；明日方舟和终末地分别维护一个插件默认角色。\n"
-                "角色序号按游戏独立生成，以最新卡片为准。`角色更新` 快捷指令对应 `skland char update`。"
-                "\n临时查询使用 `sk -r <序号>` 或 `sk efcard -r <序号>`，无需先切换默认角色。"
-            ),
-        },
-        {
-            "func": "全体角色更新",
-            "trigger_method": "**超级用户**",
-            "trigger_condition": "**全体角色更新** | `skland char update --all`",
-            "brief_des": "逐账号更新所有绑定角色。",
-            "detail_des": (
-                "-  **全体角色更新**\n\n"
-                "```bash\n"
-                "skland char update --all\n"
-                "```\n\n"
-                "**快捷指令** ：`全体角色更新`\n\n"
-                "逐个森空岛账号同步角色；单个账号失败不会回滚其他已成功账号。\n\n"
-                "> **注意：** 该指令仅超管可用。"
-            ),
-        },
-        {
-            "func": "资源更新",
-            "trigger_method": "**超级用户**",
-            "trigger_condition": "**资源更新** | `skland sync --data`",
-            "brief_des": "检查并更新游戏数据与卡池数据，不下载图片。",
-            "detail_des": (
-                "-  **资源更新**\n\n"
-                "```bash\n"
-                "skland sync --data\n"
-                "```\n\n"
-                "**快捷指令** ：资源更新\n\n"
-                "快捷指令仅更新数据；手动 `skland sync` 仍同时更新图片与数据。\n"
-                "每天 09:00 自动检查数据，沿用 APScheduler 时区（默认 Asia/Shanghai）；"
-                "可设置 `skland__auto_update_resources=False` 关闭。\n\n"
-                "- **仅更新图片资源**\n\n"
-                "```bash\n"
-                "skland sync --img\n"
-                "```\n\n"
-                "仅更新游戏图片资源（干员立绘、技能图标等）。\n\n"
-                "- **仅更新数据资源**\n\n"
-                "```bash\n"
-                "skland sync --data\n"
-                "```\n\n"
-                "仅更新游戏数据资源（卡池数据、角色数据等）。\n\n"
-                "- **强制更新**\n\n"
-                "```bash\n"
-                "skland sync --force\n"
-                "```\n\n"
-                "强制重新下载资源，忽略版本检查。\n\n"
-                "- **覆盖已有文件**\n\n"
-                "```bash\n"
-                "skland sync --update\n"
-                "```\n\n"
-                "更新图片资源时，覆盖已存在的图片文件。\n\n"
-                "> 数据按固定路径下载，不请求仓库文件树；下载或校验失败时保留旧数据。\n"
-                "> 图片资源更新仍为可选操作，不在每日数据更新范围内。\n"
-                "> 可以组合使用选项，例如 `skland sync --img --force --update`"
-            ),
-        },
-        {
-            "func": "暗语",
-            "trigger_method": "**回复一条该插件渲染的图片消息**",
-            "trigger_condition": "**background** | **clue**",
-            "brief_des": "获取暗语消息。",
-            "detail_des": (
-                "- 目前暗语列表：\n\n"
-                "|   暗语指令   |      对象      |    说明    |\n"
-                "| :----------: | :------------: | :--------: |\n"
-                "| `background` | `插件渲染卡片` | 查看背景图 |\n"
-                "|    `clue`    | `游戏信息卡片` | 查看线索板 |\n"
-            ),
-        },
-        {
-            "func": "自定义指令",
-            "trigger_method": "**超级用户**",
-            "trigger_condition": "`/skland --shortcut`",
-            "brief_des": "添加自定义指令，使用方法请看详情。",
-            "detail_des": (
-                "#### 🪄 自定义快捷指令\n\n"
-                "> 该特性依赖于 `Alconna 快捷指令`"
-                "自定义指令不带 `COMMAND_START`，若有必要需手动填写\n"
-                "```bash\n"
-                "# 增加\n"
-                "/skland --shortcut <自定义指令> /skland\n"
-                "# 删除\n"
-                "/skland --shortcut delete <自定义指令>\n"
-                "# 列出\n"
-                "/skland --shortcut list\n"
-                "```\n\n"
-                "> 自定义指令中包含空格，需要用引号`"
-                "`包裹。\n\n"
-                "例子:\n\n"
-                "```bash\n"
-                'user: /skland --shortcut /兔兔签到 "/skland arksign sign --all"\n'
-                'bot: skland::skland 的快捷指令: "/兔兔签到" 添加成功\n'
-                "```\n"
-            ),
-        },
-    ],
-    "pmn": {"markdown": True},
+    "menu_data": [entry.to_menu_data(HELP_PREFIX) for entry in HELP_ENTRIES],
+    "pmn": {"markdown": True, "template": "skland", "inherit_func_template": True},
 }

@@ -1,8 +1,8 @@
 from datetime import datetime
 from collections.abc import Callable
 
-from .image_cache import wait_for_page_resources
 from .config import RES_DIR, TEMPLATES_DIR, config
+from .image_cache import wait_for_page_resources
 from .compact import open_html_page, template_to_html
 from .utils.background import BackgroundImage, background_to_uri
 from .image_cache import cached_template_to_pic as template_to_pic

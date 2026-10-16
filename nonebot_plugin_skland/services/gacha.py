@@ -114,13 +114,19 @@ async def get_all_ef_gacha_records(
         raise ValueError("concurrency must be greater than 0")
 
     first_page = await SklandAPI.get_ef_gacha_history(pool_type, server_id, role_token)
-    if not first_page.gacha_list:
-        return []
     if not first_page.hasMore:
         return first_page.gacha_list
+    next_seq = getattr(first_page, "next_seq", "")
+    if not next_seq:
+        if not first_page.gacha_list:
+            return []
+        last_record = first_page.gacha_list[-1]
+        next_seq = getattr(last_record, "seqId", getattr(last_record, "seq_id_int", ""))
 
-    page_size = len(first_page.gacha_list)  # normally 5
-    last_seq = first_page.gacha_list[-1].seq_id_int  # shared between workers
+    page_size = getattr(first_page, "page_size", len(first_page.gacha_list))
+    last_seq = int(next_seq)  # shared between workers
+    if page_size <= 0 or last_seq <= 0:
+        return first_page.gacha_list
     last_seq_lock = asyncio.Lock()
 
     # the worker fn

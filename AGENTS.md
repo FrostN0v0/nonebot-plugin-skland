@@ -396,6 +396,7 @@ class Config(BaseModel):
 终末地：
 
 - `services.gacha.sync_ef_gacha_records()` 获取 `STANDARD`、`SPECIAL`、`BEGINNER`、`JOINT` 和 `WEAPON` 五类记录，全部获取成功后按现有角色身份去重（包括同批响应内重复项）并提交，再返回脱离 ORM 的统计数据。获取失败不保存不完整的新记录。
+- 武器抽卡响应中的 `kind="gift_weapon"` 是赠礼元数据，不具备普通武器记录所需字段；解析时过滤，不计入抽数、保底或数据库，并保留原始序号作为分页边界。
 - `skland efgacha` 和“终末地抽卡记录”统一完成获取、保存和展示，移除 `-u` 及旧更新快捷指令。缺少 token 或接口失败时，仅在已有本地记录的情况下回退，并明确标注本次未更新；错误反馈不包含可能携带凭证的原始请求 URL。
 - `commands/endfield/gacha.py` 在事务结束前保存普通角色/账号身份，渲染不再持有 ORM 角色。头像请求失败不阻断已保存历史的展示，刷新后的凭证在渲染前单独提交；全部图片发送成功后才标记完成。
 - `services.gacha.get_all_ef_gacha_records(server_id, ...)` 沿用并发分页，不依赖 ORM `Character`。

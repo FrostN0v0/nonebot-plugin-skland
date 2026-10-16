@@ -20,6 +20,77 @@ def _pull(pool_id="standard", *, seq=1, timestamp=1700000000, free=False):
     return EfCharGachaInfo(**common, kind="draw", nameText="寻访", charId="char_test", charName="测试干员", isFree=free)
 
 
+def _weapon_api_item(seq: int, *, kind: str = "draw") -> dict:
+    if kind == "gift_weapon":
+        return {
+            "kind": kind,
+            "poolId": "weaponbox_1_6_1",
+            "poolName": "篆玉申领",
+            "poolVersion": None,
+            "poolType": "normal",
+            "nameText": "玉中身",
+            "gachaTs": "1792079999109",
+            "seqId": str(seq),
+            "giftRewardLabel": "篆玉赠礼",
+        }
+    return {
+        "kind": kind,
+        "poolId": "weaponbox_1_6_1",
+        "poolName": "篆玉申领",
+        "nameText": "测试武器",
+        "weaponId": "weapon_test",
+        "weaponName": "测试武器",
+        "weaponType": "E_WeaponType_Lance",
+        "rarity": 4,
+        "isNew": False,
+        "gachaTs": "1792079999109",
+        "seqId": str(seq),
+    }
+
+
+def test_weapon_response_ignores_gift_marker_and_preserves_raw_page_boundary(app):
+    from nonebot_plugin_skland.schemas.endfield.gacha.base import EfWeaponGachaResponse
+
+    response = EfWeaponGachaResponse(
+        list=[_weapon_api_item(922, kind="gift_weapon"), *[_weapon_api_item(seq) for seq in range(921, 917, -1)]],
+        hasMore=True,
+    )
+
+    assert [item.seq_id_int for item in response.gacha_list] == [921, 920, 919, 918]
+    assert response.page_size == 5
+    assert response.next_seq == "918"
+
+
+@pytest.mark.asyncio
+async def test_weapon_pagination_uses_raw_page_size_after_gift_filter(app, mocker):
+    from nonebot_plugin_skland.schemas.endfield.gacha.base import EfWeaponGachaResponse
+    from nonebot_plugin_skland.schemas import EndfieldPoolType
+    import nonebot_plugin_skland.services.gacha as service
+
+    pages = {
+        None: EfWeaponGachaResponse(
+            list=[_weapon_api_item(922, kind="gift_weapon"), *[_weapon_api_item(seq) for seq in range(921, 917, -1)]],
+            hasMore=True,
+        ),
+        "918": EfWeaponGachaResponse(
+            list=[_weapon_api_item(seq) for seq in range(917, 912, -1)],
+            hasMore=False,
+        ),
+    }
+    calls = []
+
+    async def fetch(pool_type, server_id, role_token, seq_id=None, client=None):
+        calls.append(seq_id)
+        return pages[seq_id]
+
+    mocker.patch.object(service.SklandAPI, "get_ef_gacha_history", side_effect=fetch)
+
+    records = await service.get_all_ef_gacha_records("1", EndfieldPoolType.WEAPON, "role-token", concurrency=1)
+
+    assert calls == [None, "918"]
+    assert [record.seq_id_int for record in records] == list(range(921, 912, -1))
+
+
 async def _save_pull(session, character_id, pull):
     from nonebot_plugin_skland.model import GachaRecord
 

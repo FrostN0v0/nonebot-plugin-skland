@@ -70,6 +70,7 @@ nonebot_plugin_skland/
 │   ├── __init__.py      # API 模块导出
 │   ├── request.py       # SklandAPI：森空岛/抽卡/终末地接口与签名逻辑
 │   ├── login.py         # SklandLoginAPI：token、cred、扫码登录相关接口
+│   ├── resources.py     # 官方 Wiki 游客设备注册、短期签名与公开武器目录
 │   └── dId.py           # dId 获取逻辑（部分接口签名需要）
 ├── commands/
 │   ├── __init__.py      # 命令 handler 导出
@@ -106,6 +107,7 @@ nonebot_plugin_skland/
 │   └── endfield/
 │       ├── card.py      # EndfieldCard 与终末地角色卡片结构
 │       ├── sign.py      # EndfieldSignResponse
+│       ├── item_icons.py # 官网 HTML/CSS、Wiki 目录与游戏 ID 的图标投影
 │       ├── war_echoes.py  # 战争回响 wire model、评级/荣勋与赛季轮换视图
 │       └── gacha/
 │           ├── base.py       # EndfieldPoolType、角色/武器抽卡响应、Content API 模型
@@ -347,11 +349,18 @@ class Config(BaseModel):
   - 通过相同客户端定位上游提交，直接获取该提交的卡池表；解析验证成功后才替换文件。同语义内容（包括强制检查）不重写缓存；失败保留可用旧数据并抛错。
   - 提供 `get_pool(pool_id)` 为终末地抽卡渲染补充 UP 信息。
 
-`services/resources.py` 的 `update_data_resources()` 为启动、手动及每日任务提供共用入口，一轮借用同一个 `GitHubDataClient`，分别处理两游戏失败并返回汇总。进程内已有更新时抛出 `ResourceUpdateInProgress`；命令提示稍后重试，定时任务跳过，不并发写同一组文件。`hook.py` 启动使用此入口加载两游戏数据，并在加载快捷指令缓存后将“资源更新”替换为 `skland sync --data`，使用 `compact=False` 要求参数前有空格。
+- `EfItemIconData`
+  - 运行时唯一数据文件是用户配置的 `DATA_DIR/endfield/ItemIconTable.json`，由启动、手动和每日数据更新在本地构建；不维护仓库映射 JSON，不从 GitHub 下载头像表，也不使用随包快照。
+  - 角色名称和官网 key 取自 `/operator` 的 SSR HTML，头像完整 URL 取自该页面当前引用 CSS 的角色切换器规则；不执行官网 JS，不推导名称或图片哈希。
+  - 武器图标取自森空岛官方 Wiki 公开目录。`api/resources.py` 使用现有 dId 正常设备注册与 `/web/v1/auth/refresh` 返回的游客短期签名 token，不读取玩家凭证、不复用账号刷新流程、不依赖浏览器。
+  - `schemas/endfield/item_icons.py` 使用现有卡池 `all` 的名称关联游戏 ID；同 ID 的历史名称作为候选别名，只接受唯一官方图片结果。两类资源完整构建并通过官方 HTTPS 域名校验后才原子写入 localstore；等价结果即使 `--force` 也不重写，失败保留旧缓存并报告失败。
+  - `filters.ef_item_icon_url()` 统一服务六星、五星汇总和 UP 小图；未收录项保留名称，不拼接第三方地址。数据更新只构建 URL 表，不批量下载图片。
 
-数据更新结果保留独立、带 `✅` 的 INFO 日志：干员筛选元数据包含条数，明日方舟游戏数据包含版本，终末地卡池数据包含卡池数；不能用英文 DEBUG 替代这些可见结果，也不合并成一条“启动数据资源更新”汇总。
+`services/resources.py` 的 `update_data_resources()` 为启动、手动及每日任务提供共用入口。两游戏数据共用一个 `GitHubDataClient`，终末地图片表使用独立官方 HTTP 连接；三项更新独立反馈失败并返回汇总。进程内已有更新时抛出 `ResourceUpdateInProgress`；命令提示稍后重试，定时任务则跳过，不并发写同一组文件。`hook.py` 启动使用此入口加载数据，并在加载快捷指令缓存后将“资源更新”替换为 `skland sync --data`，使用 `compact=False` 要求参数前有空格。
 
-用户侧数据更新回复保留状态图标：更新成功使用 `✅`，已是最新使用 `📦`，更新失败使用 `❌`。终末地卡池数据无论更新成功还是已是最新，都返回当前卡池数量；仍在命令结束后合并发送一条结果消息。
+数据更新结果保留独立、带 `✅` 的 INFO 日志：干员筛选元数据包含条数，明日方舟游戏数据包含版本，终末地卡池数据包含卡池数，终末地图片资源包含角色数和武器数；不能用英文 DEBUG 替代这些可见结果，也不合并成一条“启动数据资源更新”汇总。
+
+用户侧数据更新回复保留状态图标：更新成功使用 `✅`，已是最新使用 `📦`，更新失败使用 `❌`。终末地卡池表成功或已是最新时返回当前卡池数，统一图片资源表返回角色数和武器数；仍在命令结束后合并发送一条结果消息。
 
 `GitHubDataClient` 默认经配置代理获取 GitHub 数据；原站回退、瞬时故障的有限重试和连接池限流属于单轮更新。失效代理不会让后续文件重复等待相同长超时，GitHub Token 仅传给直连官方 API。PRTS 地址不加 GitHub 代理。此客户端不使用 jsDelivr，也不需要额外镜像仓库或 CI。
 
@@ -500,8 +509,9 @@ uv run pytest -s tests/test_skland_api.py
 - `make_user_session` fixture 将真实 `UserSession.user` 加入命令使用的同一个 SQLAlchemy session；解绑、缺少默认角色和签到选择失败的回归测试覆盖事务结束后用户 ORM 属性过期的行为，不能只用普通整数模拟 `user_id`。
 - `tests/test_auth.py` 覆盖有界重试、缺少 token 时零刷新请求及刷新失败传播；`tests/test_player_data.py` 覆盖真实缓存中并发等待者分别刷新凭证与成功结果合并。
 - `tests/test_download.py` 覆盖原有图片下载统计/计时隔离、跳过与覆盖规则，以及数据客户端代理回退、凭证边界、错误响应校验、有限重试和并发限流；数据下载进度回归使用真实 Rich 输出，覆盖下载中进度可见、日志换行与重绘顺序、成功/失败/取消清理、非交互输出无框，以及保留文件日志和用户运行中修改的日志处理器。
-- `tests/test_data_source.py` 使用离线 HTTP 传输与真实 loader 验证同版本不下载、固定提交直接下载、完整批次校验、失败零版本推进、写入回滚、冷启动缓存可用、首次下载不误报警告、损坏缓存保留警告、PRTS 回退及终末地等价数据不重写。
-- `tests/test_resource_updates.py` 覆盖手动/定时互斥、独立游戏失败、取消释放、关闭任务、09:00 时区边界、旧快捷指令缓存迁移为数据更新，以及用户回复的状态图标和终末地更新/未变化时的卡池数量。
+- `tests/test_data_source.py` 使用离线 HTTP 传输与真实 loader 验证同版本不下载、固定提交直接下载、完整批次校验、失败零版本推进、写入回滚、冷启动缓存、损坏缓存警告、PRTS 回退及终末地等价数据不重写。
+- `tests/test_ef_item_icons.py` 覆盖官网动态 CSS 发现、名称与游戏 ID 关联、历史名称变化、无玩家凭证的 Wiki 游客请求、官方域名限制、完整构建后发布、冷/热 localstore 缓存、首次离线及写入失败；`tests/test_skland_api.py::TestPublicResources` 可单独验证无需扫码的真实公开目录。
+- `tests/test_resource_updates.py` 覆盖手动/定时互斥、独立游戏和图片资源表失败、取消释放、关闭任务、09:00 时区边界、旧快捷指令缓存迁移为数据更新，以及用户回复的状态图标、卡池数量与角色/武器图片数量。
 - `tests/test_ef_gacha_joint_pool.py` 覆盖终末地联合寻访分类与统计；`tests/test_ef_gacha_view.py` 覆盖免费/付费间隔隔离、多金事件完整性及分类切片不改变累计统计；`tests/test_ef_gacha_command.py` 覆盖默认同步、去重、先保存再渲染、显式缓存回退、失败零部分写入、选角身份及有序发送。
 - `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、实际模板中的已拥有/未拥有干员，以及分页发送。
 - `tests/test_image_cache.py` 覆盖配置开关、浏览器半身图响应落盘、本地复用、资源就绪与等待超时，以及失败响应不进入缓存。

@@ -220,16 +220,11 @@ def loads_json(json_str: str) -> dict:
     return json.loads(json_str)
 
 
-def ef_charId_to_avatarUrl(item_id: str) -> str:
-    """终末地角色/武器头像URL拼接
+def ef_item_icon_url(item_id: str) -> str:
+    """Look up character and weapon icons from the same official resource table."""
+    from .data_source import ef_item_icon_data
 
-    角色ID以 chr_ 开头，使用 charremoteicon 路径；
-    武器ID以 wpn_ 开头，使用 itemiconbig 路径。
-    """
-    ENDFIELD_ASSET_BASE = "https://endfieldtools.dev/assets/images/endfield"
-    if item_id.startswith("wpn_"):
-        return f"{ENDFIELD_ASSET_BASE}/itemiconbig/{item_id}.png"
-    return f"{ENDFIELD_ASSET_BASE}/charremoteicon/icon_{item_id}.png"
+    return ef_item_icon_data.get_icon(item_id)
 
 
 def format_stamina_time(remaining_seconds: float) -> str:

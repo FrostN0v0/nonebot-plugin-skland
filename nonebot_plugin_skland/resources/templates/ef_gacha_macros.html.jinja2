@@ -3,9 +3,10 @@
 {% if items %}
 <div class="flex flex-wrap gap-0.5 mt-0.5">
     {% for item in items %}
+    {% set avatar_url = item.item_id | ef_item_icon_url %}
     <div class="relative inline-block" title="{{ item.item_name }} ×{{ item.count }}">
-        <img src="{{ item.item_id | ef_charId_to_avatarUrl }}" alt="" class="w-5 h-5 rounded-xs bg-[#D3D6D1] object-cover" />
-        {% if item.count > 1 %}<div class="absolute right-0 bottom-0 min-w-2.5 h-2.5 bg-[#080808]/65 text-white text-[8px] flex items-center justify-center">{{ item.count }}</div>{% endif %}
+        {% if avatar_url %}<img src="{{ avatar_url }}" alt="{{ item.item_name }}" class="w-5 h-5 rounded-xs bg-[#D3D6D1] object-cover" />{% else %}<span class="text-[9px]">{{ item.item_name }}{% if item.count > 1 %} ×{{ item.count }}{% endif %}</span>{% endif %}
+        {% if avatar_url and item.count > 1 %}<div class="absolute right-0 bottom-0 min-w-2.5 h-2.5 bg-[#080808]/65 text-white text-[8px] flex items-center justify-center">{{ item.count }}</div>{% endif %}
     </div>
     {% endfor %}
 </div>
@@ -23,10 +24,11 @@
     </div>
     {% endif %}
     {% for six in event.six_stars %}
+    {% set avatar_url = six.item_id | ef_item_icon_url %}
     <div class="flex flex-col px-2 py-1.5" data-six-key="{{ event.key }}:{{ loop.index0 }}">
         <div class="flex items-start gap-1.5">
             <div class="flex flex-col items-center flex-shrink-0">
-                <div class="w-8 h-8 rounded-xs overflow-hidden bg-[#D3D6D1]"><img src="{{ six.item_id | ef_charId_to_avatarUrl }}" class="w-full h-full object-cover" alt="" /></div>
+                {% if avatar_url %}<div class="w-8 h-8 rounded-xs overflow-hidden bg-[#D3D6D1]"><img src="{{ avatar_url }}" class="w-full h-full object-cover" alt="{{ six.item_name }}" /></div>{% endif %}
                 <time class="text-[#080808]/50 text-[8px] font-[Bender] mt-0.5">{{ event.gacha_ts | format_timestamp_md }}</time>
             </div>
             <div class="flex flex-col flex-1 gap-0.5 min-w-0">
@@ -81,7 +83,7 @@
                 {% if pool.up_six_chars %}
                 <div class="flex flex-wrap items-center gap-0.5">
                     <span class="text-[#77721E] text-[8px] font-[Akrobat] font-bold">UP</span>
-                    {% for item_id in pool.up_six_chars %}<img src="{{ item_id | ef_charId_to_avatarUrl }}" alt="" class="w-4 h-4 rounded-xs bg-[#D3D6D1] object-cover" />{% endfor %}
+                    {% for item_id in pool.up_six_chars %}{% set avatar_url = item_id | ef_item_icon_url %}{% if avatar_url %}<img src="{{ avatar_url }}" alt="" class="w-4 h-4 rounded-xs bg-[#D3D6D1] object-cover" />{% endif %}{% endfor %}
                 </div>
                 {% endif %}
                 <span class="whitespace-nowrap"><b class="text-[#080808]/85 text-[11px]">{{ pool.total_pulls }}</b> 抽</span>

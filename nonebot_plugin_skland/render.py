@@ -1,8 +1,8 @@
 from datetime import datetime
 from collections.abc import Callable
 
-from .image_cache import wait_for_page_resources
 from .config import RES_DIR, TEMPLATES_DIR, config
+from .image_cache import wait_for_page_resources
 from .compact import open_html_page, template_to_html
 from .utils.background import BackgroundImage, background_to_uri
 from .image_cache import cached_template_to_pic as template_to_pic
@@ -23,6 +23,7 @@ from .filters import (
     loads_json,
     format_date_ymd,
     get_domain_info,
+    ef_item_icon_url,
     format_money_wan,
     format_timestamp,
     get_rarity_color,
@@ -35,7 +36,6 @@ from .filters import (
     get_profession_icon,
     format_timestamp_str,
     charId_to_portraitUrl,
-    ef_charId_to_avatarUrl,
     format_war_echoes_date,
     get_equip_rarity_color,
     war_echoes_stage_asset,
@@ -255,7 +255,7 @@ async def render_ef_gacha_history(props: EfGachaView) -> list[bytes]:
         props=props,
         filters={
             "format_timestamp_md": format_timestamp_md,
-            "ef_charId_to_avatarUrl": ef_charId_to_avatarUrl,
+            "ef_item_icon_url": ef_item_icon_url,
         },
     )
     async with open_html_page(

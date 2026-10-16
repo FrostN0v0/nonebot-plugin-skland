@@ -63,9 +63,9 @@ def test_weapon_response_ignores_gift_marker_and_preserves_raw_page_boundary(app
 
 @pytest.mark.asyncio
 async def test_weapon_pagination_uses_raw_page_size_after_gift_filter(app, mocker):
-    from nonebot_plugin_skland.schemas.endfield.gacha.base import EfWeaponGachaResponse
-    from nonebot_plugin_skland.schemas import EndfieldPoolType
     import nonebot_plugin_skland.services.gacha as service
+    from nonebot_plugin_skland.schemas import EndfieldPoolType
+    from nonebot_plugin_skland.schemas.endfield.gacha.base import EfWeaponGachaResponse
 
     pages = {
         None: EfWeaponGachaResponse(

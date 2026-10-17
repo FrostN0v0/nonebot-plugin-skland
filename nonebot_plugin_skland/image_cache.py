@@ -15,8 +15,8 @@ from playwright.async_api import Page
 from playwright.async_api import Request
 from playwright.async_api import Error as PlaywrightError
 
-from .compact import template_to_html
 from .config import CACHE_DIR, config
+from .compact import template_to_html
 from .compact import html_to_pic, open_html_page
 from .compact import template_to_pic as base_template_to_pic
 

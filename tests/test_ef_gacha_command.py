@@ -48,17 +48,38 @@ def _weapon_api_item(seq: int, *, kind: str = "draw") -> dict:
     }
 
 
-def test_weapon_response_ignores_gift_marker_and_preserves_raw_page_boundary(app):
+@pytest.mark.parametrize("legacy_format", [False, True])
+def test_weapon_response_ignores_gift_marker_and_preserves_raw_page_boundary(app, legacy_format):
     from nonebot_plugin_skland.schemas.endfield.gacha.base import EfWeaponGachaResponse
 
-    response = EfWeaponGachaResponse(
-        list=[_weapon_api_item(922, kind="gift_weapon"), *[_weapon_api_item(seq) for seq in range(921, 917, -1)]],
-        hasMore=True,
-    )
+    draws = [_weapon_api_item(seq) for seq in range(921, 917, -1)]
+    if legacy_format:
+        for draw in draws:
+            draw.pop("kind")
+    response = EfWeaponGachaResponse(list=[_weapon_api_item(922, kind="gift_weapon"), *draws], hasMore=True)
 
     assert [item.seq_id_int for item in response.gacha_list] == [921, 920, 919, 918]
     assert response.page_size == 5
     assert response.next_seq == "918"
+
+
+def test_character_response_filters_untyped_events_and_preserves_raw_cursor(app):
+    from nonebot.compat import model_dump
+
+    from nonebot_plugin_skland.schemas.endfield.gacha.base import EfCharGachaResponse
+
+    response = EfCharGachaResponse(
+        list=[
+            model_dump(_pull(seq=12)),
+            {"kind": "gift", "nameText": "寻访情报书", "seqId": "11"},
+            {"nameText": "未标记事件", "seqId": "10"},
+        ],
+        hasMore=True,
+    )
+
+    assert [item.seq_id_int for item in response.gacha_list] == [12]
+    assert response.page_size == 3
+    assert response.next_seq == "10"
 
 
 @pytest.mark.asyncio

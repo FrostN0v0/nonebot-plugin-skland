@@ -52,12 +52,14 @@ async def get_dId() -> str:
         response = await client.post(V4_URL, json=json)
         response.raise_for_status()
         data = response.json()
+        if not isinstance(data, dict):
+            raise RequestException("获取 dId 失败：响应格式无效")
         status = data.get("code")
         if status != 1100:
             raise RequestException(f"获取 dId 失败：{data.get('msg')}")
 
-        detail = data.get("detail") or {}
-        device_id = detail.get("deviceId")
-        if not device_id:
+        detail = data.get("detail")
+        device_id = detail.get("deviceId") if isinstance(detail, dict) else None
+        if not isinstance(device_id, str) or not device_id:
             raise RequestException("deviceId 缺失或无效")
         return f"B{device_id}"

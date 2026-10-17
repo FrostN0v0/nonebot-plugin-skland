@@ -52,8 +52,8 @@ else:
     from nonebot import get_driver
     from nonebot_plugin_htmlrender.capabilities import PLAYWRIGHT
     from nonebot_plugin_htmlrender.preparation.models import PreparedHtml
-    from nonebot_plugin_htmlrender.adapters.playwright.provider import PROVIDER
     from nonebot_plugin_htmlrender import Application, RenderTemplateHtmlRequest
+    from nonebot_plugin_htmlrender.adapters.playwright.provider import PROVIDER
     from nonebot_plugin_htmlrender.adapters.playwright.config import PlaywrightConfig
     from nonebot_plugin_htmlrender.bootstrap import prepare_runtime, load_render_settings
     from nonebot_plugin_htmlrender.preparation.materialize import materialize_local_assets
@@ -68,18 +68,18 @@ else:
         build_browser_load_plan,
         install_browser_asset_routes,
     )
-    from nonebot_plugin_htmlrender.resources.config import (
-        ResourceStrategy,
-        ResourceResolveMode,
-        LocalLocalResourcePolicy,
-        RemoteLocalResourcePolicy,
-    )
     from nonebot_plugin_htmlrender.providers.sdk import (
         EngineBindings,
         EngineProvider,
         PluginRequirement,
         ProviderAvailability,
         ProviderDependencies,
+    )
+    from nonebot_plugin_htmlrender.resources.config import (
+        ResourceStrategy,
+        ResourceResolveMode,
+        LocalLocalResourcePolicy,
+        RemoteLocalResourcePolicy,
     )
 
     from .config import RES_DIR, CACHE_DIR

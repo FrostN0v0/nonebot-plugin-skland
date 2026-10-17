@@ -498,7 +498,7 @@ class EfItemIconData:
         try:
             operator_url = "https://endfield.hypergryph.com/operator"
             async with httpx.AsyncClient(
-                timeout=30, follow_redirects=True, limits=httpx.Limits(max_connections=8, max_keepalive_connections=8)
+                timeout=30, follow_redirects=False, limits=httpx.Limits(max_connections=8, max_keepalive_connections=8)
             ) as client:
                 response = await client.get(operator_url)
                 response.raise_for_status()

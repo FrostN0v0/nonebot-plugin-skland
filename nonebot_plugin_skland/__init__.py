@@ -27,8 +27,8 @@ from nonebot_plugin_alconna.builtins.extensions import ReplyRecordExtension
 from . import hook as hook
 from .config import Config
 from .matcher import skland
-from .extras import extra_data
 from . import tasks as tasks  # noqa: F401
+from .extras import extra_data
 
 __plugin_meta__ = PluginMetadata(
     name="森空岛",

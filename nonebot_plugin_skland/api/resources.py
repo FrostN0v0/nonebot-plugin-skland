@@ -19,7 +19,7 @@ WEAPON_CATALOG_URL = f"{WIKI_ORIGIN}/web/v1/wiki/item/catalog?typeMainId=1&typeS
 async def get_endfield_weapon_catalog(client: httpx.AsyncClient) -> dict[str, Any]:
     device_id = await get_dId()
     visitor_headers = {"dId": device_id, "platform": "3", "vName": "1.0.0", "Referer": "https://wiki.skland.com/"}
-    refreshed = await client.get(f"{WIKI_ORIGIN}/web/v1/auth/refresh", headers=visitor_headers)
+    refreshed = await client.get(f"{WIKI_ORIGIN}/web/v1/auth/refresh", headers=visitor_headers, follow_redirects=False)
     refreshed.raise_for_status()
     payload = refreshed.json()
     data = payload.get("data") if isinstance(payload, dict) else None
@@ -35,6 +35,7 @@ async def get_endfield_weapon_catalog(client: httpx.AsyncClient) -> dict[str, An
     response = await client.get(
         WEAPON_CATALOG_URL,
         headers={**visitor_headers, **fields, "sign": hashlib.md5(digest.encode()).hexdigest()},
+        follow_redirects=False,
     )
     response.raise_for_status()
     payload = response.json()

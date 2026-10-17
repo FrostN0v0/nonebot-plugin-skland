@@ -30,6 +30,8 @@ class OfficialIconServer:
         self.css_override = None
         self.catalog_override = None
         self.refresh_override = None
+        self.device_payload = {"code": 1100, "detail": {"deviceId": "public-visitor-device"}}
+        self.redirects = {}
         self.requests = []
 
     def operator_html(self):
@@ -80,6 +82,8 @@ class OfficialIconServer:
     def respond(self, request):
         self.requests.append(request.url)
         host, path = request.url.host, request.url.path
+        if destination := self.redirects.get((host, path)):
+            return httpx.Response(302, headers={"Location": destination})
         if host == "endfield.hypergryph.com" and path == "/operator":
             return httpx.Response(503) if self.fail == "operator" else httpx.Response(200, text=self.operator_html())
         if host == "web.hycdn.cn" and path.endswith(self.css_file):
@@ -87,7 +91,7 @@ class OfficialIconServer:
         if host == "fp-it.portal101.cn":
             if self.fail == "device":
                 return httpx.Response(503)
-            return httpx.Response(200, json={"code": 1100, "detail": {"deviceId": "public-visitor-device"}})
+            return httpx.Response(200, json=self.device_payload)
         if host == "zonai.skland.com":
             assert "cred" not in request.headers
             assert "authorization" not in request.headers
@@ -199,6 +203,71 @@ async def test_invalid_official_cover_preserves_last_usable_table(official_icons
     server.icons["wpn_claym_0018"] = url
     with pytest.raises(RequestException):
         await loader.load(pools)
+    assert loader.icons is old_icons
+    assert loader._file_path.read_bytes() == before
+
+
+@pytest.mark.parametrize(
+    ("host", "path"),
+    [
+        ("endfield.hypergryph.com", "/operator"),
+        ("web.hycdn.cn", "/official/icons-build1.css"),
+        ("zonai.skland.com", "/web/v1/auth/refresh"),
+        ("zonai.skland.com", "/web/v1/wiki/item/catalog"),
+    ],
+)
+@pytest.mark.parametrize("destination", ["http://127.0.0.1/internal", "https://attacker.example/resource"])
+@pytest.mark.asyncio
+async def test_official_redirects_are_not_requested_and_preserve_cache(official_icons, host, path, destination):
+    source, server, pools = official_icons
+    from nonebot_plugin_skland.exception import RequestException
+
+    loader = source.EfItemIconData()
+    await loader.load(pools)
+    old_icons, before = loader.icons, loader._file_path.read_bytes()
+    server.redirects[host, path] = destination
+    server.requests.clear()
+
+    with pytest.raises(RequestException):
+        await loader.load(pools)
+
+    assert all(url.host != httpx.URL(destination).host for url in server.requests)
+    assert loader.icons is old_icons
+    assert loader._file_path.read_bytes() == before
+
+
+@pytest.mark.parametrize("path", ["/web/v1/auth/refresh", "/web/v1/wiki/item/catalog"])
+@pytest.mark.asyncio
+async def test_wiki_rejects_redirects_even_with_following_client(official_icons, path):
+    source, server, _ = official_icons
+    server.redirects["zonai.skland.com", path] = "https://attacker.example/resource"
+
+    async with HTTP_CLIENT(transport=httpx.MockTransport(server.respond), follow_redirects=True) as client:
+        with pytest.raises(httpx.HTTPStatusError) as error:
+            await source.get_endfield_weapon_catalog(client)
+
+    assert error.value.response.status_code == 302
+    assert all(url.host != "attacker.example" for url in server.requests)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [[], {"code": 1100, "detail": ["invalid"]}, {"code": 1100, "detail": {"deviceId": 123}}],
+    ids=["non-object-response", "non-object-detail", "non-string-device-id"],
+)
+@pytest.mark.asyncio
+async def test_malformed_device_response_is_handled_and_preserves_cache(official_icons, payload):
+    source, server, pools = official_icons
+    from nonebot_plugin_skland.exception import RequestException
+
+    loader = source.EfItemIconData()
+    await loader.load(pools)
+    old_icons, before = loader.icons, loader._file_path.read_bytes()
+    server.device_payload = payload
+
+    with pytest.raises(RequestException):
+        await loader.load(pools)
+
     assert loader.icons is old_icons
     assert loader._file_path.read_bytes() == before
 

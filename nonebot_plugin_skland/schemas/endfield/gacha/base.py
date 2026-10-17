@@ -26,7 +26,7 @@ EndfieldCharPoolType = Literal[
 EndfieldWeaponPoolType = Literal[EndfieldPoolType.WEAPON]
 
 
-def _prepare_draw_page(values: Any) -> Any:
+def _prepare_draw_page(values: Any, *, allow_missing_kind: bool = False) -> Any:
     """过滤非抽卡事件，同时保留原始分页边界。"""
     if not isinstance(values, dict):
         return values
@@ -37,8 +37,11 @@ def _prepare_draw_page(values: Any) -> Any:
     values = dict(values)
     values["raw_page_size"] = len(raw_list)
     values["raw_next_seq"] = str(raw_list[-1].get("seqId", "")) if raw_list and isinstance(raw_list[-1], dict) else ""
-    # 武器接口的 gift_weapon 是赠礼元数据，不具备普通抽卡字段。
-    values["list"] = [item for item in raw_list if not isinstance(item, dict) or item.get("kind", "draw") == "draw"]
+    # 仅武器旧响应允许省略 kind；角色接口仍须显式标记 draw。
+    default_kind = "draw" if allow_missing_kind else None
+    values["list"] = [
+        item for item in raw_list if not isinstance(item, dict) or item.get("kind", default_kind) == "draw"
+    ]
     return values
 
 
@@ -196,7 +199,7 @@ class EfWeaponGachaResponse(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def draws_filter(cls, values) -> Any:
-        return _prepare_draw_page(values)
+        return _prepare_draw_page(values, allow_missing_kind=True)
 
 
 EfGachaResponse = EfCharGachaResponse | EfWeaponGachaResponse

@@ -3,8 +3,8 @@ from pydantic import Field, BaseModel
 from . import operator_query
 from .models.base import Equip
 from .models.status import Status
-from .models.assist_chars import Equipment
 from .models.chars import Skill, Character
+from .models.assist_chars import Equipment
 from .game_data import OperatorCatalog, OperatorCatalogEntry
 from ...filters import (
     ark_roster_lh_url,

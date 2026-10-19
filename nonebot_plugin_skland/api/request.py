@@ -2,12 +2,13 @@ import hmac
 import json
 import hashlib
 import contextlib
-from typing import Literal
 from datetime import datetime
+from typing import Any, Literal
 from urllib.parse import urlparse, urlencode
 
 import httpx
 from nonebot import logger
+from pydantic import ValidationError
 from nonebot.compat import type_validate_python
 
 from ..exception import LoginException, RequestException, UnauthorizedException
@@ -31,6 +32,20 @@ from ..schemas import (
 base_url = "https://zonai.skland.com/api/v1"
 
 
+def _raise_for_skland_code(payload: dict[str, Any], *, error_prefix: str) -> None:
+    """仅转换 code/message 业务错误，不负责请求或响应模型解析。"""
+    status = payload.get("code")
+    if not status:
+        return
+    if status == 10000:
+        error_type = UnauthorizedException
+    elif status == 10002:
+        error_type = LoginException
+    else:
+        error_type = RequestException
+    raise error_type(f"{error_prefix}：{payload.get('message')}")
+
+
 class SklandAPI:
     _headers = {
         "User-Agent": ("Skland/1.32.1 (com.hypergryph.skland; build:103201004; Android 33; ) Okhttp/4.11.0"),
@@ -50,14 +65,9 @@ class SklandAPI:
                     binding_url,
                     headers=await cls.get_sign_header(cred, binding_url, method="get"),
                 )
-                if status := response.json().get("code"):
-                    if status == 10000:
-                        raise UnauthorizedException(f"获取绑定角色失败：{response.json().get('message')}")
-                    elif status == 10002:
-                        raise LoginException(f"获取绑定角色失败：{response.json().get('message')}")
-                    if status != 0:
-                        raise RequestException(f"获取绑定角色失败：{response.json().get('message')}")
-                return type_validate_python(list[BindingApp], response.json()["data"]["list"])
+                payload = response.json()
+                _raise_for_skland_code(payload, error_prefix="获取绑定角色失败")
+                return type_validate_python(list[BindingApp], payload["data"]["list"])
             except httpx.HTTPError as e:
                 raise RequestException(f"获取绑定角色失败: {e}")
 
@@ -119,17 +129,12 @@ class SklandAPI:
                     headers={**headers, "Content-Type": "application/json"},
                     content=json_body,
                 )
-                logger.debug(f"签到回复：{response.json()}")
-                if status := response.json().get("code"):
-                    if status == 10000:
-                        raise UnauthorizedException(f"角色 {uid} 签到失败：{response.json().get('message')}")
-                    elif status == 10002:
-                        raise LoginException(f"角色 {uid} 签到失败：{response.json().get('message')}")
-                    elif status != 0:
-                        raise RequestException(f"角色 {uid} 签到失败：{response.json().get('message')}")
+                payload = response.json()
+                logger.debug(f"签到回复：{payload}")
+                _raise_for_skland_code(payload, error_prefix=f"角色 {uid} 签到失败")
             except httpx.HTTPError as e:
                 raise RequestException(f"角色 {uid} 签到失败: {e}")
-            return ArkSignResponse(**response.json()["data"])
+            return ArkSignResponse(**payload["data"])
 
     @classmethod
     async def get_user_ID(cls, cred: CRED) -> str:
@@ -140,14 +145,9 @@ class SklandAPI:
                     uid_url,
                     headers=await cls.get_sign_header(cred, uid_url, method="get"),
                 )
-                if status := response.json().get("code"):
-                    if status == 10000:
-                        raise UnauthorizedException(f"获取账号 userId 失败：{response.json().get('message')}")
-                    elif status == 10002:
-                        raise LoginException(f"获取账号 userId 失败：{response.json().get('message')}")
-                    if status != 0:
-                        raise RequestException(f"获取账号 userId 失败：{response.json().get('message')}")
-                return response.json()["data"]["teenager"]["userId"]
+                payload = response.json()
+                _raise_for_skland_code(payload, error_prefix="获取账号 userId 失败")
+                return payload["data"]["teenager"]["userId"]
             except httpx.HTTPError as e:
                 raise RequestException(f"获取账号 userId 失败: {e}")
 
@@ -161,14 +161,9 @@ class SklandAPI:
                     game_info_url,
                     headers=await cls.get_sign_header(cred, game_info_url, method="get"),
                 )
-                if status := response.json().get("code"):
-                    if status == 10000:
-                        raise UnauthorizedException(f"获取账号 game_info 失败：{response.json().get('message')}")
-                    elif status == 10002:
-                        raise LoginException(f"获取账号 game_info 失败：{response.json().get('message')}")
-                    if status != 0:
-                        raise RequestException(f"获取账号 game_info 失败：{response.json().get('message')}")
-                return ArkCard(**response.json()["data"])
+                payload = response.json()
+                _raise_for_skland_code(payload, error_prefix="获取账号 game_info 失败")
+                return ArkCard(**payload["data"])
             except httpx.HTTPError as e:
                 raise RequestException(f"获取账号 userId 失败: {e}")
 
@@ -182,14 +177,9 @@ class SklandAPI:
                     rogue_url,
                     headers=await cls.get_sign_header(cred, rogue_url, method="get"),
                 )
-                if status := response.json().get("code"):
-                    if status == 10000:
-                        raise UnauthorizedException(f"获取肉鸽数据失败：{response.json().get('message')}")
-                    elif status == 10002:
-                        raise LoginException(f"获取肉鸽数据失败：{response.json().get('message')}")
-                    if status != 0:
-                        raise RequestException(f"获取肉鸽数据失败：{response.json().get('message')}")
-                return RogueData(**response.json()["data"])
+                payload = response.json()
+                _raise_for_skland_code(payload, error_prefix="获取肉鸽数据失败")
+                return RogueData(**payload["data"])
             except httpx.HTTPError as e:
                 raise RequestException(f"获取肉鸽数据失败: {e}") from e
 
@@ -204,14 +194,9 @@ class SklandAPI:
                     headers={"X-Account-Token": token, "X-Role-Token": role_token},
                     cookies={"ak-user-center": ak_cookie},
                 )
-                if status := response.json().get("code"):
-                    if status == 10000:
-                        raise UnauthorizedException(f"获取抽卡类别失败：{response.json().get('message')}")
-                    elif status == 10002:
-                        raise LoginException(f"获取抽卡类别失败：{response.json().get('message')}")
-                    if status != 0:
-                        raise RequestException(f"获取抽卡类别失败：{response.json().get('message')}")
-                return [GachaCate(**item) for item in response.json().get("data", [])]
+                payload = response.json()
+                _raise_for_skland_code(payload, error_prefix="获取抽卡类别失败")
+                return [GachaCate(**item) for item in payload.get("data", [])]
             except httpx.HTTPError as e:
                 raise RequestException(f"获取抽卡类别失败: {e}") from e
 
@@ -246,14 +231,9 @@ class SklandAPI:
                     cookies={"ak-user-center": ak_cookie},
                     params=query_params,
                 )
-                if status := response.json().get("code"):
-                    if status == 10000:
-                        raise UnauthorizedException(f"获取抽卡记录失败：{response.json().get('message')}")
-                    elif status == 10002:
-                        raise LoginException(f"获取抽卡记录失败：{response.json().get('message')}")
-                    if status != 0:
-                        raise RequestException(f"获取抽卡记录失败：{response.json().get('message')}")
-                return GachaResponse(**response.json()["data"])
+                payload = response.json()
+                _raise_for_skland_code(payload, error_prefix="获取抽卡记录失败")
+                return GachaResponse(**payload["data"])
             except httpx.HTTPError as e:
                 raise RequestException(f"获取抽卡记录失败: {e}") from e
 
@@ -285,17 +265,18 @@ class SklandAPI:
                     ef_gacha_url,
                     params=query_params,
                 )
-                if status := response.json().get("code"):
-                    if status == 10000:
-                        raise UnauthorizedException(f"获取终末地抽卡记录失败：{response.json().get('message')}")
-                    elif status == 10002:
-                        raise LoginException(f"获取终末地抽卡记录失败：{response.json().get('message')}")
-                    if status != 0:
-                        raise RequestException(f"获取终末地抽卡记录失败：{response.json().get('message')}")
-                data = response.json()["data"]
+                payload = response.json()
+                if not isinstance(payload, dict):
+                    raise RequestException("获取终末地抽卡记录失败：接口响应格式异常")
+                _raise_for_skland_code(payload, error_prefix="获取终末地抽卡记录失败")
+                data = payload.get("data")
+                if not isinstance(data, dict):
+                    raise RequestException("获取终末地抽卡记录失败：接口响应格式异常")
                 if is_weapon:
                     return EfWeaponGachaResponse(**data)
                 return EfCharGachaResponse(**data)
+            except (json.JSONDecodeError, UnicodeDecodeError, ValidationError) as e:
+                raise RequestException("获取终末地抽卡记录失败：接口响应格式异常") from e
             except httpx.HTTPError as e:
                 raise RequestException(f"获取终末地抽卡记录失败: {e}") from e
 
@@ -349,17 +330,12 @@ class SklandAPI:
                         "sk-game-role": game_role,
                     },
                 )
-                logger.debug(f"终末地签到回复：{response.json()}")
-                if status := response.json().get("code"):
-                    if status == 10000:
-                        raise UnauthorizedException(f"角色 {role_id} 终末地签到失败：{response.json().get('message')}")
-                    elif status == 10002:
-                        raise LoginException(f"角色 {role_id} 终末地签到失败：{response.json().get('message')}")
-                    elif status != 0:
-                        raise RequestException(f"角色 {role_id} 终末地签到失败：{response.json().get('message')}")
+                payload = response.json()
+                logger.debug(f"终末地签到回复：{payload}")
+                _raise_for_skland_code(payload, error_prefix=f"角色 {role_id} 终末地签到失败")
             except httpx.HTTPError as e:
                 raise RequestException(f"角色 {role_id} 终末地签到失败: {e}") from e
-            return EndfieldSignResponse(**response.json()["data"])
+            return EndfieldSignResponse(**payload["data"])
 
     @classmethod
     async def endfield_card(cls, cred: CRED, *, user_id: str, role_id: str, server_id: str) -> EndfieldCard:
@@ -379,14 +355,9 @@ class SklandAPI:
                     game_info_url,
                     headers=headers,
                 )
-                if status := response.json().get("code"):
-                    if status == 10000:
-                        raise UnauthorizedException(f"获取终末地角色卡片失败：{response.json().get('message')}")
-                    elif status == 10002:
-                        raise LoginException(f"获取终末地角色卡片失败：{response.json().get('message')}")
-                    if status != 0:
-                        raise RequestException(f"获取终末地角色卡片失败：{response.json().get('message')}")
-                return EndfieldCard(**response.json()["data"]["detail"])
+                payload = response.json()
+                _raise_for_skland_code(payload, error_prefix="获取终末地角色卡片失败")
+                return EndfieldCard(**payload["data"]["detail"])
             except httpx.HTTPError as e:
                 raise RequestException(f"获取终末地角色卡片失败: {e}") from e
 
@@ -414,12 +385,7 @@ class SklandAPI:
             try:
                 response = await client.get(request_url, headers=headers)
                 data = response.json()
-                if status := data.get("code"):
-                    if status == 10000:
-                        raise UnauthorizedException(f"获取终末地战争回响失败：{data.get('message')}")
-                    if status == 10002:
-                        raise LoginException(f"获取终末地战争回响失败：{data.get('message')}")
-                    raise RequestException(f"获取终末地战争回响失败：{data.get('message')}")
+                _raise_for_skland_code(data, error_prefix="获取终末地战争回响失败")
                 return WarEchoes(**data["data"]["warEchoes"])
             except httpx.HTTPError as e:
                 raise RequestException(f"获取终末地战争回响失败: {e}") from e

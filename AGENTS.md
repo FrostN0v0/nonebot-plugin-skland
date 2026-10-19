@@ -269,6 +269,8 @@ class Config(BaseModel):
 
 `api/request.py` 中 `SklandAPI.get_sign_header()` 负责生成森空岛签名请求头。
 
+同模块的私有函数 `_raise_for_skland_code(payload, error_prefix=...)` 为 11 个同类业务接口统一错误码映射：`10000` 为 `UnauthorizedException`，`10002` 为 `LoginException`，其他非零码为 `RequestException`。调用方保留各自的错误文案前缀，每个响应只解析一次 JSON；HTTP、JSON 解码与模型校验仍由各接口处理。登录接口、dId 设备注册及公开资源接口不套用这套账号异常分类。
+
 签名流程：
 
 ```text
@@ -402,6 +404,7 @@ class Config(BaseModel):
 - 武器抽卡响应中的 `kind="gift_weapon"` 是赠礼元数据，不具备普通武器记录所需字段；解析时过滤，不计入抽数、保底或数据库，并保留原始序号作为分页边界。
 - 角色抽卡响应只接受显式 `kind="draw"` 的条目，缺失 `kind` 的事件仍参与原始分页边界但不进入抽卡列表；仅武器旧格式允许省略 `kind`，不能将这项兼容扩展到角色接口。
 - `skland efgacha` 和“终末地抽卡记录”统一完成获取、保存和展示，移除 `-u` 及旧更新快捷指令。缺少 token 或接口失败时，仅在已有本地记录的情况下回退，并明确标注本次未更新；错误反馈不包含可能携带凭证的原始请求 URL。
+- `SklandAPI.get_ef_gacha_history()` 在 API 边界将 JSON/字符解码错误、非对象响应或 `data`、Pydantic 模型校验失败转换为 `RequestException`，不在错误文案中附带原始响应或请求 URL。登录和鉴权错误保持原异常类型；命令复用已有的文字提示或带未更新标记的缓存展示，不笼统捕获程序、数据库及渲染异常。
 - `commands/endfield/gacha.py` 在事务结束前保存普通角色/账号身份，渲染不再持有 ORM 角色。头像请求失败不阻断已保存历史的展示，刷新后的凭证在渲染前单独提交；全部图片发送成功后才标记完成。
 - `services.gacha.get_all_ef_gacha_records(server_id, ...)` 沿用并发分页，不依赖 ORM `Character`。
 - `services.gacha.group_ef_gacha_records()` 将记录分为 `beginner_pools`、`standard_pools`、`special_pools`、`joint_pools`、`weapon_pools`。
@@ -512,12 +515,12 @@ uv run pytest -s tests/test_skland_api.py
 - `tests/conftest.py` 使用 nonebug 初始化 NoneBot，并加载 `pyproject.toml` 中配置的插件。测试配置忽略项目 dotenv，localstore 使用 pytest 临时目录；htmlrender 本地授权仅覆盖测试临时目录，禁止通过测试配置绕过生产资源授权。
 - 数据库测试使用内存 SQLite：`sqlite+aiosqlite://`。
 - `make_user_session` fixture 将真实 `UserSession.user` 加入命令使用的同一个 SQLAlchemy session；解绑、缺少默认角色和签到选择失败的回归测试覆盖事务结束后用户 ORM 属性过期的行为，不能只用普通整数模拟 `user_id`。
-- `tests/test_auth.py` 覆盖有界重试、缺少 token 时零刷新请求及刷新失败传播；`tests/test_player_data.py` 覆盖真实缓存中并发等待者分别刷新凭证与成功结果合并。
+- `tests/test_auth.py` 覆盖有界重试、缺少 token 时零刷新请求及刷新失败传播，并通过离线 HTTP 调用实际账号 API 和凭证接口，验证错误码分别触发 token 刷新、cred 更新或直接失败；`tests/test_player_data.py` 覆盖真实缓存中并发等待者分别刷新凭证与成功结果合并。
 - `tests/test_download.py` 覆盖原有图片下载统计/计时隔离、跳过与覆盖规则，以及数据客户端代理回退、凭证边界、错误响应校验、有限重试和并发限流；数据下载进度回归使用真实 Rich 输出，覆盖下载中进度可见、日志换行与重绘顺序、成功/失败/取消清理、非交互输出无框，以及保留文件日志和用户运行中修改的日志处理器。
 - `tests/test_data_source.py` 使用离线 HTTP 传输与真实 loader 验证同版本不下载、固定提交直接下载、完整批次校验、失败零版本推进、写入回滚、冷启动缓存、损坏缓存警告、PRTS 回退及终末地等价数据不重写。
 - `tests/test_ef_item_icons.py` 使用离线 HTTP 传输覆盖官网动态 CSS 发现、名称与游戏 ID 关联、历史名称变化、无玩家凭证的 Wiki 游客请求、官方域名和重定向限制、异常设备响应、完整构建后发布、冷/热 localstore 缓存、首次离线及写入失败；`tests/test_skland_api.py::TestPublicResources` 可单独验证无需扫码的真实公开目录。
 - `tests/test_resource_updates.py` 覆盖手动/定时互斥、独立游戏和图片资源表失败、取消释放、关闭任务、09:00 时区边界、旧快捷指令缓存迁移为数据更新，以及用户回复的状态图标、卡池数量与角色/武器图片数量。
-- `tests/test_ef_gacha_joint_pool.py` 覆盖终末地联合寻访分类与统计；`tests/test_ef_gacha_view.py` 覆盖免费/付费间隔隔离、多金事件完整性及分类切片不改变累计统计；`tests/test_ef_gacha_command.py` 覆盖默认同步、去重、先保存再渲染、显式缓存回退、失败零部分写入、选角身份、有序发送，以及角色/武器的 `kind` 过滤差异与原始分页边界。
+- `tests/test_ef_gacha_joint_pool.py` 覆盖终末地联合寻访分类与统计；`tests/test_ef_gacha_view.py` 覆盖免费/付费间隔隔离、多金事件完整性及分类切片不改变累计统计；`tests/test_ef_gacha_command.py` 覆盖默认同步、去重、先保存再渲染、显式缓存回退、接口解析失败的有/无缓存反馈、首/后续页失败零部分写入、鉴权错误优先级、选角身份、有序发送，以及角色/武器的 `kind` 过滤差异与原始分页边界。
 - `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、实际模板中的已拥有/未拥有干员，以及分页发送。
 - `tests/test_image_cache.py` 覆盖配置开关、浏览器半身图响应落盘、本地复用、资源就绪与等待超时，以及失败响应不进入缓存。
 - `tests/test_compact.py` 覆盖支持版本的模板渲染、资源授权和生命周期。真实 Chromium 回归验证 `memory`、`filehost` 策略下普通截图与自定义页面均不依赖浏览器读取本地文件，并保留文档内 fragment 引用；测试仅使用已安装的 Chromium，缺失时跳过且不自动安装。

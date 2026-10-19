@@ -1,5 +1,6 @@
 """Behavioral coverage for bounded credential refresh and failure propagation."""
 
+import httpx
 import pytest
 
 
@@ -145,3 +146,61 @@ async def test_refresh_failures_propagate_without_another_refresh(app, mocker, r
         if refresh_stage == "token"
         else ["request", "grant"] + (["cred"] if refresh_stage == "cred" else [])
     )
+
+
+@pytest.mark.parametrize(
+    ("code", "expected_trace", "expected_credentials"),
+    [
+        (10000, ["request", "token", "request"], ("old-cred", "refreshed-token")),
+        (10002, ["request", "grant", "cred", "request"], ("new-cred", "new-token")),
+        (99999, ["request"], ("old-cred", "old-token")),
+    ],
+)
+@pytest.mark.asyncio
+async def test_api_error_codes_select_the_correct_credential_refresh(
+    app, mocker, code, expected_trace, expected_credentials
+):
+    from nonebot_plugin_skland.schemas import CRED
+    from nonebot_plugin_skland.api import SklandAPI
+    from nonebot_plugin_skland.exception import RequestException
+    from nonebot_plugin_skland.services.auth import CredentialState, refresh_credentials
+
+    state = CredentialState("access", "old-cred", "old-token")
+    trace = []
+    responses = iter(
+        [
+            {"code": code, "message": "upstream rejected", "data": None},
+            {"code": 0, "data": {"teenager": {"userId": "remote-user"}}},
+        ]
+    )
+
+    def respond(request):
+        if request.url.path == "/api/v1/user/teenager":
+            trace.append("request")
+            return httpx.Response(200, json=next(responses))
+        if request.url.path == "/api/v1/auth/refresh":
+            trace.append("token")
+            return httpx.Response(200, json={"status": 0, "data": {"token": "refreshed-token"}})
+        if request.url.path == "/user/oauth2/v2/grant":
+            trace.append("grant")
+            return httpx.Response(200, json={"status": 0, "data": {"code": "grant-code"}})
+        if request.url.path == "/api/v1/user/auth/generate_cred_by_code":
+            trace.append("cred")
+            return httpx.Response(200, json={"status": 0, "data": {"cred": "new-cred", "token": "new-token"}})
+        raise AssertionError(f"Unexpected request: {request.url.path}")
+
+    client_type = httpx.AsyncClient
+    transport = httpx.MockTransport(respond)
+    mocker.patch.object(httpx, "AsyncClient", side_effect=lambda **kwargs: client_type(transport=transport, **kwargs))
+
+    @refresh_credentials
+    async def fetch_user_id(credentials):
+        return await SklandAPI.get_user_ID(CRED(cred=credentials.cred, token=credentials.cred_token))
+
+    if code == 99999:
+        with pytest.raises(RequestException):
+            await fetch_user_id(state)
+    else:
+        assert await fetch_user_id(state) == "remote-user"
+    assert trace == expected_trace
+    assert (state.cred, state.cred_token) == expected_credentials

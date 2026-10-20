@@ -44,7 +44,7 @@ class GachaPool(GachaTable):
 
     @property
     def bare_six_consume(self) -> int:
-        """该卡池的UP六星角色净消耗(不含歪卡)"""
+        """该卡池截至最后一名六星角色（含歪卡）的累计抽数，包含该次出货。"""
         all_pulls_chronological = []
         for record in reversed(self.records):
             all_pulls_chronological.extend(reversed(record.pulls))

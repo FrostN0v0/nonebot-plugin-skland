@@ -447,3 +447,143 @@ async def test_global_sign_records_failures_and_presents_after_commit(app, mocke
     assert "offline" in messages[0]
     assert f"{prefix}-a" in messages[0]
     assert f"{prefix}-b" in messages[0]
+
+
+@pytest.mark.parametrize("game", ["arknights", "endfield"])
+@pytest.mark.parametrize(
+    "corruption",
+    [
+        "truncated",
+        "invalid_utf8",
+        "root",
+        "missing_data",
+        "data_scalar",
+        "entry_not_object",
+        "missing_key",
+        "invalid_timestamp",
+        "owner_id",
+        "character_id",
+        "nickname",
+        "role_id",
+        "server_id",
+        "server_name",
+        "result",
+        "result_missing_awards",
+        "result_malformed_award",
+        "boolean_id",
+        "unreadable",
+    ],
+)
+@pytest.mark.asyncio
+async def test_sign_status_reports_corrupted_cache(app, mocker, make_user_session, tmp_path, game, corruption):
+    from nonebot_plugin_orm import get_session
+
+    import nonebot_plugin_skland.services.sign as signing
+    import nonebot_plugin_skland.commands.arksign as arksign
+    import nonebot_plugin_skland.commands.endfield.sign as efsign
+
+    command, handler, cache_name = (
+        (arksign, arksign.arksign_status_handler, "sign_result.json")
+        if game == "arknights"
+        else (efsign, efsign.ef_sign_status_handler, "endfield_sign_result.json")
+    )
+    entry = {
+        "owner_id": 190,
+        "character_id": 1,
+        "nickname": "角色",
+        "role_id": "role",
+        "server_id": "1",
+        "server_name": "服务器",
+        "result": "request failed",
+    }
+    cache = {"data": [entry]}
+    path = tmp_path / cache_name
+    if corruption == "unreadable":
+        path.mkdir()
+    elif corruption == "truncated":
+        path.write_bytes(b'{"data":[')
+    elif corruption == "invalid_utf8":
+        path.write_bytes(b"\xff")
+    else:
+        if corruption == "root":
+            cache = []
+        elif corruption == "missing_data":
+            cache = {}
+        elif corruption == "data_scalar":
+            cache["data"] = None
+        elif corruption == "entry_not_object":
+            cache["data"] = [None]
+        elif corruption == "missing_key":
+            del entry["nickname"]
+        elif corruption == "invalid_timestamp":
+            cache["timestamp"] = 123
+        elif corruption == "boolean_id":
+            entry["owner_id"] = True
+        elif corruption == "result_missing_awards":
+            entry["result"] = {}
+        elif corruption == "result_malformed_award":
+            entry["result"] = (
+                {"awards": [{"count": 1}]}
+                if game == "arknights"
+                else {"ts": "1", "awardIds": [{"type": 1}], "resourceInfoMap": {}, "tomorrowAwardIds": []}
+            )
+        else:
+            entry[corruption] = None
+        path.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+
+    mocker.patch.object(signing, "CACHE_DIR", tmp_path)
+    reactions = mocker.patch.object(command, "send_reaction")
+    messages = []
+    async with get_session() as session:
+        user_session = await make_user_session(session, 190)
+
+        async def send(message, **_kwargs):
+            assert not session.in_transaction()
+            messages.append(message.extract_plain_text())
+
+        mocker.patch.object(command.UniMessage, "send", new=send)
+        await handler(user_session, session, mocker.Mock(), True, is_superuser=True)
+
+    assert messages == ["签到结果文件已损坏，请等待下一次自动签到或重新执行全体签到"]
+    reactions.assert_not_called()
+
+
+@pytest.mark.parametrize("game", ["arknights", "endfield"])
+def test_legacy_sign_cache_keeps_format_upgrade_feedback(app, mocker, tmp_path, game):
+    import nonebot_plugin_skland.services.sign as signing
+    from nonebot_plugin_skland.exception import SignCacheFormatError
+
+    mocker.patch.object(signing, "CACHE_DIR", tmp_path)
+    path = tmp_path / ("sign_result.json" if game == "arknights" else "endfield_sign_result.json")
+    path.write_text(json.dumps({"data": {"old-role": {}}}), encoding="utf-8")
+
+    with pytest.raises(SignCacheFormatError, match="签到结果格式已更新,请等待下一次自动签到或重新执行全体签到"):
+        signing.read_sign_cache(game)
+
+
+@pytest.mark.parametrize("game", ["arknights", "endfield"])
+def test_sign_cache_failed_replacement_preserves_previous_results(app, mocker, tmp_path, game):
+    from nonebot_plugin_skland.utils import files
+    import nonebot_plugin_skland.services.sign as signing
+
+    mocker.patch.object(signing, "CACHE_DIR", tmp_path)
+    signing.write_sign_cache(game, [])
+    path = tmp_path / ("sign_result.json" if game == "arknights" else "endfield_sign_result.json")
+    previous = path.read_bytes()
+    mocker.patch.object(files.os, "replace", side_effect=OSError("replacement failed"))
+    replacement = {
+        "owner_id": 1,
+        "character_id": 1,
+        "nickname": "角色",
+        "role_id": "role",
+        "server_id": "1",
+        "server_name": "服务器",
+        "result": "new result",
+    }
+
+    with pytest.raises(OSError, match="replacement failed"):
+        signing.write_sign_cache(game, [replacement])
+
+    assert path.read_bytes() == previous
+    assert signing.read_sign_cache(game)["data"] == []
+    assert not list(tmp_path.glob(f".{path.name}.*.tmp"))

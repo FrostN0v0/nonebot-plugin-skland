@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from collections.abc import Iterable
 
 from nonebot.exception import NoneBotException
 
@@ -50,3 +51,11 @@ class BindingStateChangedError(RuntimeError):
 
 class SignCacheFormatError(ValueError):
     """The persisted cache predates role-owned sign entries."""
+
+
+class UnresolvedGachaCharacterError(ValueError):
+    """A Heybox import contains operators absent from the official character table."""
+
+    def __init__(self, names: Iterable[str]) -> None:
+        self.names = sorted(set(names))
+        super().__init__("Unresolved gacha characters: " + ", ".join(self.names))

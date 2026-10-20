@@ -29,12 +29,12 @@ class AP(BaseModel):
 
     @property
     def ap_now(self) -> int:
-        """计算当前理智 ap_now ,并确保不超过最大理智值。"""
+        """保留溢出的理智，否则估算自然恢复后的当前值。"""
+        if self.current >= self.max:
+            return self.current
         current_time = datetime.now().timestamp()
         ap_now = self.max - math.ceil((self.completeRecoveryTime - current_time) / 360)
-        ap_now = min(ap_now, self.max)
-
-        return ap_now
+        return min(max(ap_now, self.current), self.max)
 
 
 class Exp(BaseModel):

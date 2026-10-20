@@ -41,13 +41,15 @@ async def sync_handler(
                     force=force_update,
                     update=update_existing,
                 )
-                if download_result.version is None:
+                if download_result.failed_count > 0:
+                    stats = f"成功: {download_result.success_count}个，失败: {download_result.failed_count}个"
+                    messages.append(f"❌ 图片资源更新未完成（{stats}），版本未更新，下次运行将重试")
+                    has_error = True
+                elif download_result.version is None:
                     messages.append("📦 图片资源已是最新")
                 else:
                     update_mode = "（覆盖更新）" if update_existing else ""
                     stats = f"成功: {download_result.success_count}个"
-                    if download_result.failed_count > 0:
-                        stats += f"，失败: {download_result.failed_count}个"
                     messages.append(f"✅ 图片资源更新成功{update_mode}，版本: {download_result.version}（{stats}）")
             except RequestException as e:
                 logger.error(f"下载图片资源失败: {e}")

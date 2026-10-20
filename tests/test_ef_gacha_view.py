@@ -1,3 +1,6 @@
+import pytest
+
+
 def _pull(seq_id, rarity, item_id, *, is_free=False, is_new=False):
     from nonebot_plugin_skland.schemas.endfield.gacha.base import EfGachaPull
 
@@ -140,7 +143,7 @@ def test_category_slices_keep_full_totals_and_pool_local_intervals_including_emp
 
     record = EfGroupedGachaRecord(
         special_pools=[
-            _pool("special_old", [(100, [_pull(1, 4, "old_four")])]),
+            _pool("special_old", [(100, [_pull(1, 4, "old_four")])], up_six_chars=["up"]),
             _pool("special_new", [(900, [_pull(4, 6, "up")])], up_six_chars=["up"]),
             _pool("special_middle", [(500, [_pull(2, 4, "four"), _pull(3, 6, "up")])], up_six_chars=["up"]),
         ],
@@ -176,3 +179,168 @@ def test_category_slices_keep_full_totals_and_pool_local_intervals_including_emp
         assert empty.pools == []
         assert empty.record.total_pulls == 10
         assert empty.record.special_up_avg == 2.0
+
+
+@pytest.mark.parametrize("category", ["special", "weapon"])
+@pytest.mark.parametrize("unknown_pool_rarity", [4, 6])
+def test_missing_up_metadata_makes_category_spook_and_up_average_unknown(app, category, unknown_pool_rarity):
+    from nonebot_plugin_skland.schemas.endfield.gacha.statistics import EfGroupedGachaRecord
+
+    unknown_pool = _pool(f"{category}_unknown", [(100, [_pull(1, unknown_pool_rarity, "unknown")])])
+    known_pool = _pool(
+        f"{category}_known",
+        [(200, [_pull(2, 6, "off")]), (300, [_pull(3, 6, "up")])],
+        up_six_chars=["up"],
+    )
+    record = EfGroupedGachaRecord(**{f"{category}_pools": [unknown_pool, known_pool]})
+
+    assert unknown_pool.total_six_spook is None
+    assert not unknown_pool.show_spook_stats
+    assert known_pool.total_six_spook == 1
+    assert known_pool.show_spook_stats
+    assert getattr(record, f"{category}_total_spook") is None
+    assert getattr(record, f"{category}_up_avg") is None
+    selected = _view(record, limit=1)
+    assert [pool.pool.pool_id for pool in selected.pools] == [known_pool.pool_id]
+    assert getattr(selected.record, f"{category}_total_spook") is None
+    assert getattr(selected.record, f"{category}_up_avg") is None
+
+
+@pytest.mark.parametrize(
+    ("category", "average"),
+    [
+        ("special", "special_up_avg"),
+        ("weapon", "weapon_up_avg"),
+        ("standard", "standard_six_avg"),
+        ("joint", "joint_six_avg"),
+    ],
+)
+def test_paid_average_excludes_free_six_stars_and_paid_tail(app, category, average):
+    from nonebot_plugin_skland.schemas.endfield.gacha.statistics import EfGroupedGachaRecord
+
+    pool = _pool(
+        category,
+        [
+            (100, [_pull(1, 4, "four")]),
+            (200, [_pull(2, 6, "up")]),
+            (300, [_pull(3, 4, "four")]),
+            (400, [_pull(4, 6, "up", is_free=True)]),
+            (500, [_pull(5, 4, "four")]),
+        ],
+        up_six_chars=["up"],
+    )
+    record = EfGroupedGachaRecord(**{f"{category}_pools": [pool]})
+
+    assert pool.total_six_stars == 2
+    assert pool.paid_six_stars == 1
+    assert pool.paid_pulls == 4
+    assert pool.pity_count == 2
+    assert getattr(record, average) == 2.0
+
+
+@pytest.mark.parametrize(
+    ("category", "average"),
+    [
+        ("special", "special_up_avg"),
+        ("weapon", "weapon_up_avg"),
+        ("standard", "standard_six_avg"),
+        ("joint", "joint_six_avg"),
+    ],
+)
+def test_paid_average_is_unknown_when_all_six_stars_are_free(app, category, average):
+    from nonebot_plugin_skland.schemas.endfield.gacha.statistics import EfGroupedGachaRecord
+
+    pool = _pool(
+        category,
+        [
+            (100, [_pull(1, 4, "four")]),
+            (200, [_pull(2, 6, "up", is_free=True)]),
+            (300, [_pull(3, 4, "four")]),
+        ],
+        up_six_chars=["up"],
+    )
+    record = EfGroupedGachaRecord(**{f"{category}_pools": [pool]})
+
+    assert pool.total_six_stars == 1
+    assert pool.paid_six_stars == 0
+    assert getattr(record, average) is None
+
+
+@pytest.mark.parametrize("category", ["special", "weapon"])
+def test_up_average_is_unknown_with_only_free_up_despite_paid_off_banner_six(app, category):
+    from nonebot_plugin_skland.schemas.endfield.gacha.statistics import EfGroupedGachaRecord
+
+    pool = _pool(
+        category,
+        [(100, [_pull(1, 6, "off")]), (200, [_pull(2, 6, "up", is_free=True)])],
+        up_six_chars=["up"],
+    )
+    record = EfGroupedGachaRecord(**{f"{category}_pools": [pool]})
+
+    assert pool.paid_six_stars == 1
+    assert getattr(record, f"{category}_total_spook") == 1
+    assert getattr(record, f"{category}_up_avg") is None
+
+
+def test_empty_categories_have_unknown_averages(app):
+    from nonebot_plugin_skland.schemas.endfield.gacha.statistics import EfGroupedGachaRecord
+
+    record = EfGroupedGachaRecord()
+
+    assert record.special_up_avg is None
+    assert record.weapon_up_avg is None
+    assert record.standard_six_avg is None
+    assert record.joint_six_avg is None
+    assert record.special_total_spook == 0
+    assert record.weapon_total_spook == 0
+
+
+@pytest.mark.parametrize(("up_six_chars", "spook_text"), [((), "-"), (("up",), "0")])
+def test_statistics_header_displays_unknown_averages_and_preserves_known_zero_spook(app, up_six_chars, spook_text):
+    from pathlib import Path
+    from html.parser import HTMLParser
+
+    from jinja2 import Environment, FileSystemLoader
+
+    from nonebot_plugin_skland.filters import ef_item_icon_url, format_timestamp_md
+    from nonebot_plugin_skland.schemas.endfield.gacha.statistics import EfGroupedGachaRecord
+
+    class VisibleTextParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.ignored_depth = 0
+            self.parts = []
+
+        def handle_starttag(self, tag, attrs):
+            if tag in {"head", "script", "style"}:
+                self.ignored_depth += 1
+
+        def handle_endtag(self, tag):
+            if tag in {"head", "script", "style"} and self.ignored_depth:
+                self.ignored_depth -= 1
+
+        def handle_data(self, data):
+            if not self.ignored_depth:
+                self.parts.append(data)
+
+    record = EfGroupedGachaRecord(
+        **{
+            f"{category}_pools": [
+                _pool(category, [(100, [_pull(1, 6, "up", is_free=True)])], up_six_chars=up_six_chars)
+            ]
+            for category in ("special", "weapon", "standard", "joint")
+        }
+    )
+    environment = Environment(
+        loader=FileSystemLoader(Path("nonebot_plugin_skland/resources/templates")), autoescape=True
+    )
+    environment.filters.update(ef_item_icon_url=ef_item_icon_url, format_timestamp_md=format_timestamp_md)
+    rendered = environment.get_template("ef_gacha.html.jinja2").render(props=_view(record, limit=0))
+    parser = VisibleTextParser()
+    parser.feed(rendered)
+    parser.close()
+    visible_text = " ".join("".join(parser.parts).split())
+
+    assert visible_text.count(f"1/{spook_text} 6★/歪") == 2
+    assert visible_text.count("- UP平均") == 2
+    assert visible_text.count("- 6★平均") == 2

@@ -4,13 +4,15 @@ import json
 from pathlib import Path
 from datetime import datetime
 
-from nonebot.compat import model_dump
+from pydantic import ValidationError
 from nonebot_plugin_orm import async_scoped_session
+from nonebot.compat import model_dump, type_validate_python
 
 from ..api import SklandAPI
 from ..config import CACHE_DIR
 from ..model import SkUser, Character
 from .auth import refresh_credentials
+from ..utils.files import atomic_write
 from ..exception import SklandException, SignCacheFormatError
 from ..db_handler import select_all_accounts, get_account_characters
 from ..schemas import CRED, SignGame, SignCache, SignResult, SignCacheEntry, ArkSignResponse, EndfieldSignResponse
@@ -70,22 +72,45 @@ def _cache_path(game: SignGame) -> Path:
 
 def write_sign_cache(game: SignGame, entries: list[SignCacheEntry]) -> None:
     path = _cache_path(game)
-    path.parent.mkdir(parents=True, exist_ok=True)
     cache: SignCache = {"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"), "data": entries}
-    with path.open("w", encoding="utf-8") as file:
-        json.dump(cache, file, ensure_ascii=False, indent=2)
+    with atomic_write(path) as file:
+        file.write(json.dumps(cache, ensure_ascii=False, indent=2).encode("utf-8"))
 
 
 def read_sign_cache(game: SignGame) -> SignCache | None:
     path = _cache_path(game)
-    if not path.exists():
+    corrupted_message = "签到结果文件已损坏，请等待下一次自动签到或重新执行全体签到"
+    try:
+        with path.open(encoding="utf-8") as file:
+            cache = json.load(file)
+    except FileNotFoundError:
         return None
-    with path.open(encoding="utf-8") as file:
-        cache = json.load(file)
-    entries = cache.get("data", [])
-    if not isinstance(entries, list):
+    except (json.JSONDecodeError, UnicodeDecodeError, OSError) as error:
+        raise SignCacheFormatError(corrupted_message) from error
+
+    if not isinstance(cache, dict):
+        raise SignCacheFormatError(corrupted_message)
+    entries = cache.get("data")
+    if isinstance(entries, dict):
         raise SignCacheFormatError("签到结果格式已更新,请等待下一次自动签到或重新执行全体签到")
-    return {"timestamp": cache.get("timestamp", "未记录签到时间"), "data": entries}
+    timestamp = cache.get("timestamp", "未记录签到时间")
+    if not isinstance(entries, list) or not isinstance(timestamp, str):
+        raise SignCacheFormatError(corrupted_message)
+    response_model = ArkSignResponse if game == "arknights" else EndfieldSignResponse
+    for entry in entries:
+        if (
+            not isinstance(entry, dict)
+            or any(type(entry.get(key)) is not int for key in ("owner_id", "character_id"))
+            or any(not isinstance(entry.get(key), str) for key in ("nickname", "role_id", "server_id", "server_name"))
+            or not isinstance(entry.get("result"), (dict, str))
+        ):
+            raise SignCacheFormatError(corrupted_message)
+        if isinstance(entry["result"], dict):
+            try:
+                type_validate_python(response_model, entry["result"])
+            except ValidationError as error:
+                raise SignCacheFormatError(corrupted_message) from error
+    return {"timestamp": timestamp, "data": entries}
 
 
 def filter_sign_cache(cache: SignCache, *, owner_id: int | None, character_ids: set[int] | None) -> SignCache:

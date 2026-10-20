@@ -124,9 +124,19 @@ async def rginfo_handler(
         if rogue_data is None:
             await UniMessage.text("请回复一条肉鸽战绩，或使用 -r 指定自己的角色").finish()
 
+    is_favored = result.find("rginfo.favored")
+    record = rogue_data.history.select_record(id.result, favored=is_favored)
+    if record is None:
+        send_reaction(user_session, "unmatch")
+        records = rogue_data.history.favourRecords if is_favored else rogue_data.history.records
+        label = "收藏战绩" if is_favored else "最近战绩"
+        message = f"{label}编号应为 1-{len(records)}" if records else f"暂无{label}"
+        await UniMessage.text(message).send(at_sender=True)
+        return
+
     send_reaction(user_session, "processing")
     background = await get_rogue_background_image(rogue_data.topic)
-    img = await render_rogue_info(rogue_data, background, id.result, result.find("rginfo.favored"))
+    img = await render_rogue_info(rogue_data, background, id.result, record, is_favored)
     argot_seg = build_background_argot_segment(background)
     await UniMessage(
         Image(raw=img) + Argot("background", argot_seg, command="background", expired_at=config.argot_expire)

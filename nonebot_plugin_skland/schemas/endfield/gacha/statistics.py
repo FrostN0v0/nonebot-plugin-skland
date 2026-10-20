@@ -1,12 +1,23 @@
 """终末地抽卡统计模型"""
 
 from typing import Any
+from collections.abc import Iterable
 
 from pydantic import BaseModel
 from nonebot.compat import model_validator
 
 from .base import EfGachaPull
 from .pool import EfGachaPoolInfo
+
+
+def _sum_known(values: Iterable[int | None]) -> int | None:
+    """累加各卡池计数；任一卡池未知时整个类别未知。"""
+    total = 0
+    for value in values:
+        if value is None:
+            return None
+        total += value
+    return total
 
 
 class EfGroupedGachaRecord(BaseModel):
@@ -107,14 +118,14 @@ class EfGroupedGachaRecord(BaseModel):
         return sum(pool.total_six_stars for pool in self.standard_pools)
 
     @property
-    def standard_six_avg(self) -> float:
-        """常驻池六星平均抽数
+    def standard_six_avg(self) -> float | None:
+        """常驻池付费六星平均抽数
 
-        计算方式：去掉免费十连，去掉距上次出6★的垫抽后，总付费抽数除以6★总数
+        去掉免费抽和距上次付费6★的垫抽后，总付费抽数除以付费6★数。
         """
-        six_count = self.standard_total_six
+        six_count = sum(pool.paid_six_stars for pool in self.standard_pools)
         if six_count == 0:
-            return 0.0
+            return None
         total_paid = sum(pool.paid_pulls for pool in self.standard_pools)
         return (total_paid - self.standard_pity) / six_count
 
@@ -128,24 +139,20 @@ class EfGroupedGachaRecord(BaseModel):
         return sum(pool.total_six_stars for pool in self.special_pools)
 
     @property
-    def special_total_spook(self) -> int:
-        """限定池总歪卡数"""
-        return sum(pool.total_six_spook for pool in self.special_pools)
+    def special_total_spook(self) -> int | None:
+        """限定池总歪卡数，任一卡池缺少UP信息时未知"""
+        return _sum_known(pool.total_six_spook for pool in self.special_pools)
 
     @property
-    def special_up_count(self) -> int:
-        """限定池出UP角色总数"""
-        return self.special_total_six - self.special_total_spook
+    def special_up_avg(self) -> float | None:
+        """限定池付费UP平均抽数
 
-    @property
-    def special_up_avg(self) -> float:
-        """限定池UP平均抽数
-
-        计算方式：去掉免费十连，去掉距上次出UP的垫抽后，总付费抽数除以UP角色总数
+        去掉免费抽和距上次付费UP的垫抽后，总付费抽数除以付费UP数。
+        任一卡池缺少UP信息，或未抽到付费UP时未知。
         """
-        up_count = self.special_up_count
-        if up_count == 0:
-            return 0.0
+        up_count = _sum_known(pool.paid_up_six_stars for pool in self.special_pools)
+        if not up_count:
+            return None
         total_paid = sum(pool.paid_pulls for pool in self.special_pools)
         # 去掉距上次出UP后的垫抽
         pity_after_last_up = self._special_up_pity()
@@ -179,11 +186,11 @@ class EfGroupedGachaRecord(BaseModel):
         return max(0, 80 - self.joint_pity)
 
     @property
-    def joint_six_avg(self) -> float:
-        """联合寻访六星平均抽数"""
-        six_count = self.joint_total_six
+    def joint_six_avg(self) -> float | None:
+        """联合寻访付费六星平均抽数"""
+        six_count = sum(pool.paid_six_stars for pool in self.joint_pools)
         if six_count == 0:
-            return 0.0
+            return None
         total_paid = sum(pool.paid_pulls for pool in self.joint_pools)
         return (total_paid - self.joint_pity) / six_count
 
@@ -308,24 +315,20 @@ class EfGroupedGachaRecord(BaseModel):
         return sum(pool.total_six_stars for pool in self.weapon_pools)
 
     @property
-    def weapon_total_spook(self) -> int:
-        """武器池总歪卡数"""
-        return sum(pool.total_six_spook for pool in self.weapon_pools)
+    def weapon_total_spook(self) -> int | None:
+        """武器池总歪卡数，任一卡池缺少UP信息时未知"""
+        return _sum_known(pool.total_six_spook for pool in self.weapon_pools)
 
     @property
-    def weapon_up_count(self) -> int:
-        """武器池出UP武器总数"""
-        return self.weapon_total_six - self.weapon_total_spook
+    def weapon_up_avg(self) -> float | None:
+        """武器池付费UP平均抽数
 
-    @property
-    def weapon_up_avg(self) -> float:
-        """武器池UP平均抽数
-
-        计算方式：去掉免费十连，去掉距上次出UP的垫抽后，总付费抽数除以UP武器总数
+        去掉免费抽和距上次付费UP的垫抽后，总付费抽数除以付费UP数。
+        任一卡池缺少UP信息，或未抽到付费UP时未知。
         """
-        up_count = self.weapon_up_count
-        if up_count == 0:
-            return 0.0
+        up_count = _sum_known(pool.paid_up_six_stars for pool in self.weapon_pools)
+        if not up_count:
+            return None
         total_paid = sum(pool.paid_pulls for pool in self.weapon_pools)
         # 武器池各池独立保底，取最新池的垫抽
         pity_after_last_up = self._weapon_up_pity()

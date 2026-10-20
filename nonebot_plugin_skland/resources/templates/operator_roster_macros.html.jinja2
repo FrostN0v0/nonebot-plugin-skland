@@ -126,7 +126,7 @@
 
   {% if card.modules %}
   <div class="absolute top-[3px] right-[2px] z-[6] flex w-8 flex-col gap-0.5">
-    {% for module in card.modules[:2] %}
+    {% for module in card.modules %}
     {{ operator_roster_module(module) }}
     {% endfor %}
   </div>

@@ -9,11 +9,11 @@ from collections.abc import Sequence
 import httpx
 from nonebot_plugin_orm import async_scoped_session
 
-from ..exception import RequestException
 from ..data_source import gacha_table_data
 from ..model import Character, GachaRecord
 from ..api import SklandAPI, SklandLoginAPI
 from ..db_handler import get_character_gacha_records
+from ..exception import RequestException, UnresolvedGachaCharacterError
 from ..schemas import (
     GachaCate,
     GachaPool,
@@ -361,13 +361,13 @@ async def import_heybox_gacha_data(url: str) -> dict:
         return response.json()
 
 
-def get_char_id_by_char_name(char_name: str) -> str:
+def get_char_id_by_char_name(char_name: str) -> str | None:
     """通过角色名称获取角色ID"""
     if char_name == "麒麟X夜刀":
         char_name = "麒麟R夜刀"
     return next(
         (char.char_id for char in gacha_table_data.character_table if char.name == char_name),
-        "char_601_cguard",
+        None,
     )
 
 
@@ -398,26 +398,31 @@ def get_pool_id(pool_name: str, gacha_ts: int) -> str:
 def heybox_data_to_record(data: dict, character_id: int) -> list[GachaRecord]:
     """Convert Heybox export data into role-owned gacha records."""
     records: list[GachaRecord] = []
+    unresolved_names: set[str] = set()
+    official_names = {char.char_id: char.name for char in gacha_table_data.character_table}
     for gacha_ts, gacha_data in data.items():
         pool_name = gacha_data["p"]
         pool_id = get_pool_id(pool_name, int(gacha_ts))
         if pool_id == "NORM_1_0_1":
             pool_name = "未知寻访"
         for index, char in enumerate(gacha_data["c"]):
-            char_name = char[0]
-            if char_name == "麒麟X夜刀":
-                char_name = "麒麟R夜刀"
+            char_id = get_char_id_by_char_name(char[0])
+            if char_id is None:
+                unresolved_names.add(char[0])
+                continue
             records.append(
                 GachaRecord(
                     character_id=character_id,
                     pool_id=pool_id,
                     pool_name=pool_name,
-                    char_id=get_char_id_by_char_name(char[0]),
-                    char_name=char[0],
+                    char_id=char_id,
+                    char_name=official_names[char_id],
                     rarity=char[1],
                     is_new=char[2],
                     gacha_ts=int(gacha_ts),
                     pos=index,
                 )
             )
+    if unresolved_names:
+        raise UnresolvedGachaCharacterError(unresolved_names)
     return records

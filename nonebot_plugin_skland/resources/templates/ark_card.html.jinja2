@@ -171,7 +171,7 @@
               </div>
               <div class="w-37.5 h-2.5 absolute bottom-2.5 bg-white/20 rounded-[10px] backdrop-blur-xs">
                 <div class="h-full rounded-[10px] blue-bar"
-                  style="width: {{ (status.ap.ap_now / status.ap.max) * 100 }}%;"></div>
+                  style="width: {{ [(status.ap.ap_now / status.ap.max) * 100, 100] | min }}%;"></div>
               </div>
             </div>
             <span class="text-white/60 text-xs absolute bottom-0.5">{{ (status.ap.completeRecoveryTime - now_ts) |

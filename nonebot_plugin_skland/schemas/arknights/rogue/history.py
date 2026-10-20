@@ -75,3 +75,7 @@ class RogueHistory(BaseModel):
     tagList: list[Tag]
     records: list[Record]
     favourRecords: list[Record]
+
+    def select_record(self, index: int, *, favored: bool) -> Record | None:
+        records = self.favourRecords if favored else self.records
+        return records[index - 1] if 1 <= index <= len(records) else None

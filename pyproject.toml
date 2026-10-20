@@ -1,6 +1,6 @@
 [project]
 name = "nonebot-plugin-skland"
-version = "0.7.2"
+version = "0.7.3"
 description = "通过森空岛查询游戏数据,支持明日方舟和终末地"
 readme = "README.md"
 license = { text = "MIT" }
@@ -81,7 +81,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 
 [tool.bumpversion]
-current_version = "0.7.2"
+current_version = "0.7.3"
 commit = true
 tag = true
 message = ":bookmark: {new_version}"

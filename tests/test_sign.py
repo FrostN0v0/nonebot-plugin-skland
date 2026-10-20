@@ -468,6 +468,8 @@ async def test_global_sign_records_failures_and_presents_after_commit(app, mocke
         "server_id",
         "server_name",
         "result",
+        "result_missing_awards",
+        "result_malformed_award",
         "boolean_id",
         "unreadable",
     ],
@@ -517,6 +519,14 @@ async def test_sign_status_reports_corrupted_cache(app, mocker, make_user_sessio
             cache["timestamp"] = 123
         elif corruption == "boolean_id":
             entry["owner_id"] = True
+        elif corruption == "result_missing_awards":
+            entry["result"] = {}
+        elif corruption == "result_malformed_award":
+            entry["result"] = (
+                {"awards": [{"count": 1}]}
+                if game == "arknights"
+                else {"ts": "1", "awardIds": [{"type": 1}], "resourceInfoMap": {}, "tomorrowAwardIds": []}
+            )
         else:
             entry[corruption] = None
         path.write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")

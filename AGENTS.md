@@ -481,7 +481,7 @@ async def run_daily_resource_update(): ...
 - `sign_result.json`
 - `endfield_sign_result.json`
 
-两项签到任务和签到命令共用 `services/sign.py` 的执行、缓存读写、owner/角色过滤及格式化；`schemas/sign.py` 提供 `SignCacheEntry`、`SignCache`、`SignResult`。结果文件名和有序列表 JSON 结构不变；事务提交与消息发送仍由调用方负责。缓存通过 `atomic_write()` 保存；读取时的解码失败、根对象或条目结构异常统一转换为 `SignCacheFormatError` 并提示文件已损坏，`data` 为字典的旧格式保留原有提示。
+两项签到任务和签到命令共用 `services/sign.py` 的执行、缓存读写、owner/角色过滤及格式化；`schemas/sign.py` 提供 `SignCacheEntry`、`SignCache`、`SignResult`。结果文件名和有序列表 JSON 结构不变；事务提交与消息发送仍由调用方负责。缓存通过 `atomic_write()` 保存；读取时的解码失败、根对象或条目结构异常，以及签到成功结果不符合对应游戏的 `ArkSignResponse` / `EndfieldSignResponse`，统一转换为 `SignCacheFormatError` 并提示文件已损坏，`data` 为字典的旧格式保留原有提示。
 
 每日数据任务受 `auto_update_resources` 控制，沿用 APScheduler 时区（默认 `Asia/Shanghai`），只执行数据更新和汇总日志，不发送 Bot 消息、不下载图片、不访问玩家接口。它与启动、手动数据更新共用互斥入口，停机后不承诺补跑错过的日程。
 

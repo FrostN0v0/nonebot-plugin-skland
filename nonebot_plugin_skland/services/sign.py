@@ -4,8 +4,9 @@ import json
 from pathlib import Path
 from datetime import datetime
 
-from nonebot.compat import model_dump
+from pydantic import ValidationError
 from nonebot_plugin_orm import async_scoped_session
+from nonebot.compat import model_dump, type_validate_python
 
 from ..api import SklandAPI
 from ..config import CACHE_DIR
@@ -95,6 +96,7 @@ def read_sign_cache(game: SignGame) -> SignCache | None:
     timestamp = cache.get("timestamp", "未记录签到时间")
     if not isinstance(entries, list) or not isinstance(timestamp, str):
         raise SignCacheFormatError(corrupted_message)
+    response_model = ArkSignResponse if game == "arknights" else EndfieldSignResponse
     for entry in entries:
         if (
             not isinstance(entry, dict)
@@ -103,6 +105,11 @@ def read_sign_cache(game: SignGame) -> SignCache | None:
             or not isinstance(entry.get("result"), (dict, str))
         ):
             raise SignCacheFormatError(corrupted_message)
+        if isinstance(entry["result"], dict):
+            try:
+                type_validate_python(response_model, entry["result"])
+            except ValidationError as error:
+                raise SignCacheFormatError(corrupted_message) from error
     return {"timestamp": timestamp, "data": entries}
 
 

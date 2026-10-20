@@ -26,6 +26,25 @@ EndfieldCharPoolType = Literal[
 EndfieldWeaponPoolType = Literal[EndfieldPoolType.WEAPON]
 
 
+def _prepare_draw_page(values: Any, *, allow_missing_kind: bool = False) -> Any:
+    """过滤非抽卡事件，同时保留原始分页边界。"""
+    if not isinstance(values, dict):
+        return values
+    raw_list = values.get("list")
+    if not isinstance(raw_list, list):
+        return values
+
+    values = dict(values)
+    values["raw_page_size"] = len(raw_list)
+    values["raw_next_seq"] = str(raw_list[-1].get("seqId", "")) if raw_list and isinstance(raw_list[-1], dict) else ""
+    # 仅武器旧响应允许省略 kind；角色接口仍须显式标记 draw。
+    default_kind = "draw" if allow_missing_kind else None
+    values["list"] = [
+        item for item in raw_list if not isinstance(item, dict) or item.get("kind", default_kind) == "draw"
+    ]
+    return values
+
+
 class EfCharGachaInfo(BaseModel):
     """终末地角色池 - 单条抽卡记录（API 原始响应）"""
 
@@ -136,6 +155,8 @@ class EfCharGachaResponse(BaseModel):
 
     gacha_list: list[EfCharGachaInfo] = Field(default=[], alias="list")
     hasMore: bool
+    raw_page_size: int = Field(default=0, exclude=True)
+    raw_next_seq: str = Field(default="", exclude=True)
 
     @property
     def next_ts(self) -> str:
@@ -143,15 +164,16 @@ class EfCharGachaResponse(BaseModel):
 
     @property
     def next_seq(self) -> str:
-        return self.gacha_list[-1].seqId if self.gacha_list else ""
+        return self.raw_next_seq or (self.gacha_list[-1].seqId if self.gacha_list else "")
+
+    @property
+    def page_size(self) -> int:
+        return self.raw_page_size or len(self.gacha_list)
 
     @model_validator(mode="before")
     @classmethod
     def draws_filter(cls, values) -> Any:
-        if "list" in values:
-            # 过滤掉非抽卡记录（如寻访情报书）
-            values["list"] = [draw for draw in values["list"] if draw.get("kind") == "draw"]
-        return values
+        return _prepare_draw_page(values)
 
 
 class EfWeaponGachaResponse(BaseModel):
@@ -159,6 +181,8 @@ class EfWeaponGachaResponse(BaseModel):
 
     gacha_list: list[EfWeaponGachaInfo] = Field(default=[], alias="list")
     hasMore: bool
+    raw_page_size: int = Field(default=0, exclude=True)
+    raw_next_seq: str = Field(default="", exclude=True)
 
     @property
     def next_ts(self) -> str:
@@ -166,7 +190,16 @@ class EfWeaponGachaResponse(BaseModel):
 
     @property
     def next_seq(self) -> str:
-        return self.gacha_list[-1].seqId if self.gacha_list else ""
+        return self.raw_next_seq or (self.gacha_list[-1].seqId if self.gacha_list else "")
+
+    @property
+    def page_size(self) -> int:
+        return self.raw_page_size or len(self.gacha_list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def draws_filter(cls, values) -> Any:
+        return _prepare_draw_page(values, allow_missing_kind=True)
 
 
 EfGachaResponse = EfCharGachaResponse | EfWeaponGachaResponse

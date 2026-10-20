@@ -335,6 +335,28 @@ class TestRealAPI:
         logger.success(f"获取到终末地战争回响数据，season={data.seasons[0].name}")
 
 
+# ==================== 无需玩家凭证的公开资源接口 ====================
+
+
+class TestPublicResources:
+    async def test_endfield_weapon_catalog(self, app):
+        from urllib.parse import urlsplit
+
+        from nonebot_plugin_skland.api.resources import get_endfield_weapon_catalog
+        from nonebot_plugin_skland.schemas.endfield.item_icons import EfWikiWeaponCatalog
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            catalog = EfWikiWeaponCatalog(**(await get_endfield_weapon_catalog(client)))
+        icons = catalog.icons_by_name()
+        assert "玉中身" in icons
+        assert "嵌合正义" in icons
+        for urls in icons.values():
+            for url in urls:
+                parsed = urlsplit(url)
+                assert parsed.scheme == "https"
+                assert parsed.netloc in {"web.hycdn.cn", "bbs.hycdn.cn"}
+
+
 # ==================== 自定义接口测试模板 ====================
 
 

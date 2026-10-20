@@ -4,6 +4,8 @@ import os
 import json
 import asyncio
 from pathlib import Path
+from urllib.parse import urlsplit
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 from tempfile import NamedTemporaryFile
 
@@ -12,8 +14,10 @@ from nonebot import logger
 from nonebot.compat import model_dump
 
 from .exception import RequestException
+from .api.resources import get_endfield_weapon_catalog
 from .config import DATA_DIR, DATA_ROUTES, GACHA_DATA_PATH, OPERATOR_METADATA_PATH
 from .schemas.arknights.game_data import OperatorCatalog, OperatorMetadataSnapshot
+from .schemas.endfield.item_icons import EfOperatorIconPage, EfWikiWeaponCatalog, build_ef_item_icons
 
 if TYPE_CHECKING:
     from .download import GitHubDataClient
@@ -449,5 +453,85 @@ class EfGachaPoolTableData:
         return self.pool_table.get(pool_id)
 
 
+class EfItemIconData:
+    """Official character and weapon icon URLs stored in the user's localstore data directory."""
+
+    def __init__(self) -> None:
+        self._file_path = DATA_DIR / "endfield" / "ItemIconTable.json"
+        self.icons: dict[str, str] = {}
+        self._cache_loaded = False
+
+    @staticmethod
+    def _parse(raw: Any) -> dict[str, str]:
+        if not isinstance(raw, dict) or not raw:
+            raise ValueError("终末地图片资源表为空或格式错误")
+        for item_id, url in raw.items():
+            if (
+                not isinstance(item_id, str)
+                or not item_id.startswith(("chr_", "wpn_"))
+                or len(item_id) <= 4
+                or not isinstance(url, str)
+            ):
+                raise ValueError("终末地图片资源数据格式错误")
+            parsed = urlsplit(url)
+            if (
+                parsed.scheme != "https"
+                or parsed.netloc not in {"web.hycdn.cn", "bbs.hycdn.cn"}
+                or not parsed.path
+                or parsed.fragment
+            ):
+                raise ValueError("终末地图片资源必须使用官方 HTTPS 图片地址")
+        return raw
+
+    async def load(self, pools: Iterable["EfGachaContentPool"], *, force: bool = False) -> bool:
+        cached = None
+        if self._file_path.exists():
+            try:
+                cached = self._parse(json.loads(self._file_path.read_text(encoding="utf-8")))
+            except (OSError, ValueError, TypeError) as error:
+                logger.warning(f"加载终末地图片资源缓存失败: {type(error).__name__}")
+        if not self._cache_loaded:
+            if cached is not None:
+                self.icons = cached
+            self._cache_loaded = True
+
+        try:
+            operator_url = "https://endfield.hypergryph.com/operator"
+            async with httpx.AsyncClient(
+                timeout=30, follow_redirects=False, limits=httpx.Limits(max_connections=8, max_keepalive_connections=8)
+            ) as client:
+                response = await client.get(operator_url)
+                response.raise_for_status()
+                operators = EfOperatorIconPage.from_html(response.text, operator_url)
+                for url in operators.stylesheets:
+                    parsed = urlsplit(url)
+                    if parsed.scheme != "https" or parsed.netloc not in {"web.hycdn.cn", "endfield.hypergryph.com"}:
+                        raise ValueError("官网样式表地址无效")
+                responses = await asyncio.gather(
+                    *(client.get(url) for url in operators.stylesheets), return_exceptions=True
+                )
+                stylesheets = []
+                for response in responses:
+                    if isinstance(response, BaseException):
+                        raise response
+                    response.raise_for_status()
+                    stylesheets.append(response.text)
+                weapons = EfWikiWeaponCatalog(**(await get_endfield_weapon_catalog(client)))
+            icons = self._parse(build_ef_item_icons(pools, operators, stylesheets, weapons))
+            changed = False
+            if cached != icons:
+                changed = _publish_files({self._file_path: _json_bytes(icons)})
+        except (RequestException, httpx.HTTPError, OSError, ValueError, TypeError) as error:
+            reason = str(error) if isinstance(error, RequestException) else type(error).__name__
+            raise RequestException(f"更新终末地图片资源失败: {reason}") from error
+
+        self.icons = icons
+        return changed
+
+    def get_icon(self, item_id: str) -> str:
+        return self.icons.get(item_id, "")
+
+
 gacha_table_data = GachaTableData()
 ef_gacha_pool_data = EfGachaPoolTableData()
+ef_item_icon_data = EfItemIconData()

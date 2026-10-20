@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from nonebot import logger
 
 from ..download import GitHubDataClient
-from ..data_source import gacha_table_data, ef_gacha_pool_data
 from ..exception import RequestException, ResourceUpdateInProgress
+from ..data_source import gacha_table_data, ef_item_icon_data, ef_gacha_pool_data
 
 
 @dataclass(frozen=True)
@@ -20,7 +20,7 @@ _update_lock = asyncio.Lock()
 
 
 async def update_data_resources(*, force: bool = False, refresh_metadata: bool = True) -> ResourceUpdateResult:
-    """Update both games independently, rejecting overlapping update requests."""
+    """Update game data and item icon URLs independently, rejecting overlapping updates."""
     if _update_lock.locked():
         raise ResourceUpdateInProgress("数据资源正在更新，请稍后再试")
     # Acquiring an unlocked asyncio lock does not suspend before taking ownership.
@@ -53,6 +53,20 @@ async def update_data_resources(*, force: bool = False, refresh_metadata: bool =
             except RequestException as error:
                 logger.error(f"终末地卡池数据更新失败: {error}")
                 messages.append(f"❌ 终末地卡池数据更新失败: {error}")
+                failed = True
+
+            try:
+                changed = await ef_item_icon_data.load(ef_gacha_pool_data.pool_table.values(), force=force)
+                characters = sum(item_id.startswith("chr_") for item_id in ef_item_icon_data.icons)
+                weapons = sum(item_id.startswith("wpn_") for item_id in ef_item_icon_data.icons)
+                message = (
+                    f"终末地图片资源{'更新成功' if changed else '已是最新'}，共 {characters} 名角色、{weapons} 件武器"
+                )
+                logger.info(f"✅ {message}")
+                messages.append(f"{'✅' if changed else '📦'} {message}")
+            except RequestException as error:
+                logger.error(f"终末地图片资源更新失败: {error}")
+                messages.append(f"❌ 终末地图片资源更新失败: {error}")
                 failed = True
 
         return ResourceUpdateResult(messages=tuple(messages), failed=failed)

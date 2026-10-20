@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+import httpx
 import pytest
 from sqlalchemy import update, inspect
 
@@ -18,6 +19,149 @@ def _pull(pool_id="standard", *, seq=1, timestamp=1700000000, free=False):
     if pool_id.startswith("weapon"):
         return EfWeaponGachaInfo(**common, weaponId="weapon_test", weaponName="测试武器", weaponType="Sword")
     return EfCharGachaInfo(**common, kind="draw", nameText="寻访", charId="char_test", charName="测试干员", isFree=free)
+
+
+def _weapon_api_item(seq: int, *, kind: str = "draw") -> dict:
+    if kind == "gift_weapon":
+        return {
+            "kind": kind,
+            "poolId": "weaponbox_1_6_1",
+            "poolName": "篆玉申领",
+            "poolVersion": None,
+            "poolType": "normal",
+            "nameText": "玉中身",
+            "gachaTs": "1792079999109",
+            "seqId": str(seq),
+            "giftRewardLabel": "篆玉赠礼",
+        }
+    return {
+        "kind": kind,
+        "poolId": "weaponbox_1_6_1",
+        "poolName": "篆玉申领",
+        "nameText": "测试武器",
+        "weaponId": "weapon_test",
+        "weaponName": "测试武器",
+        "weaponType": "E_WeaponType_Lance",
+        "rarity": 4,
+        "isNew": False,
+        "gachaTs": "1792079999109",
+        "seqId": str(seq),
+    }
+
+
+def _malformed_history_response(failure: str, *, is_weapon: bool) -> httpx.Response:
+    from nonebot.compat import model_dump
+
+    if failure == "json":
+        return httpx.Response(200, text="<html>private-response-content</html>")
+    if failure == "encoding":
+        return httpx.Response(200, content=b"\xff")
+    if failure == "envelope":
+        return httpx.Response(200, json=["private-response-content"])
+    if failure == "data":
+        return httpx.Response(200, json={"code": 0, "data": None})
+    item = model_dump(_pull("weapon_test" if is_weapon else "standard"))
+    item.pop("weaponId" if is_weapon else "charId")
+    item.update(kind="draw", nameText="private-response-content")
+    return httpx.Response(200, json={"code": 0, "data": {"list": [item], "hasMore": False}})
+
+
+@pytest.mark.parametrize("is_weapon", [False, True])
+@pytest.mark.parametrize("failure", ["json", "encoding", "envelope", "data", "draw"])
+@pytest.mark.asyncio
+async def test_ef_history_parse_errors_become_safe_request_errors(app, failure, is_weapon):
+    from nonebot_plugin_skland.api import SklandAPI
+    from nonebot_plugin_skland.schemas import EndfieldPoolType
+    from nonebot_plugin_skland.exception import RequestException
+
+    transport = httpx.MockTransport(lambda request: _malformed_history_response(failure, is_weapon=is_weapon))
+    pool_type = EndfieldPoolType.WEAPON if is_weapon else EndfieldPoolType.STANDARD
+    async with httpx.AsyncClient(transport=transport) as client:
+        with pytest.raises(RequestException) as error:
+            await SklandAPI.get_ef_gacha_history(pool_type, "1", "private-role-token", client=client)
+
+    assert "private-response-content" not in str(error.value)
+    assert "private-role-token" not in str(error.value)
+
+
+@pytest.mark.parametrize("code", [10000, 10002])
+@pytest.mark.asyncio
+async def test_ef_history_auth_errors_take_precedence_over_missing_data(app, code):
+    from nonebot_plugin_skland.api import SklandAPI
+    from nonebot_plugin_skland.schemas import EndfieldPoolType
+    from nonebot_plugin_skland.exception import LoginException, UnauthorizedException
+
+    transport = httpx.MockTransport(
+        lambda request: httpx.Response(200, json={"code": code, "message": "rejected", "data": None})
+    )
+    error_type = UnauthorizedException if code == 10000 else LoginException
+    async with httpx.AsyncClient(transport=transport) as client:
+        with pytest.raises(error_type):
+            await SklandAPI.get_ef_gacha_history(EndfieldPoolType.WEAPON, "1", "private-role-token", client=client)
+
+
+@pytest.mark.parametrize("legacy_format", [False, True])
+def test_weapon_response_ignores_gift_marker_and_preserves_raw_page_boundary(app, legacy_format):
+    from nonebot_plugin_skland.schemas.endfield.gacha.base import EfWeaponGachaResponse
+
+    draws = [_weapon_api_item(seq) for seq in range(921, 917, -1)]
+    if legacy_format:
+        for draw in draws:
+            draw.pop("kind")
+    response = EfWeaponGachaResponse(list=[_weapon_api_item(922, kind="gift_weapon"), *draws], hasMore=True)
+
+    assert [item.seq_id_int for item in response.gacha_list] == [921, 920, 919, 918]
+    assert response.page_size == 5
+    assert response.next_seq == "918"
+
+
+def test_character_response_filters_untyped_events_and_preserves_raw_cursor(app):
+    from nonebot.compat import model_dump
+
+    from nonebot_plugin_skland.schemas.endfield.gacha.base import EfCharGachaResponse
+
+    response = EfCharGachaResponse(
+        list=[
+            model_dump(_pull(seq=12)),
+            {"kind": "gift", "nameText": "寻访情报书", "seqId": "11"},
+            {"nameText": "未标记事件", "seqId": "10"},
+        ],
+        hasMore=True,
+    )
+
+    assert [item.seq_id_int for item in response.gacha_list] == [12]
+    assert response.page_size == 3
+    assert response.next_seq == "10"
+
+
+@pytest.mark.asyncio
+async def test_weapon_pagination_uses_raw_page_size_after_gift_filter(app, mocker):
+    import nonebot_plugin_skland.services.gacha as service
+    from nonebot_plugin_skland.schemas import EndfieldPoolType
+    from nonebot_plugin_skland.schemas.endfield.gacha.base import EfWeaponGachaResponse
+
+    pages = {
+        None: EfWeaponGachaResponse(
+            list=[_weapon_api_item(922, kind="gift_weapon"), *[_weapon_api_item(seq) for seq in range(921, 917, -1)]],
+            hasMore=True,
+        ),
+        "918": EfWeaponGachaResponse(
+            list=[_weapon_api_item(seq) for seq in range(917, 912, -1)],
+            hasMore=False,
+        ),
+    }
+    calls = []
+
+    async def fetch(pool_type, server_id, role_token, seq_id=None, client=None):
+        calls.append(seq_id)
+        return pages[seq_id]
+
+    mocker.patch.object(service.SklandAPI, "get_ef_gacha_history", side_effect=fetch)
+
+    records = await service.get_all_ef_gacha_records("1", EndfieldPoolType.WEAPON, "role-token", concurrency=1)
+
+    assert calls == [None, "918"]
+    assert [record.seq_id_int for record in records] == list(range(921, 912, -1))
 
 
 async def _save_pull(session, character_id, pull):
@@ -247,6 +391,64 @@ async def test_sync_failure_uses_only_marked_cache_or_reports_cause(gacha_case, 
     assert "private-access" not in visible
     assert "private-cred" not in visible
     assert "private-token" not in visible
+    assert "private-role-token" not in visible
+
+
+@pytest.mark.parametrize("has_cache", [False, True])
+@pytest.mark.parametrize("failure_page", ["first", "later"])
+@pytest.mark.parametrize("failure", ["json", "draw"])
+@pytest.mark.asyncio
+async def test_malformed_history_page_reports_failure_without_partial_writes(
+    gacha_case, mocker, has_cache, failure_page, failure
+):
+    from nonebot.compat import model_dump
+
+    from nonebot_plugin_skland.schemas import EndfieldPoolType
+    from nonebot_plugin_skland.db_handler import get_character_gacha_records
+
+    case = gacha_case
+    if has_cache:
+        await _save_pull(case.session, case.character_ids[0], _pull(seq=90, timestamp=1600000000))
+
+    def respond(request):
+        if request.url.path.endswith("/char"):
+            records = (
+                [model_dump(_pull(seq=1))] if request.url.params["pool_type"] == EndfieldPoolType.STANDARD.value else []
+            )
+            return httpx.Response(200, json={"code": 0, "data": {"list": records, "hasMore": False}})
+        assert request.url.path.endswith("/weapon")
+        if failure_page == "later" and "seq_id" not in request.url.params:
+            return httpx.Response(
+                200, json={"code": 0, "data": {"list": [model_dump(_pull("weapon_test", seq=2))], "hasMore": True}}
+            )
+        return _malformed_history_response(failure, is_weapon=True)
+
+    # Restore the actual API parser; only HTTP transport is replaced.
+    mocker.stop(case.fetch)
+    client_type = httpx.AsyncClient
+    transport = httpx.MockTransport(respond)
+    mocker.patch.object(httpx, "AsyncClient", side_effect=lambda **kwargs: client_type(transport=transport, **kwargs))
+
+    await case.run()
+
+    records = await get_character_gacha_records(case.character_ids[0], case.session)
+    assert [(record.gacha_ts, record.pos) for record in records] == ([(1600000000, 90)] if has_cache else [])
+    assert len(case.messages) == 1
+    visible = case.messages[0].extract_plain_text()
+    if has_cache:
+        view = case.render.await_args.args[0]
+        assert view.is_cached
+        assert view.new_count == 0
+        assert view.record.total_pulls == 1
+        assert "同步失败" in view.notice
+        assert "本地缓存" in view.notice
+        assert case.reaction.call_args.args[1] == "done"
+        visible += view.notice
+    else:
+        case.render.assert_not_awaited()
+        assert "同步失败" in visible
+        assert "done" not in [call.args[1] for call in case.reaction.call_args_list]
+    assert "private-response-content" not in visible
     assert "private-role-token" not in visible
 
 

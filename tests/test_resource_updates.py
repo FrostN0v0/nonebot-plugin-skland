@@ -15,8 +15,17 @@ def resource_loaders(app, mocker):
     mocker.patch.object(resources, "GitHubDataClient", return_value=client)
     ark = SimpleNamespace(version="new-version", load=mocker.AsyncMock(return_value=False))
     ef = SimpleNamespace(pool_table={"pool": {}}, load=mocker.AsyncMock(return_value=False))
+    icons = SimpleNamespace(
+        icons={
+            "chr_0004_pelica": "https://web.hycdn.cn/perlica.png",
+            "wpn_first": "https://web.hycdn.cn/first-weapon.png",
+            "wpn_second": "https://bbs.hycdn.cn/second-weapon.png",
+        },
+        load=mocker.AsyncMock(return_value=False),
+    )
     mocker.patch.object(resources, "gacha_table_data", ark)
     mocker.patch.object(resources, "ef_gacha_pool_data", ef)
+    mocker.patch.object(resources, "ef_item_icon_data", icons)
     return ark, ef
 
 
@@ -83,39 +92,32 @@ async def test_manual_and_timer_updates_do_not_overlap(app, resource_loaders, mo
     image_download.assert_not_awaited()
 
 
-@pytest.mark.parametrize("failed_game", ["ark", "ef"])
+@pytest.mark.parametrize("failed_resource", ["ark", "ef", "icons"])
 @pytest.mark.asyncio
-async def test_game_failure_does_not_block_other_game(app, resource_loaders, failed_game):
+async def test_resource_failure_does_not_block_other_updates(app, resource_loaders, failed_resource):
     from nonebot_plugin_skland.services import resources
     from nonebot_plugin_skland.exception import RequestException
 
     ark, ef = resource_loaders
-    completed = []
+    loaders = {"ark": ark, "ef": ef, "icons": resources.ef_item_icon_data}
+    for name, loader in loaders.items():
+        loader.load.return_value = True
+        if name == failed_resource:
+            loader.load.side_effect = RequestException("上游不可用")
 
-    async def load_ark(**kwargs):
-        if failed_game == "ark":
-            raise RequestException("上游不可用")
-        completed.append("ark")
-        return True
-
-    async def load_ef(**kwargs):
-        if failed_game == "ef":
-            raise RequestException("上游不可用")
-        completed.append("ef")
-        return True
-
-    ark.load.side_effect = load_ark
-    ef.load.side_effect = load_ef
     result = await resources.update_data_resources()
 
     assert result.failed
-    assert completed == (["ef"] if failed_game == "ark" else ["ark"])
-    failure = result.messages[0 if failed_game == "ark" else 1]
-    success = result.messages[1 if failed_game == "ark" else 0]
-    assert failure.startswith("❌ ")
-    assert "上游不可用" in failure
-    assert "已是最新" not in failure
-    assert success.startswith("✅ ")
+    assert len(result.messages) == 3
+    for name, message in zip(loaders, result.messages):
+        if name == failed_resource:
+            assert message.startswith("❌ ")
+            assert "上游不可用" in message
+            assert "已是最新" not in message
+        else:
+            assert message.startswith("✅ ")
+            assert "更新成功" in message
+    assert "终末地图片资源" in result.messages[2]
 
 
 @pytest.mark.asyncio
@@ -127,18 +129,24 @@ async def test_forced_unchanged_data_is_not_reported_as_updated(app, resource_lo
     assert not result.failed
     assert all("已是最新" in message for message in result.messages)
     assert all("更新成功" not in message for message in result.messages)
+    assert all(message.startswith("📦 ") for message in result.messages)
+    assert "终末地图片资源已是最新，共 1 名角色、2 件武器" in result.messages[2]
 
 
 @pytest.mark.parametrize("ark_changed", [True, False])
 @pytest.mark.asyncio
-async def test_manual_reply_retains_status_icons_and_endfield_pool_count(app, resource_loaders, mocker, ark_changed):
+async def test_manual_reply_retains_status_icons_and_endfield_resource_counts(
+    app, resource_loaders, mocker, ark_changed
+):
     from nonebot_plugin_skland.commands import sync
+    from nonebot_plugin_skland.services import resources
     from nonebot_plugin_skland.matcher import skland_command
 
     ark, ef = resource_loaders
     ark.load.return_value = ark_changed
     ef.load.return_value = not ark_changed
     ef.pool_table = {"first": {}, "second": {}}
+    resources.ef_item_icon_data.load.return_value = ark_changed
     sent = []
 
     async def send(message, *args, **kwargs):
@@ -150,10 +158,13 @@ async def test_manual_reply_retains_status_icons_and_endfield_pool_count(app, re
     await sync.sync_handler(SimpleNamespace(platform="Console"), command, is_superuser=True)
 
     assert len(sent) == 1
-    ark_message, ef_message = sent[0].splitlines()
+    ark_message, ef_message, icon_message = sent[0].splitlines()
     assert ark_message.startswith("✅ " if ark_changed else "📦 ")
     assert ef_message.startswith("📦 " if ark_changed else "✅ ")
     assert "共 2 个卡池" in ef_message
+    assert icon_message.startswith("✅ " if ark_changed else "📦 ")
+    assert "终末地图片资源" in icon_message
+    assert "共 1 名角色、2 件武器" in icon_message
 
 
 @pytest.mark.asyncio

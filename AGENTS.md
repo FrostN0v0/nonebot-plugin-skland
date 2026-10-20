@@ -374,7 +374,7 @@ class Config(BaseModel):
 
 下载框使用临时显示，仅在有实际下载任务时启动，最后一项结束或异常退出时立即清除并恢复光标。框活动期间默认 NoneBot 控制台日志经同一 Rich Console 输出，保留格式、等级和换行；结束后恢复普通控制台输出，不修改其他自定义或文件日志处理器。非交互终端与重定向输出仅输出普通日志，不产生下载边框和光标控制序列。默认控制台处理器被用户替换或已有其他 Live 窗口时，不接管自定义处理器，也不维持第二个下载框。
 
-若 `check_res_update=True`，启动调用 `download.download_img_resource()` 检查图片；手动 `skland sync` 同时更新图片与数据，`skland sync --img` 仅更新图片。图片版本检查、成功/失败计数、已有文件的跳过/覆盖和并发控制由 `download.py` 的图片下载流程负责，与数据更新流程分开。
+若 `check_res_update=True`，启动调用 `download.download_img_resource()` 检查图片；手动 `skland sync` 同时更新图片与数据，`skland sync --img` 仅更新图片。图片版本检查、成功/失败计数、已有文件的跳过/覆盖和并发控制由 `download.py` 的图片下载流程负责，与数据更新流程分开。每个图片先写入同目录临时文件，完整下载后原子替换；任一文件失败时不推进图片版本，`sync` 回复失败，下次运行重新下载缺失文件。单文件原子写入统一使用 `utils/files.atomic_write()`，签到缓存与半身图缓存共用同一实现；多文件批次仍由 `data_source._publish_files()` 负责。
 
 ### 抽卡记录
 
@@ -517,7 +517,7 @@ uv run pytest -s tests/test_skland_api.py
 - 数据库测试使用内存 SQLite：`sqlite+aiosqlite://`。
 - `make_user_session` fixture 将真实 `UserSession.user` 加入命令使用的同一个 SQLAlchemy session；解绑、缺少默认角色和签到选择失败的回归测试覆盖事务结束后用户 ORM 属性过期的行为，不能只用普通整数模拟 `user_id`。
 - `tests/test_auth.py` 覆盖有界重试、缺少 token 时零刷新请求及刷新失败传播，并通过离线 HTTP 调用实际账号 API 和凭证接口，验证错误码分别触发 token 刷新、cred 更新或直接失败；`tests/test_player_data.py` 覆盖真实缓存中并发等待者分别刷新凭证与成功结果合并。
-- `tests/test_download.py` 覆盖原有图片下载统计/计时隔离、跳过与覆盖规则，以及数据客户端代理回退、凭证边界、错误响应校验、有限重试和并发限流；数据下载进度回归使用真实 Rich 输出，覆盖下载中进度可见、日志换行与重绘顺序、成功/失败/取消清理、非交互输出无框，以及保留文件日志和用户运行中修改的日志处理器。
+- `tests/test_download.py` 覆盖原有图片下载统计/计时隔离、跳过与覆盖规则、下载中断或取消时不留下残缺图片、存在失败时不推进版本及 `sync` 失败回复，以及数据客户端代理回退、凭证边界、错误响应校验、有限重试和并发限流；数据下载进度回归使用真实 Rich 输出，覆盖下载中进度可见、日志换行与重绘顺序、成功/失败/取消清理、非交互输出无框，以及保留文件日志和用户运行中修改的日志处理器。
 - `tests/test_data_source.py` 使用离线 HTTP 传输与真实 loader 验证同版本不下载、固定提交直接下载、完整批次校验、失败零版本推进、写入回滚、冷启动缓存、损坏缓存警告、PRTS 回退及终末地等价数据不重写。
 - `tests/test_ef_item_icons.py` 使用离线 HTTP 传输覆盖官网动态 CSS 发现、名称与游戏 ID 关联、历史名称变化、无玩家凭证的 Wiki 游客请求、官方域名和重定向限制、异常设备响应、完整构建后发布、冷/热 localstore 缓存、首次离线及写入失败；`tests/test_skland_api.py::TestPublicResources` 可单独验证无需扫码的真实公开目录。
 - `tests/test_resource_updates.py` 覆盖手动/定时互斥、独立游戏和图片资源表失败、取消释放、关闭任务、09:00 时区边界、旧快捷指令缓存迁移为数据更新，以及用户回复的状态图标、卡池数量与角色/武器图片数量。

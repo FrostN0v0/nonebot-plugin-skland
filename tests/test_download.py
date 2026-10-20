@@ -78,13 +78,16 @@ async def test_resource_download_aggregates_skips_failures_and_version_updates(a
     existing_file = tmp_path / "portrait" / "existing.png"
     existing_file.parent.mkdir()
     existing_file.write_bytes(b"existing")
+    version_file = tmp_path / "version"
+    version_file.write_text("previous-release", encoding="utf-8")
+    fail_download = True
 
     async def fetch_files(*, url, dl_url, route):
         names = ("existing.png", "new.png", "failed.png") if route == "portrait" else ("avatar.png",)
         return [download.File(name=name, download_url=f"https://example.com/{name}") for name in names]
 
     async def download_file(client, file, save_path, progress, *, task_id):
-        if file.name == "failed.png":
+        if file.name == "failed.png" and fail_download:
             raise RequestException("Download failed")
         (save_path / file.name).write_bytes(b"updated")
 
@@ -93,12 +96,23 @@ async def test_resource_download_aggregates_skips_failures_and_version_updates(a
 
     result = await download.download_img_resource(force=False, update=False)
 
-    assert (result.version, result.success_count, result.failed_count) == (version, 2, 1)
+    assert (result.version, result.success_count, result.failed_count) == (None, 2, 1)
     assert existing_file.read_bytes() == b"existing"
     assert (tmp_path / "portrait" / "new.png").read_bytes() == b"updated"
     assert (tmp_path / "avatar" / "avatar.png").read_bytes() == b"updated"
     assert not (tmp_path / "portrait" / "failed.png").exists()
-    assert (tmp_path / "version").read_text(encoding="utf-8") == version
+    assert version_file.read_text(encoding="utf-8") == "previous-release"
+
+    retried = await download.download_img_resource(force=False, update=False)
+
+    assert (retried.version, retried.success_count, retried.failed_count) == (None, 0, 1)
+    assert version_file.read_text(encoding="utf-8") == "previous-release"
+
+    fail_download = False
+    completed = await download.download_img_resource(force=False, update=False)
+
+    assert (completed.version, completed.success_count, completed.failed_count) == (version, 1, 0)
+    assert version_file.read_text(encoding="utf-8") == version
 
     current = await download.download_img_resource(force=False, update=True)
 
@@ -107,14 +121,116 @@ async def test_resource_download_aggregates_skips_failures_and_version_updates(a
 
     forced = await download.download_img_resource(force=True, update=False)
 
-    assert (forced.version, forced.success_count, forced.failed_count) == (version, 0, 1)
+    assert (forced.version, forced.success_count, forced.failed_count) == (version, 0, 0)
     assert existing_file.read_bytes() == b"existing"
 
     replaced = await download.download_img_resource(force=True, update=True)
 
-    assert (replaced.version, replaced.success_count, replaced.failed_count) == (version, 3, 1)
+    assert (replaced.version, replaced.success_count, replaced.failed_count) == (version, 4, 0)
     assert existing_file.read_bytes() == b"updated"
-    assert (tmp_path / "version").read_text(encoding="utf-8") == version
+    assert version_file.read_text(encoding="utf-8") == version
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("ending", ["complete", "interrupted", "cancelled"])
+@pytest.mark.parametrize("existing", [False, True])
+async def test_image_download_publishes_only_complete_files_and_cleans_temporary_files(
+    app, tmp_path, mocker, monkeypatch, ending, existing
+):
+    from nonebot_plugin_skland import download
+
+    version = "resource-release"
+    first_chunk = asyncio.Event()
+    release = asyncio.Event()
+    payload = b"a" * 1024 + b"complete"
+    image_path = tmp_path / "portrait" / "image.png"
+    if existing:
+        image_path.parent.mkdir()
+        image_path.write_bytes(b"original-image")
+    version_file = tmp_path / "version"
+    version_file.write_text("previous-release", encoding="utf-8")
+
+    class DelayedStream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            yield payload[:1024]
+            first_chunk.set()
+            await release.wait()
+            if ending == "interrupted":
+                raise httpx.ReadError("connection interrupted")
+            yield payload[1024:]
+
+    def respond(request):
+        return httpx.Response(200, headers={"Content-Length": str(len(payload))}, stream=DelayedStream())
+
+    mocker.patch("nonebot_plugin_skland.config.CACHE_DIR", tmp_path)
+    mocker.patch("nonebot_plugin_skland.config.RESOURCE_ROUTES", ["portrait"])
+    mocker.patch.object(download.GameResourceDownloader, "get_version", return_value=version)
+    mocker.patch.object(
+        download.GameResourceDownloader,
+        "fetch_file_list",
+        return_value=[download.File(name="image.png", download_url="https://example.com/image.png")],
+    )
+    mocker.patch.object(download, "DownloadProgress")
+    monkeypatch.setattr(
+        download, "AsyncClient", lambda **kwargs: httpx.AsyncClient(transport=httpx.MockTransport(respond), **kwargs)
+    )
+
+    running = asyncio.create_task(download.download_img_resource(force=False, update=existing))
+    try:
+        await asyncio.wait_for(first_chunk.wait(), 5)
+        assert list(image_path.parent.glob(".image.png.*.tmp"))
+        assert image_path.read_bytes() == b"original-image" if existing else not image_path.exists()
+        assert version_file.read_text(encoding="utf-8") == "previous-release"
+        if ending == "cancelled":
+            running.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await running
+        else:
+            release.set()
+            result = await asyncio.wait_for(running, 5)
+            assert (result.version, result.success_count, result.failed_count) == (
+                (version, 1, 0) if ending == "complete" else (None, 0, 1)
+            )
+        if ending == "complete":
+            assert image_path.read_bytes() == payload
+            assert version_file.read_text(encoding="utf-8") == version
+        else:
+            assert image_path.read_bytes() == b"original-image" if existing else not image_path.exists()
+            assert version_file.read_text(encoding="utf-8") == "previous-release"
+        assert not list(image_path.parent.glob(".image.png.*.tmp"))
+    finally:
+        release.set()
+        if not running.done():
+            running.cancel()
+        await asyncio.gather(running, return_exceptions=True)
+
+
+@pytest.mark.asyncio
+async def test_image_sync_reports_partial_download_as_failure(app, mocker):
+    from types import SimpleNamespace
+
+    from nonebot_plugin_skland.commands import sync
+    from nonebot_plugin_skland.matcher import skland_command
+    from nonebot_plugin_skland.download import DownloadResult
+
+    mocker.patch.object(
+        sync, "download_img_resource", return_value=DownloadResult(version=None, success_count=2, failed_count=1)
+    )
+    reactions = mocker.patch.object(sync, "send_reaction")
+    messages = []
+
+    async def send(message, **_kwargs):
+        messages.append(message.extract_plain_text())
+
+    mocker.patch.object(sync.UniMessage, "send", new=send)
+    result = skland_command.parse("/skland sync --img")
+    await sync.sync_handler(SimpleNamespace(platform="Console"), result, is_superuser=True)
+
+    assert len(messages) == 1
+    assert messages[0].startswith("❌")
+    assert "成功: 2个，失败: 1个" in messages[0]
+    assert "版本未更新" in messages[0]
+    assert reactions.call_args.args[1] == "fail"
 
 
 @pytest.mark.asyncio

@@ -29,6 +29,7 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 
+from .utils.files import atomic_write
 from .exception import RequestException
 
 DataT = TypeVar("DataT")
@@ -501,7 +502,7 @@ class GameResourceDownloader:
                 file_size = int(response.headers.get("Content-Length", 0))
                 progress.update(task_id, total=file_size)
 
-                with file_path.open("wb") as f:
+                with atomic_write(file_path) as f:
                     async for data in response.aiter_bytes(1024):
                         f.write(data)
                         progress.update(task_id, advance=len(data))
@@ -535,10 +536,13 @@ async def download_img_resource(force: bool, update: bool) -> DownloadResult:
         )
         total_success += result.success_count
         total_failed += result.failed_count
-    GameResourceDownloader.update_version_file(origin_version)
-    logger.success(f"游戏资源已更新到版本：{origin_version}")
+    if total_failed:
+        logger.warning(f"游戏图片资源仍有 {total_failed} 个文件下载失败，版本未更新，下次运行将重试")
+    else:
+        GameResourceDownloader.update_version_file(origin_version)
+        logger.success(f"游戏资源已更新到版本：{origin_version}")
     return DownloadResult(
-        version=origin_version,
+        version=origin_version if total_failed == 0 else None,
         success_count=total_success,
         failed_count=total_failed,
     )

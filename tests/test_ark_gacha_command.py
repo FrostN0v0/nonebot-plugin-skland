@@ -203,3 +203,73 @@ async def test_fetched_records_and_refreshed_credentials_survive_presentation_fa
         account = await fresh.get(SkUser, case.account_id)
         assert (account.cred, account.cred_token) == ("refreshed-cred", "refreshed-token")
     assert "done" not in [call.args[1] for call in case.reaction.call_args_list]
+
+
+@pytest.mark.asyncio
+async def test_import_rejects_all_unknown_names_without_saving_partial_records(ark_gacha_case, mocker):
+    from nonebot_plugin_alconna import Match
+    from nonebot_plugin_orm import get_session
+
+    from nonebot_plugin_skland.db_handler import get_character_gacha_records
+    from nonebot_plugin_skland.exception import UnresolvedGachaCharacterError
+
+    case = ark_gacha_case
+    data = {
+        "1700000000": {"p": "未收录卡池", "c": [["测试干员", 5, True], ["UnknownB", 5, True]]},
+        "1700000010": {"p": "未收录卡池", "c": [["UnknownA", 4, True], ["UnknownB", 5, False]]},
+    }
+    assert case.service.get_char_id_by_char_name("UnknownA") is None
+    with pytest.raises(UnresolvedGachaCharacterError) as error:
+        case.service.heybox_data_to_record(data, case.character_id)
+    assert error.value.names == ["UnknownA", "UnknownB"]
+    mocker.patch.object(
+        case.command,
+        "import_heybox_gacha_data",
+        new=mocker.AsyncMock(return_value={"info": {"uid": "test-role"}, "data": data}),
+    )
+
+    await case.command.import_handler(
+        Match("https://example.com/export", available=True), case.user_session, case.session
+    )
+
+    await case.session.rollback()
+    async with get_session() as fresh:
+        assert await get_character_gacha_records(case.character_id, fresh) == []
+    visible = "\n".join(message.extract_plain_text() for message in case.messages)
+    assert visible.count("UnknownA") == visible.count("UnknownB") == 1
+    assert visible.index("UnknownA") < visible.index("UnknownB")
+    assert [call.args[1] for call in case.reaction.call_args_list] == ["fail"]
+
+
+@pytest.mark.asyncio
+async def test_import_preserves_official_alias_name_and_unknown_pool_fallback(ark_gacha_case, mocker):
+    from nonebot_plugin_alconna import Match
+    from nonebot_plugin_orm import get_session
+
+    from nonebot_plugin_skland.db_handler import get_character_gacha_records
+
+    case = ark_gacha_case
+    mocker.patch.object(
+        case.command,
+        "import_heybox_gacha_data",
+        new=mocker.AsyncMock(
+            return_value={
+                "info": {"uid": "test-role"},
+                "data": {"1700000000": {"p": "未收录卡池", "c": [["麒麟X夜刀", 5, True], ["测试干员", 4, False]]}},
+            }
+        ),
+    )
+
+    await case.command.import_handler(
+        Match("https://example.com/export", available=True), case.user_session, case.session
+    )
+
+    async with get_session() as fresh:
+        records = await get_character_gacha_records(case.character_id, fresh)
+        assert [
+            (record.char_id, record.char_name, record.pool_id, record.pool_name, record.pos) for record in records
+        ] == [
+            ("char_yato", "麒麟R夜刀", "NORM_1_0_1", "未知寻访", 0),
+            ("char_test", "测试干员", "NORM_1_0_1", "未知寻访", 1),
+        ]
+    assert case.reaction.call_args.args[1] == "done"

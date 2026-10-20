@@ -385,6 +385,7 @@ class Config(BaseModel):
 - `render.render_gacha_history()` 使用 `gacha.html.jinja2` 渲染。
 - `-b` / `-l` 先按 Python 切片规则规范化为绝对起止位置；超过 `gacha_render_max` 时在该区间内分页，末页不超过用户终点，QQ 合并转发标题使用同一页边界。
 - 新记录在查询角色资料前加入 session，并随凭证刷新一起提交；角色资料、渲染或发送失败不会丢失已获取的记录。
+- 小黑盒导入按官方角色表解析干员名称（保留夜刀别名），存在无法识别的名称时抛出 `UnresolvedGachaCharacterError`，整次导入不保存并向用户列出名称；未知卡池仍归入 `NORM_1_0_1` / 未知寻访。
 
 ### 方舟干员
 
@@ -524,7 +525,7 @@ uv run pytest -s tests/test_skland_api.py
 - `tests/test_ef_item_icons.py` 使用离线 HTTP 传输覆盖官网动态 CSS 发现、名称与游戏 ID 关联、历史名称变化、无玩家凭证的 Wiki 游客请求、官方域名和重定向限制、异常设备响应、完整构建后发布、冷/热 localstore 缓存、首次离线及写入失败；`tests/test_skland_api.py::TestPublicResources` 可单独验证无需扫码的真实公开目录。
 - `tests/test_resource_updates.py` 覆盖手动/定时互斥、独立游戏和图片资源表失败、取消释放、关闭任务、09:00 时区边界、旧快捷指令缓存迁移为数据更新，以及用户回复的状态图标、卡池数量与角色/武器图片数量。
 - `tests/test_ef_gacha_joint_pool.py` 覆盖终末地联合寻访分类与统计；`tests/test_ef_gacha_view.py` 覆盖免费/付费间隔隔离、多金事件完整性及分类切片不改变累计统计；`tests/test_ef_gacha_command.py` 覆盖默认同步、去重、先保存再渲染、显式缓存回退、接口解析失败的有/无缓存反馈、首/后续页失败零部分写入、鉴权错误优先级、选角身份、有序发送，以及角色/武器的 `kind` 过滤差异与原始分页边界。
-- `tests/test_ark_gacha_command.py` 覆盖方舟抽卡正负切片的分页边界，以及角色资料/渲染/发送失败后记录已保存。
+- `tests/test_ark_gacha_command.py` 覆盖方舟抽卡正负切片的分页边界、角色资料/渲染/发送失败后记录已保存，以及小黑盒导入遇到未知干员时零写入并列出名称。
 - `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、实际模板中的已拥有/未拥有干员，以及分页发送。
 - `tests/test_image_cache.py` 覆盖配置开关、浏览器半身图响应落盘、本地复用、资源就绪与等待超时，以及失败响应不进入缓存。
 - `tests/test_compact.py` 覆盖支持版本的模板渲染、资源授权和生命周期。真实 Chromium 回归验证 `memory`、`filehost` 策略下普通截图与自定义页面均不依赖浏览器读取本地文件，并保留文档内 fragment 引用；测试仅使用已安装的 Chromium，缺失时跳过且不自动安装。

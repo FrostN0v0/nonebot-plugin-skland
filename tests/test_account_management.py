@@ -596,6 +596,7 @@ async def test_import_records_targets_selected_role_without_changing_default(app
 
     import nonebot_plugin_skland.commands.gacha as gacha
     import nonebot_plugin_skland.services.gacha as gacha_service
+    from nonebot_plugin_skland.schemas.arknights.game_data import CharTable
     from nonebot_plugin_skland.db_handler import (
         get_default_character,
         set_default_character,
@@ -619,7 +620,9 @@ async def test_import_records_targets_selected_role_without_changing_default(app
             ),
         )
         mocker.patch.object(gacha_service, "get_pool_id", return_value="TEST_POOL")
-        mocker.patch.object(gacha_service, "get_char_id_by_char_name", return_value="char_test")
+        mocker.patch.object(
+            gacha_service.gacha_table_data, "character_table", [CharTable(char_id="char_test", name="Operator")]
+        )
         mocker.patch.object(gacha, "send_reaction")
         mocker.patch.object(gacha.UniMessage, "send", new=mocker.AsyncMock())
 

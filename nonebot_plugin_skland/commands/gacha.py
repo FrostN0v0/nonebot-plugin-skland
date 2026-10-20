@@ -12,12 +12,12 @@ from ..config import config
 from ..model import GachaRecord
 from ..schemas import GachaInfo
 from ..player_data import get_ark_card
-from ..exception import SklandException
 from ..render import render_gacha_history
 from ..api import SklandAPI, SklandLoginAPI
 from .selection import check_user_character
 from ..db_handler import get_character_gacha_records
 from ..utils.message import send_reaction, send_request_error
+from ..exception import SklandException, UnresolvedGachaCharacterError
 from ..services.gacha import (
     group_gacha_records,
     get_all_gacha_records,
@@ -189,7 +189,14 @@ async def import_handler(
     if url.available:
         import_result = await import_heybox_gacha_data(url.result)
         if str(import_result["info"]["uid"]) == character.uid:
-            records = heybox_data_to_record(import_result["data"], character.id)
+            try:
+                records = heybox_data_to_record(import_result["data"], character.id)
+            except UnresolvedGachaCharacterError as error:
+                send_reaction(user_session, "fail")
+                await UniMessage(f"以下干员无法识别：{'、'.join(error.names)}，请让管理员更新数据资源后重新导入").send(
+                    at_sender=True
+                )
+                return
             db_records = await get_character_gacha_records(character.id, session)
             existing_records_set = {(r.gacha_ts, r.pos) for r in db_records}
             record_to_save: list[GachaRecord] = []

@@ -159,18 +159,22 @@ _✨ 通过森空岛查询游戏数据 ✨_
 
 ### background_source
 
-`skland__background_source` 为背景图来源，可选值为字面量 `default` / `Lolicon` / `random` 或者结构 `CustomSource` 。 `Lolicon` 为网络请求获取随机带`arknights`tag 的背景图，`random`为从[默认背景目录](/nonebot_plugin_skland/resources/images/background/)中随机, `CustomSource` 用于自定义背景图。 默认为 `default`。
+`skland__background_source` 控制明日方舟和终末地角色卡片背景，默认为 `default`；`skland__rogue_background_source` 控制肉鸽战绩背景，默认为 `rogue`。
 
-`rogue_background_source` 为肉鸽战绩背景图来源，可选值为字面量 `default` / `Lolicon` / `rogue` 或者结构 `CustomSource` 。 `rogue`为根据肉鸽主题提供的一套默认背景图。
+| 配置值 | 角色卡片背景 | 肉鸽战绩背景 |
+| --- | --- | --- |
+| `default` | 使用内置默认背景 | 使用内置通用背景 |
+| `Lolicon` | 联网获取随机背景，按游戏使用 `arknights` 或 `endfield` 标签 | 联网获取带 `arknights` 标签的随机背景 |
+| `random` | 从对应游戏的内置背景目录随机选择 | 不支持 |
+| `rogue` | 不支持 | 使用当前肉鸽主题的内置背景 |
+| `{"uri": "图片地址或路径"}` | 使用自定义背景 | 使用自定义背景 |
 
-方舟干员页面复用 `skland__background_source`；当值为 `default` 时不传背景图片，由模板使用纯色 `#3F3F3F`，其余选项直接沿用上述解析逻辑。
+方舟干员页面也使用 `skland__background_source`；设为 `default` 时使用纯色背景，其他设置与角色卡片相同。
 
-以下是 `CustomSource` 用法示例
-
-在配置文件中将对应的背景来源字段设置为 `CustomSource` 结构的字典；以下以 `skland__background_source` 为例。
+自定义背景可填写网络图片地址或本地路径，以下以 `skland__background_source` 为例。
 
 <details>
-  <summary>CustomSource配置示例</summary>
+  <summary>自定义背景配置示例</summary>
 
 - 网络链接
 
@@ -184,11 +188,11 @@ skland__background_source = '{"uri": "https://example.com/image.jpg"}'
 - 本地图片
 
 > - `uri` 也可以为本地图片路径，如 `imgs/image.jpg`、`/path/to/image.jpg`
-> - 如果本地图片路径是相对路径，会使用 [`nonebot-plugin-localstore`](https://github.com/nonebot/plugin-localstore) 指定的 data 目录作为根目录
+> - 相对路径以 [`nonebot-plugin-localstore`](https://github.com/nonebot/plugin-localstore) 为 Skland 分配的插件数据目录（`get_plugin_data_dir()`）为根目录，不是项目根目录或通用 `data/` 目录。例如插件数据目录为 `data/nonebot_plugin_skland/` 时，`imgs/image.jpg` 对应 `data/nonebot_plugin_skland/imgs/image.jpg`
 > - 如果本地图片路径是目录，会随机选择目录下的一张图片作为背景图
 
 ```env
-skland__background_source = '{"uri": "/imgs/image.jpg"}'
+skland__background_source = '{"uri": "imgs/image.jpg"}'
 ```
 
 </details>
@@ -200,7 +204,7 @@ skland__background_source = '{"uri": "/imgs/image.jpg"}'
 
 ### 图片帮助（可选）
 
-Bot 同时安装并加载 [nonebot-plugin-picmenu-next](https://github.com/lgc-NB2Dev/nonebot-plugin-picmenu-next) 后，Skland 会在启动时注册专属帮助模板。接入使用 PicMenu Next 0.5 系列的模板接口，不会主动加载 PicMenu，也不会替换机器人的全局帮助首页。
+Bot 同时安装并加载 [nonebot-plugin-picmenu-next](https://github.com/lgc-NB2Dev/nonebot-plugin-picmenu-next) 后，即可使用 Skland 专属图片帮助。支持 PicMenu Next 0.5 系列，不会替换机器人的全局帮助首页；未安装或未加载 PicMenu 时不影响插件的其他功能。
 
 ```text
 帮助 森空岛
@@ -213,17 +217,19 @@ Bot 同时安装并加载 [nonebot-plugin-picmenu-next](https://github.com/lgc-N
 
 管理功能默认隐藏，`-H` 显示隐藏项；隐藏不是命令权限校验。若希望仅超管能通过普通帮助入口查看隐藏项，在 Bot 配置中设置 `PMN_ONLY_SUPERUSER_SEE_HIDDEN=True`，实际管理命令仍沿用原有超管权限。
 
-Skland 不自动开启 `PMN_ALCONNA_GLOBAL_EXT`。由 Bot 管理者开启后，`sk box --help` 等 Alconna 帮助可以使用相同主题，但正文仍由 Alconna 按当前子命令生成，不等同于手写的中文功能说明。未加载 PicMenu 时仍可使用 `skland --help`。
+若希望 `sk box --help` 等命令也使用图片帮助样式，需由 Bot 管理者开启 `PMN_ALCONNA_GLOBAL_EXT=True`；这类帮助展示命令参数，与 `帮助 森空岛 <功能>` 的中文使用说明不同。未加载 PicMenu 时，仍可使用 `skland --help` 查看文字帮助。
 
 ### 🪧 指令总览
+
+权限说明：**所有**表示任何用户均可使用；**超级用户**指 Bot 管理者在 NoneBot `SUPERUSERS` 中配置的用户，群主或群管理员不会自动获得此权限。
 
 <details open>
 <summary><b>🔐 账号管理</b></summary>
 
 | 指令                                          | 权限     | 说明                                           |
 | --------------------------------------------- | -------- | ---------------------------------------------- |
-| `skland bind <token\|cred>`                  | 所有     | 新增森空岛账号，确认角色列表后保存             |
-| `skland bind -u <token\|cred>`               | 所有     | 更新由凭证识别的既有森空岛账号                 |
+| `skland bind <token\|cred>`                  | 所有     | 仅私聊，新增森空岛账号并确认角色列表后保存     |
+| `skland bind -u <token\|cred>`               | 所有     | 仅私聊，更新由凭证识别的既有森空岛账号         |
 | `skland qrcode`                               | 所有     | 扫码后确认角色列表，新增或更新对应账号         |
 | `skland unbind`                               | 所有     | 交互选择一个账号或全部账号并二次确认解绑       |
 | `skland char`                                 | 所有     | 查看全部森空岛账号、游戏角色及当前插件默认角色 |
@@ -231,7 +237,9 @@ Skland 不自动开启 `PMN_ALCONNA_GLOBAL_EXT`。由 Bot 管理者开启后，`
 | `skland char update`                          | 所有     | 逐账号同步自己的森空岛角色                     |
 | `skland char update --all`                    | 超级用户 | 逐账号同步所有用户的森空岛角色                 |
 
-同一 NoneBot 用户可绑定多个森空岛账号。明日方舟与终末地分别维护一个插件默认角色；角色查询、签到、肉鸽和抽卡始终使用所选角色所属账号的凭证。角色序号不会持久化，同步后请以最新 `skland char` 卡片为准。
+群聊中请使用 `skland qrcode` 扫码绑定，不要发送 token 或 cred。
+
+同一 NoneBot 用户可绑定多个森空岛账号。明日方舟与终末地分别维护一个插件默认角色；角色查询、签到、肉鸽和抽卡始终使用所选角色所属账号的凭证。角色同步会保留仍有效的默认角色；指向已移除角色的默认设置会清空，需要使用 `skland char set` 重新选择。角色序号不会持久化，同步后请以最新 `skland char` 卡片为准。
 
 **快捷指令：** `森空岛绑定` `扫码绑定` `森空岛解绑` `森空岛角色` `切换方舟角色 <序号>` `切换终末地角色 <序号>` `角色更新` `全体角色更新`
 
@@ -247,13 +255,13 @@ Skland 不自动开启 `PMN_ALCONNA_GLOBAL_EXT`。由 Bot 管理者开启后，`
 | `skland @某人`  | 所有 | 查询指定用户的角色信息 |
 | `skland <QQ号>` | 所有 | 查询指定QQ号的角色信息 |
 
-默认角色由插件按游戏独立管理，不再跟随森空岛账号的默认设置。本人尚未选择默认角色时，相关命令会返回最新账号角色卡片并提示使用 `skland char set`。
+默认角色由插件按游戏独立管理，不跟随森空岛账号的默认设置。本人尚未选择默认角色时，相关命令会返回最新账号角色卡片并提示使用 `skland char set`。
 
 `--role` 使用最新 `skland char` 卡片中对应游戏的角色序号，不是账号序号或玩家 UID；无需预先设置默认角色，只对本次命令生效。它只允许选择自己的绑定角色，序号无效时会提示重新查看卡片，不会回退到默认角色。裸数字仍表示 QQ 目标，不能用 `skland 2` 代替 `skland --role 2`。
 
 所有按角色执行的入口均支持 `-r` / `--role`：角色卡片、两游戏抽卡查询、战争回响、抽卡导入、方舟干员、肉鸽战绩与详情、两游戏个人签到与签到状态。例：`sk gacha -r 2`、`sk efgacha -r 2`、`sk efwar -r 2`、`sk rogue -r 2`。绑定、解绑、账号管理、资源同步及超管全体签到不按单个游戏角色执行。
 
-干员查询的 `-r` 也统一表示角色；星级短选项改为 `-ra`，保留 `--rarity` 和 `6星` 等自然筛选词。例如 `sk box -r 2 -ra 6` 查询第 2 个角色的六星干员。
+干员查询中，`-r` / `--role` 选择角色，`-ra` / `--rarity` 和 `6星` 等自然筛选词筛选星级。例如 `sk box -r 2 -ra 6` 查询第 2 个角色的六星干员。
 
 </details>
 
@@ -284,7 +292,7 @@ Skland 不自动开启 `PMN_ALCONNA_GLOBAL_EXT`。由 Bot 管理者开启后，`
 
 **快捷指令：** `终末地签到` `终末地签到详情` `终末地全体签到` `终末地全体签到详情`
 
-两游戏的 `sign` 不带选项时签到默认角色。`-r` / `--role` 与 `--all` 不能同时使用；原 `-u` / `--uid` / `uid` 指定 UID 签到入口已移除。绑定、角色同步和抽卡更新等命令中表示“更新”的 `-u` 不受影响。
+两游戏的 `sign` 不带选项时签到默认角色，`-r` / `--role` 与 `--all` 不能同时使用。`-u` 仅用于 `bind` 更新账号、`char` 同步角色和 `sync` 覆盖已有图片；两游戏抽卡命令均直接获取记录，不接受 `-u`。
 
 `明日方舟签到` / `终末地签到` 不带参数时仍签到本人全部角色；追加 `-r 2` 时只签到第 2 个角色。`签到详情 -r 2` / `终末地签到详情 -r 2` 只显示该角色的缓存结果；签到和状态中的 `-r` 都不能与 `--all` 同用。
 
@@ -292,10 +300,10 @@ Skland 不自动开启 `PMN_ALCONNA_GLOBAL_EXT`。由 Bot 管理者开启后，`
 
 | 指令                  | 权限 | 说明                         |
 | --------------------- | ---- | ---------------------------- |
-| `skland efcard`       | 所有 | 查询终末地角色信息卡片       |
+| `skland efcard`       | 所有 | 查询终末地角色信息卡片，默认展示森空岛展示配置中选择的干员 |
 | `skland efcard --role <序号>` | 所有 | 临时查询自己的指定终末地角色，不切换默认 |
 | `skland efcard @某人` | 所有 | 查询指定用户的终末地角色信息 |
-| `skland efcard -a`    | 所有 | 展示所有角色                 |
+| `skland efcard -a`    | 所有 | 展示当前角色的全部干员       |
 | `skland efcard -s`    | 所有 | 使用简化背景                 |
 
 **快捷指令：** `ef`
@@ -345,9 +353,9 @@ Skland 不自动开启 `PMN_ALCONNA_GLOBAL_EXT`。由 Bot 管理者开启后，`
 
 同一维度内为“或”，不同维度之间为“且”；筛选词必须使用空格分隔。查询他人时将 @ 或 QQ 号放在筛选词之前。裸数字会作为 QQ 目标解析，因此星级必须写成 `6星`，潜能必须写成 `潜6` 或 `满潜`。
 
-高级调用支持 `skland box [target] [filters ...] [options]`：`-r` / `--role` 选择自己的角色，`-ra` / `--rarity` 筛选星级；`--ownership`、`--position`、`--potential`、`--sort` 等参数保持原义。自然筛选词和高级参数可以混用；集合条件合并为“或”，互相冲突的持有状态、排序或名称会返回明确提示。
+高级调用支持 `skland box [target] [filters ...] [options]`：`-r` / `--role` 选择自己的角色，`-ra` / `--rarity` 筛选星级；还可使用 `--ownership` 指定持有状态、`--position` 指定部署位置、`--potential` 筛选潜能、`--sort` 选择排序。自然筛选词和高级参数可以混用；集合条件合并为“或”，互相冲突的持有状态、排序或名称会返回明确提示。
 
-页面使用玩家信息头部和 4 列干员卡，展示精英阶段、等级、潜能、技能与模组。获取排序使用森空岛 `gainTime`；练度排序依次比较精英阶段、等级、专精、已解锁模组、技能等级和信赖。未拥有干员没有潜能、获取时间或练度。结果超过 `skland__roster_render_max` 时自动分图，QQClient 使用合并转发，其余平台逐图发送。
+页面展示玩家信息和干员卡片，包括精英阶段、等级、潜能、技能与模组。获取排序将最近获得的干员排在前面；练度排序依次比较精英阶段、等级、专精、已解锁模组、技能等级和信赖。未拥有干员没有潜能、获取时间或练度。结果超过 `skland__roster_render_max` 时自动分图，QQ 聊天中使用合并转发，其他平台逐图发送。
 
 </details>
 
@@ -540,11 +548,11 @@ Bot: skland::skland 的快捷指令: "查战绩" 添加成功
 > - 指令中包含空格时，需要用引号 `""` 包裹
 
 > [!NOTE]
-> Token 获取相关文档还没写~~才不是懒得写~~
+> 推荐使用 `skland qrcode` 扫码绑定，或参考 [token 获取指南](https://docs.qq.com/doc/p/2f705965caafb3ef342d4a979811ff3960bb3c17) 后在私聊使用 token 绑定。保存前均需由命令发起者确认角色列表。
 >
-> 可以参考[`token获取`](https://docs.qq.com/doc/p/2f705965caafb3ef342d4a979811ff3960bb3c17)获取
+> 仅用 cred 新增绑定不会保存 token，无法查询明日方舟抽卡或同步终末地抽卡记录，cred 失效后也无法自动刷新；请使用 token 或扫码更新该账号。
 >
-> 本插件支持 cred 和 token 两种手动绑定方式，也支持二维码绑定；三种方式都会在保存前展示角色列表并要求命令发起者确认。token、cred 和二维码登录结果均属于敏感凭证，请勿交给不信任的 Bot 所有者。
+> token、cred 和二维码登录结果都是敏感凭证，请勿交给不信任的 Bot 所有者。
 
 ### 📸 效果图
 

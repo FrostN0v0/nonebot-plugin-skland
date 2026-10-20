@@ -476,7 +476,7 @@ async def run_daily_resource_update(): ...
 - `sign_result.json`
 - `endfield_sign_result.json`
 
-两项签到任务和签到命令共用 `services/sign.py` 的执行、缓存读写、owner/角色过滤及格式化；`schemas/sign.py` 提供 `SignCacheEntry`、`SignCache`、`SignResult`。结果文件名和有序列表 JSON 结构不变；事务提交与消息发送仍由调用方负责。
+两项签到任务和签到命令共用 `services/sign.py` 的执行、缓存读写、owner/角色过滤及格式化；`schemas/sign.py` 提供 `SignCacheEntry`、`SignCache`、`SignResult`。结果文件名和有序列表 JSON 结构不变；事务提交与消息发送仍由调用方负责。缓存通过 `atomic_write()` 保存；读取时的解码失败、根对象或条目结构异常统一转换为 `SignCacheFormatError` 并提示文件已损坏，`data` 为字典的旧格式保留原有提示。
 
 每日数据任务受 `auto_update_resources` 控制，沿用 APScheduler 时区（默认 `Asia/Shanghai`），只执行数据更新和汇总日志，不发送 Bot 消息、不下载图片、不访问玩家接口。它与启动、手动数据更新共用互斥入口，停机后不承诺补跑错过的日程。
 
@@ -530,7 +530,7 @@ uv run pytest -s tests/test_skland_api.py
 - `tests/test_bound_roles.py` 覆盖 binding API 规范化、角色卡投影、序号、默认徽标、两游戏玩家 UID 选择、内部 ID 隐藏、昵称转义、四种展示模式及空态/不可用角色。
 - `tests/test_multi_account_migration.py` 覆盖旧结构升级、数据保护检查、生成主键和不可表示数据的 downgrade 拒绝。
 - `tests/test_bind.py` 覆盖 token/cred 确认式新增/更新、取消/超时零写入、确认期间状态变化，以及真实 UserSession 下选择性/全量解绑的双 waiter 和提交后反馈。
-- `tests/test_sign.py` 覆盖多账号同名/同 UID 角色、角色所属凭证、签到缓存 list 结构、序号选角和默认不变，以及签到/状态的 `--role`/`--all` 冲突、状态 owner/角色联合过滤、空结果和全体状态的 ORM 过期边界。
+- `tests/test_sign.py` 覆盖多账号同名/同 UID 角色、角色所属凭证、签到缓存 list 结构、缓存截断或结构损坏时的状态反馈、序号选角和默认不变，以及签到/状态的 `--role`/`--all` 冲突、状态 owner/角色联合过滤、空结果和全体状态的 ORM 过期边界。
 - `tests/test_role_selection.py` 覆盖全部 13 个选角入口的长短选项、`-r` / `-ra` 冲突隔离、旧 UID 语法拒绝、更新开关保留，以及存在默认角色时无效序号的真实 matcher 分发，确保没有回退默认和外部数据访问。
 - `tests/test_war_echoes.py` 覆盖评级投影、荣勋累计、用户信息、当前/指定/相对赛季轮换选择、最高已通关难度和命令提交后渲染发送。
 - `tests/test_skland_api.py` 会调用真实接口；单独运行时使用 `uv run pytest -s tests/test_skland_api.py`，其中 `-s` 用于显示终端二维码输出；凭证优先级为：

@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import os
 import asyncio
-from uuid import uuid4
 from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urlsplit
 from contextvars import ContextVar
 from collections.abc import Iterator
-from contextlib import suppress, nullcontext, contextmanager
+from contextlib import nullcontext, contextmanager
 
 from nonebot import logger
 from playwright.async_api import Page
@@ -17,6 +15,7 @@ from playwright.async_api import Error as PlaywrightError
 
 from .compact import template_to_html
 from .config import CACHE_DIR, config
+from .utils.files import atomic_write
 from .compact import html_to_pic, open_html_page
 from .compact import template_to_pic as base_template_to_pic
 
@@ -88,7 +87,6 @@ def _is_allowed_image(url: str, path: Path) -> bool:
 
 
 async def _cache_finished_request(request: Request, path: Path) -> None:
-    temporary_path = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
     try:
         if path.exists():
             return
@@ -109,14 +107,10 @@ async def _cache_finished_request(request: Request, path: Path) -> None:
         if not body or len(body) > _IMAGE_DOWNLOAD_MAX_BYTES:
             return
 
-        path.parent.mkdir(parents=True, exist_ok=True)
-        temporary_path.write_bytes(body)
-        os.replace(temporary_path, path)
+        with atomic_write(path) as file:
+            file.write(body)
     except (OSError, ValueError, PlaywrightError) as e:
         logger.warning(f"Failed to cache render image {request.url}: {type(e).__name__}: {e}")
-    finally:
-        with suppress(OSError):
-            temporary_path.unlink(missing_ok=True)
 
 
 async def _html_to_pic_with_cache(

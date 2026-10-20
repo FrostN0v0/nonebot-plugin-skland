@@ -64,6 +64,7 @@ nonebot_plugin_skland/
 ├── utils/
 │   ├── __init__.py      # Package boundary without implicit exports
 │   ├── background.py    # Configured background selection
+│   ├── files.py         # Same-directory atomic publication of single files
 │   ├── message.py       # Command reactions and API error feedback
 │   └── qrcode.py        # Safe avatar fetching and pixel-preserving QR cards
 ├── api/

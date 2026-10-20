@@ -94,6 +94,7 @@ async def gacha_handler(
     gacha_data_grouped = group_gacha_records(all_gacha_records)
     character_nickname = character.nickname
     character_channel_master_id = character.channel_master_id
+    session.add_all(record_to_save)
     try:
         user_info = await get_ark_card(user, character)
     except SklandException as error:
@@ -105,46 +106,34 @@ async def gacha_handler(
         return
     gacha_limit = limit.result if limit.available else None
     gacha_begin = begin.result if begin.available else None
-    if len(gacha_data_grouped.pools[gacha_begin:gacha_limit]) > config.gacha_render_max:
+    start, stop, _ = slice(gacha_begin, gacha_limit).indices(len(gacha_data_grouped.pools))
+    selected_count = max(0, stop - start)
+    page_size = config.gacha_render_max
+    if selected_count > page_size:
         await UniMessage.text("抽卡记录过多，将以多张图片形式发送").send(reply_to=True)
         if user_session.platform == "QQClient":
             render_semaphore = asyncio.Semaphore(4)
 
-            async def render(index: int) -> bytes:
+            async def render(page_start: int) -> bytes:
                 async with render_semaphore:
                     return await render_gacha_history(
                         gacha_data_grouped,
                         user_info.status,
                         nickname=character_nickname,
                         channel_master_id=character_channel_master_id,
-                        begin=index,
-                        limit=index + config.gacha_render_max,
+                        begin=page_start,
+                        limit=min(page_start + page_size, stop),
                     )
 
-            imgs = await asyncio.gather(
-                *(
-                    render(i)
-                    for i in range(
-                        gacha_begin if gacha_begin is not None else 0,
-                        len(gacha_data_grouped.pools[gacha_begin:gacha_limit]),
-                        config.gacha_render_max,
-                    )
-                )
-            )
-            gacha_begin_val = gacha_begin if gacha_begin is not None else 0
-            total = len(gacha_data_grouped.pools[gacha_begin:gacha_limit])
+            page_starts = range(start, stop, page_size)
+            imgs = await asyncio.gather(*(render(page_start) for page_start in page_starts))
             nodes = []
-            for index, content in enumerate(imgs, 1):
-                start_id = gacha_begin_val + (index - 1) * config.gacha_render_max
-
-                if index * config.gacha_render_max >= total:
-                    end_id = gacha_begin_val + total
-                else:
-                    end_id = gacha_begin_val + index * config.gacha_render_max
+            for page_start, content in zip(page_starts, imgs):
+                page_stop = min(page_start + page_size, stop)
                 nodes.append(
                     CustomNode(
                         bot.self_id,
-                        f"{character_nickname} | {start_id}-{end_id}",
+                        f"{character_nickname} | {page_start}-{page_stop}",
                         UniMessage.image(raw=content),
                     )
                 )
@@ -157,18 +146,15 @@ async def gacha_handler(
                     await UniMessage.image(raw=img).send()
 
             tasks: list[asyncio.Task] = []
-            for i in range(
-                gacha_begin if gacha_begin is not None else 0,
-                len(gacha_data_grouped.pools[gacha_begin:gacha_limit]),
-                config.gacha_render_max,
-            ):
+            for page_start in range(start, stop, page_size):
+                page_stop = min(page_start + page_size, stop)
                 img = await render_gacha_history(
                     gacha_data_grouped,
                     user_info.status,
                     nickname=character_nickname,
                     channel_master_id=character_channel_master_id,
-                    begin=i,
-                    limit=i + config.gacha_render_max,
+                    begin=page_start,
+                    limit=page_stop,
                 )
                 tasks.append(asyncio.create_task(send(img)))
             await asyncio.gather(*tasks)
@@ -179,13 +165,11 @@ async def gacha_handler(
                 user_info.status,
                 nickname=character_nickname,
                 channel_master_id=character_channel_master_id,
-                begin=gacha_begin,
-                limit=gacha_limit,
+                begin=start,
+                limit=stop,
             )
         ).send()
     send_reaction(user_session, "done")
-    session.add_all(record_to_save)
-    await session.commit()
 
 
 async def import_handler(

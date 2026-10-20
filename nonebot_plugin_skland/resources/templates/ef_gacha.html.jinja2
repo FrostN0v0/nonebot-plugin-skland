@@ -24,6 +24,12 @@
 <div class="absolute inset-x-0 bottom-0 flex h-1"><span class="w-8 bg-[#92999C]"></span><span class="flex-1 bg-[#E3D600]"></span></div>
 </header>
 <div data-overview>
+        {% set special_total_spook = record.special_total_spook %}
+        {% set special_up_avg = record.special_up_avg %}
+        {% set weapon_total_spook = record.weapon_total_spook %}
+        {% set weapon_up_avg = record.weapon_up_avg %}
+        {% set joint_six_avg = record.joint_six_avg %}
+        {% set standard_six_avg = record.standard_six_avg %}
         {# 统计卡片 - 均等宽度 #}
         <div class="flex flex-row gap-2">
                 {# 限定池统计 #}
@@ -39,12 +45,12 @@
                     <div class="flex justify-around text-center gap-1">
                         <div class="flex flex-col">
                             <span class="font-[Akrobat] font-bold text-base">
-                                <span class="text-[#8F6D15]">{{ record.special_total_six }}</span><span class="text-[#080808]/50">/</span><span class="text-[#A0524C]">{{ record.special_total_spook }}</span>
+                                <span class="text-[#8F6D15]">{{ record.special_total_six }}</span><span class="text-[#080808]/50">/</span><span class="text-[#A0524C]">{{ special_total_spook if special_total_spook is not none else "-" }}</span>
                             </span>
                             <span class="text-[#080808]/50 text-[10px]">6★/歪</span>
                         </div>
                         <div class="flex flex-col">
-                            <span class="text-[#080808]/85 font-[Akrobat] font-bold text-base">{{ "%.1f"|format(record.special_up_avg) if record.special_up_count > 0 else "-" }}</span>
+                            <span class="text-[#080808]/85 font-[Akrobat] font-bold text-base">{{ "%.1f"|format(special_up_avg) if special_up_avg is not none else "-" }}</span>
                             <span class="text-[#080808]/50 text-[10px]">UP平均</span>
                         </div>
                     </div>
@@ -74,12 +80,12 @@
                     <div class="flex justify-around text-center gap-1">
                         <div class="flex flex-col">
                             <span class="font-[Akrobat] font-bold text-base">
-                                <span class="text-[#8F6D15]">{{ record.weapon_total_six }}</span><span class="text-[#080808]/50">/</span><span class="text-[#A0524C]">{{ record.weapon_total_spook }}</span>
+                                <span class="text-[#8F6D15]">{{ record.weapon_total_six }}</span><span class="text-[#080808]/50">/</span><span class="text-[#A0524C]">{{ weapon_total_spook if weapon_total_spook is not none else "-" }}</span>
                             </span>
                             <span class="text-[#080808]/50 text-[10px]">6★/歪</span>
                         </div>
                         <div class="flex flex-col">
-                            <span class="text-[#080808]/85 font-[Akrobat] font-bold text-base">{{ "%.1f"|format(record.weapon_up_avg) if record.weapon_up_count > 0 else "-" }}</span>
+                            <span class="text-[#080808]/85 font-[Akrobat] font-bold text-base">{{ "%.1f"|format(weapon_up_avg) if weapon_up_avg is not none else "-" }}</span>
                             <span class="text-[#080808]/50 text-[10px]">UP平均</span>
                         </div>
                     </div>
@@ -112,7 +118,7 @@
                             <span class="text-[#080808]/50 text-[10px]">6★</span>
                         </div>
                         <div class="flex flex-col">
-                            <span class="text-[#080808]/85 font-[Akrobat] font-bold text-base">{{ "%.1f"|format(record.joint_six_avg) if record.joint_total_six > 0 else "-" }}</span>
+                            <span class="text-[#080808]/85 font-[Akrobat] font-bold text-base">{{ "%.1f"|format(joint_six_avg) if joint_six_avg is not none else "-" }}</span>
                             <span class="text-[#080808]/50 text-[10px]">6★平均</span>
                         </div>
                     </div>
@@ -135,7 +141,7 @@
                             <span class="text-[#080808]/50 text-[10px]">6★</span>
                         </div>
                         <div class="flex flex-col">
-                            <span class="text-[#080808]/85 font-[Akrobat] font-bold text-base">{{ "%.1f"|format(record.standard_six_avg) if record.standard_total_six > 0 else "-" }}</span>
+                            <span class="text-[#080808]/85 font-[Akrobat] font-bold text-base">{{ "%.1f"|format(standard_six_avg) if standard_six_avg is not none else "-" }}</span>
                             <span class="text-[#080808]/50 text-[10px]">6★平均</span>
                         </div>
                     </div>

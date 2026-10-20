@@ -152,7 +152,7 @@ def test_joint_statistics_use_only_six_star_count_and_six_average(app):
     assert grouped.char_total_pulls == 3
 
 
-def test_joint_six_avg_is_zero_without_six_star_pulls(app):
+def test_joint_six_avg_is_unknown_without_six_star_pulls(app):
     from nonebot_plugin_skland.services.gacha import group_ef_gacha_records
 
     grouped = group_ef_gacha_records(
@@ -166,7 +166,7 @@ def test_joint_six_avg_is_zero_without_six_star_pulls(app):
     assert grouped.joint_total_six == 0
     assert grouped.joint_pity == 3
     assert grouped.joint_pity_remaining == 77
-    assert grouped.joint_six_avg == 0.0
+    assert grouped.joint_six_avg is None
 
 
 def test_joint_current_pity_uses_latest_joint_pool(app):

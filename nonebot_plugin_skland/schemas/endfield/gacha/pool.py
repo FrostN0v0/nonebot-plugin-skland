@@ -104,13 +104,32 @@ class EfGachaPoolInfo(BaseModel):
         return sum(1 for record in self.records for pull in record.pulls if pull.rarity == 6)
 
     @property
-    def total_six_spook(self) -> int:
-        """该卡池的总六星歪数（非UP六星）"""
+    def paid_six_stars(self) -> int:
+        """该卡池的付费六星数（不含 isFree）"""
+        return sum(1 for record in self.records for pull in record.pulls if pull.rarity == 6 and not pull.is_free)
+
+    @property
+    def total_six_spook(self) -> int | None:
+        """该卡池的总六星歪数，UP信息缺失时未知"""
+        if not self.up_six_chars:
+            return None
         return sum(
             1
             for record in self.records
             for pull in record.pulls
             if pull.rarity == 6 and pull.item_id not in self.up_six_chars
+        )
+
+    @property
+    def paid_up_six_stars(self) -> int | None:
+        """该卡池付费抽出的UP六星数，UP信息缺失时未知"""
+        if not self.up_six_chars:
+            return None
+        return sum(
+            1
+            for record in self.records
+            for pull in record.pulls
+            if pull.rarity == 6 and not pull.is_free and pull.item_id in self.up_six_chars
         )
 
     # ── 武库配额 ──

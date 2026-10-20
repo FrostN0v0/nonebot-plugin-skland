@@ -402,7 +402,7 @@ class Config(BaseModel):
 - `filters.py` 统一提供立绘、技能、潜能、精英阶段、职业、稀有度、模组及 Half 卡片装饰资源 URL。
 - `image_cache.py` 仅在 `ark_portrait_cache_enabled=True` 时登记 `char/portrait` 与 `char_skin/portrait` 拼链资源。首次 HTML 仍保留远程 URL，Chromium 正常并发加载；成功的 `requestfinished` 响应经校验后原子写入 `CACHE_DIR/portrait`，后续渲染由 URL helper 返回本地 URI。不会额外发起图片请求或重新生成 HTML，接口直接返回的图片 URL 不参与缓存。
 - `render.render_operator_roster()` 使用 `load`、`document.fonts.ready` 与图片 `decode()` 显式判断资源就绪；远程背景通过隐藏图片节点纳入等待。每页使用独立 BrowserContext、固定 706px Playwright 视口、1.5 设备缩放和可配置截图超时，默认输出 JPEG 90，可配置切回 PNG。
-- `operator_roster.html.jinja2` 维护 706px、4 列固定网格；筛选标签支持自动换行，样式编译到 `resources/templates/index.css`。
+- `operator_roster.html.jinja2` 维护 706px、4 列固定网格；干员卡展示 schema 提供的全部模组；筛选标签支持自动换行，样式编译到 `resources/templates/index.css`。
 
 终末地：
 
@@ -528,7 +528,7 @@ uv run pytest -s tests/test_skland_api.py
 - `tests/test_resource_updates.py` 覆盖手动/定时互斥、独立游戏和图片资源表失败、取消释放、关闭任务、09:00 时区边界、旧快捷指令缓存迁移为数据更新，以及用户回复的状态图标、卡池数量与角色/武器图片数量。
 - `tests/test_ef_gacha_joint_pool.py` 覆盖终末地联合寻访分类与统计；`tests/test_ef_gacha_view.py` 覆盖免费/付费间隔隔离、多金事件完整性及分类切片不改变累计统计；`tests/test_ef_gacha_command.py` 覆盖默认同步、去重、先保存再渲染、显式缓存回退、接口解析失败的有/无缓存反馈、首/后续页失败零部分写入、鉴权错误优先级、选角身份、有序发送，以及角色/武器的 `kind` 过滤差异与原始分页边界。
 - `tests/test_ark_gacha_command.py` 覆盖方舟抽卡正负切片的分页边界、角色资料/渲染/发送失败后记录已保存，以及小黑盒导入遇到未知干员时零写入并列出名称。
-- `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、实际模板中的已拥有/未拥有干员，以及分页发送。
+- `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、实际模板中的已拥有/未拥有干员及三个模组完整展示，以及分页发送。
 - `tests/test_ark_ap.py` 覆盖理智溢出保留、未满时的估算区间及回满时间已过的边界。
 - `tests/test_image_cache.py` 覆盖配置开关、浏览器半身图响应落盘、本地复用、资源就绪与等待超时，以及失败响应不进入缓存。
 - `tests/test_compact.py` 覆盖支持版本的模板渲染、资源授权和生命周期。真实 Chromium 回归验证 `memory`、`filehost` 策略下普通截图与自定义页面均不依赖浏览器读取本地文件，并保留文档内 fragment 引用；测试仅使用已安装的 Chromium，缺失时跳过且不自动安装。

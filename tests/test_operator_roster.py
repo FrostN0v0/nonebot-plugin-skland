@@ -728,6 +728,11 @@ async def test_roster_template_renders_owned_and_missing_operators(app, operator
     from nonebot_plugin_skland.config import TEMPLATES_DIR
     from nonebot_plugin_skland.compact import template_to_html
     from nonebot_plugin_skland.schemas import OperatorRoster, OperatorRosterQuery
+    from nonebot_plugin_skland.schemas.arknights.game_data import OperatorCatalogModule
+
+    operator_catalog.by_id["char_350_surtr"].modules += (
+        OperatorCatalogModule(id="uniequip_004_surtr", type_icon="aft-d"),
+    )
 
     roster = OperatorRoster.build(
         status=_status(),
@@ -747,6 +752,9 @@ async def test_roster_template_renders_owned_and_missing_operators(app, operator
     assert "史尔特尔" in html
     assert "凯尔希" in html
     assert "全部干员" in html
+    surtr = next(card for card in roster.cards if card.char_id == "char_350_surtr")
+    assert len(surtr.modules) == 3
+    assert all(module.icon in html for module in surtr.modules)
 
 
 def test_ark_card_cache_config_accepts_custom_values(app):

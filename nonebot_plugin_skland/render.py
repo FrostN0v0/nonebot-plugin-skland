@@ -1,6 +1,7 @@
 from datetime import datetime
 from collections.abc import Callable
 
+from .schemas.arknights.rogue import Record
 from .image_cache import wait_for_page_resources
 from .config import RES_DIR, TEMPLATES_DIR, config
 from .compact import open_html_page, template_to_html
@@ -162,15 +163,13 @@ async def render_rogue_card(props: RogueData, bg: BackgroundImage) -> bytes:
     )
 
 
-async def render_rogue_info(props: RogueData, bg: BackgroundImage, id: int, is_favored: bool) -> bytes:
+async def render_rogue_info(props: RogueData, bg: BackgroundImage, id: int, record: Record, is_favored: bool) -> bytes:
     return await template_to_pic(
         template_path=str(TEMPLATES_DIR),
         template_name="rogue_info.html.jinja2",
         templates={
             "id": id,
-            "record": props.history.favourRecords[id - 1]
-            if is_favored and id - 1 < len(props.history.favourRecords)
-            else (props.history.records[id - 1] if id - 1 < len(props.history.records) else None),
+            "record": record,
             "is_favored": is_favored,
             "background_image": background_to_uri(bg),
             "topic_img": props.topic_img,

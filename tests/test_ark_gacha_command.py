@@ -160,7 +160,7 @@ async def test_pool_slice_renders_each_selected_pool_once(ark_gacha_case, mocker
     assert case.reaction.call_args.args[1] == "done"
 
 
-@pytest.mark.parametrize("failure", ["profile", "render", "send"])
+@pytest.mark.parametrize("failure", ["profile", "profile_unexpected", "render", "send"])
 @pytest.mark.asyncio
 async def test_fetched_records_and_refreshed_credentials_survive_presentation_failure(ark_gacha_case, mocker, failure):
     from nonebot_plugin_orm import get_session
@@ -171,16 +171,24 @@ async def test_fetched_records_and_refreshed_credentials_survive_presentation_fa
 
     case = ark_gacha_case
     case.pulls.append(_pull())
-    if failure == "profile":
+    if failure.startswith("profile"):
+        unexpected = failure == "profile_unexpected"
 
         async def profile(user, character):
             user.cred = "refreshed-cred"
             user.cred_token = "refreshed-token"
+            if unexpected:
+                raise ValueError("profile response changed")
             raise RequestException("profile unavailable")
 
         case.profile.side_effect = profile
-        await case.run()
-        case.error.assert_awaited_once()
+        if unexpected:
+            with pytest.raises(ValueError, match="profile response changed"):
+                await case.run()
+            case.error.assert_not_awaited()
+        else:
+            await case.run()
+            case.error.assert_awaited_once()
         case.render.assert_not_awaited()
     else:
         if failure == "render":

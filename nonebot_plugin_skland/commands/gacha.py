@@ -101,6 +101,10 @@ async def gacha_handler(
         await session.commit()
         await send_request_error(error)
         return
+    except Exception:
+        # Fetched pulls and any refreshed credentials are valid even if the profile response is not.
+        await session.commit()
+        raise
     await session.commit()
     if not user_info:
         return

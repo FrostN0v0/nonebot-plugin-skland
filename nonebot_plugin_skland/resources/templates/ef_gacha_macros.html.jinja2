@@ -4,7 +4,7 @@
 <div class="flex flex-wrap gap-0.5 mt-0.5">
     {% for item in items %}
     {% set avatar_url = item.item_id | ef_item_icon_url %}
-    <div class="relative inline-block" title="{{ item.item_name }} ×{{ item.count }}">
+    <div class="relative inline-block" title="{{ item.item_name }} ×{{ item.count }}" data-item-id="{{ item.item_id }}">
         {% if avatar_url %}<img src="{{ avatar_url }}" alt="{{ item.item_name }}" class="w-5 h-5 rounded-xs bg-[#D3D6D1] object-cover" />{% else %}<span class="text-[9px]">{{ item.item_name }}{% if item.count > 1 %} ×{{ item.count }}{% endif %}</span>{% endif %}
         {% if avatar_url and item.count > 1 %}<div class="absolute right-0 bottom-0 min-w-2.5 h-2.5 bg-[#080808]/65 text-white text-[8px] flex items-center justify-center">{{ item.count }}</div>{% endif %}
     </div>
@@ -14,18 +14,18 @@
 {% endautoescape %}
 {% endmacro %}
 
-{% macro event_card(event) %}
+{% macro event_card(event, six_star_limit) %}
 {% autoescape true %}
 <section class="ef-event flex flex-col gap-0.5 border-t border-[#080808]/8{% if event.is_free %} border-l-2 border-l-[#458AA4] bg-[#75BBCA]/10{% endif %}{% if event.six_stars | length >= 2 %} multi-six-bg{% endif %}" data-event-key="{{ event.key }}">
     {% if event.is_free or event.six_stars | length >= 2 %}
     <div class="flex items-center justify-between gap-2 px-2 pt-1 text-[9px] font-[Akrobat] font-bold {{ 'text-[#35667D]' if event.is_free else 'text-[#337047]' }}">
-        <span>{% if event.is_free %}免费{{ event.pull_count }}连{% endif %}{% if event.six_stars | length >= 2 %}{{ ' · ' if event.is_free else '十连' }}{{ event.six_stars | length }}金{% endif %}</span>
+        <span>{% if event.is_free %}免费{{ event.pull_count }}连{% endif %}{% if event.six_stars | length >= 2 %}{% if event.is_free %} · {% elif event.pull_count == 10 %}十连{% else %}{{ event.pull_count }}连{% endif %}{{ event.six_stars | length }}金{% endif %}</span>
         {% if event.is_free and not event.six_stars %}<time class="text-[#080808]/50 text-[8px] font-[Bender] font-normal">{{ event.gacha_ts | format_timestamp_md }}</time>{% endif %}
     </div>
     {% endif %}
     {% for six in event.six_stars %}
     {% set avatar_url = six.item_id | ef_item_icon_url %}
-    <div class="flex flex-col px-2 py-1.5" data-six-key="{{ event.key }}:{{ loop.index0 }}">
+    <div class="flex flex-col px-2 py-1.5" data-six-key="{{ event.key }}:{{ loop.index0 }}" data-item-id="{{ six.item_id }}">
         <div class="flex items-start gap-1.5">
             <div class="flex flex-col items-center flex-shrink-0">
                 {% if avatar_url %}<div class="w-8 h-8 rounded-xs overflow-hidden bg-[#D3D6D1]"><img src="{{ avatar_url }}" class="w-full h-full object-cover" alt="{{ six.item_name }}" /></div>{% endif %}
@@ -37,13 +37,15 @@
                     {% if six.is_spook %}<span class="text-[8px] text-white bg-[#A65D59] rounded-xs px-0.5">歪</span>{% endif %}
                     {% if six.is_up %}<span class="text-[8px] text-[#4D4B12] bg-[#E3D600]/60 rounded-xs px-0.5">UP</span>{% endif %}
                     {% if not event.is_free and six.is_new %}<span class="text-[8px] text-white bg-[#548671] rounded-xs px-0.5">NEW</span>{% endif %}
-                    {% if six.pity_count is not none and (six.pity_count <= 10 or six.pity_count >= 70) %}<span class="text-[8px] text-white font-[Bender] px-1 rounded-xs whitespace-nowrap {{ 'bg-[#548671]' if six.pity_count <= 10 else 'bg-[#B96955]' }}">{{ '超欧' if six.pity_count <= 10 else '超非' }}</span>{% endif %}
+                    {% if six.pity_count is not none and (six.pity_count <= six_star_limit / 8 or six.pity_count >= six_star_limit * 7 / 8) %}<span class="text-[8px] text-white font-[Bender] px-1 rounded-xs whitespace-nowrap {{ 'bg-[#548671]' if six.pity_count <= six_star_limit / 8 else 'bg-[#B96955]' }}">{{ '超欧' if six.pity_count <= six_star_limit / 8 else '超非' }}</span>{% endif %}
                 </div>
                 {% if event.is_free %}
                 <div class="h-4 rounded-xs flex items-center" style="background: linear-gradient(90deg, #7FBFCB99, #C0DAD288);"><span class="text-[#244C5B] text-[10px] font-[Bender] font-bold px-1.5 whitespace-nowrap">不计入保底</span></div>
+                {% elif six.pity_count is not none %}
+                {% set bar_class = 'red-stripe-bar' if six.pity_count >= six_star_limit * 7 / 8 else 'yellow-stripe-bar' if six.pity_count >= six_star_limit * 9 / 16 else 'green-stripe-bar' %}
+                <div class="h-4 rounded-xs flex items-center {{ bar_class }}" style="width: {{ [15 + six.pity_count / six_star_limit * 85, 100] | min }}%; min-width: 36px;"><span class="text-[#080808]/85 text-[10px] font-[Bender] font-bold px-1 whitespace-nowrap">{{ six.pity_count }}抽</span></div>
                 {% else %}
-                {% set bar_class = 'red-stripe-bar' if six.pity_count >= 70 else 'yellow-stripe-bar' if six.pity_count >= 45 else 'green-stripe-bar' %}
-                <div class="h-4 rounded-xs flex items-center {{ bar_class }}" style="width: {{ [15 + six.pity_count / 80 * 85, 100] | min }}%; min-width: 36px;"><span class="text-[#080808]/85 text-[10px] font-[Bender] font-bold px-1 whitespace-nowrap">{{ six.pity_count }}抽</span></div>
+                <div class="h-4 rounded-xs bg-[#080808]/10 text-[#080808]/55 text-[10px] font-[Bender] px-1">出货间隔未知</div>
                 {% endif %}
                 {{ five_stars(six.five_stars) }}
                 {% if loop.last %}{{ five_stars(event.five_stars) }}{% endif %}
@@ -60,39 +62,74 @@
 {% endautoescape %}
 {% endmacro %}
 
-{% macro pool_card(view, index) %}
+{% macro category_header(category) %}
+{% autoescape true %}
+<header class="ef-category-head">
+    <div class="ef-category-heading"><h2>{{ category.title }}</h2><span>本次展示 {{ category.pools | length }} 池</span></div>
+    {% if category.pity_label %}
+    <div class="ef-category-pity">
+        <div><span>{{ category.pity_label }}</span><strong>{{ category.pity_count if category.pity_count is not none else '-' }}<small> / {{ category.pity_limit }} {{ category.pity_unit }}</small></strong></div>
+        <div class="ef-pity-track">{% if category.pity_count is not none %}<i style="width: {{ [category.pity_count / category.pity_limit * 100, 100] | min }}%"></i>{% endif %}</div>
+    </div>
+    {% endif %}
+</header>
+{% endautoescape %}
+{% endmacro %}
+
+{% macro series_progress(progress) %}
+{% autoescape true %}
+<div class="ef-series-status">
+    <span class="ef-status-chip">累计付费 <b>{{ progress.paid_count if progress.paid_count is not none else '-' }}</b> {{ progress.unit }}</span>
+    <span class="ef-status-chip{% if progress.up_obtained is true %} ef-status-complete{% endif %}">{% if progress.up_obtained is true %}已获首次付费 UP{% elif progress.up_remaining is none %}首次 UP 进度未知{% elif progress.up_remaining == 0 %}已达首次 UP 门槛{% else %}距首次 UP <b>{{ progress.up_remaining }}</b> {{ progress.unit }}{% endif %}</span>
+    {% if progress.free_ten_pulls_unlocked is not none %}<span class="ef-status-chip">免费十连解锁 <b>{{ progress.free_ten_pulls_unlocked }}/3</b></span>{% endif %}
+    {% if progress.reward_count %}<span class="ef-status-chip">奖励达成 <b>{{ progress.reward_count }}</b> 次</span>{% endif %}
+</div>
+<div class="ef-next-reward">{% if progress.reward_remaining is not none %}距{{ progress.next_reward_name }} <b>{{ progress.reward_remaining }}</b> {{ progress.unit }}{% else %}累计奖励进度未知{% endif %}</div>
+{% endautoescape %}
+{% endmacro %}
+
+{% macro period_card(period, view) %}
+{% autoescape true %}
+<section class="ef-period" data-period-key="{{ period.key }}"{% if view.pool.is_rerun %} data-pool-version="{{ period.pool_version if period.pool_version is not none else 'unknown' }}"{% endif %}>
+    <header class="ef-period-head">
+        {% if view.pool.is_rerun %}
+        <div class="ef-period-title"><h3>{% if period.pool_version is not none %}第 {{ period.pool_version }} 期{% else %}期次未知{% endif %}</h3><span>{{ period.total_pulls }} 抽{% if period.free_pulls %} · 免费 {{ period.free_pulls }}{% endif %} · 6★ {{ period.six_count }}</span></div>
+        {% endif %}
+        {% if view.pool.pool_category == 'weapon' %}
+        <div class="ef-period-pity"><span>{{ '当期小保底' if view.pool.is_rerun else '本池小保底' }}</span><strong>{{ period.pity_count if period.pity_count is not none else '-' }} / {{ period.pity_limit }} {{ period.pity_unit }}</strong></div>
+        {% endif %}
+    </header>
+    <div class="ef-events bg-white/35">
+        {% for event in period.events %}{{ event_card(event, view.six_star_limit) }}{% else %}<p class="ef-pool-empty">尚无六星或免费寻访记录</p>{% endfor %}
+    </div>
+</section>
+{% endautoescape %}
+{% endmacro %}
+
+{% macro pool_card(view, category) %}
 {% autoescape true %}
 {% set pool = view.pool %}
-{% set colors = {"special":"#C0B642", "weapon":"#C69254", "joint":"#91849C", "standard":"#628F83", "beginner":"#6790A0"} %}
-{% set color = colors[pool.pool_category] %}
-<article class="ef-pool bound-roles-account flex flex-col w-full rounded-[4px] border border-white/40 overflow-hidden bg-[#F4F5EF]/85" data-pool-key="{{ index }}" data-category="{{ pool.pool_category }}">
+<article class="ef-pool bound-roles-account w-full rounded-[4px] border border-white/40 overflow-hidden bg-[#F4F5EF]/85" data-pool-key="{{ pool.pool_id }}" data-category="{{ category }}">
     <header class="ef-pool-head">
         {% if pool.up6_img %}
-        <div class="w-full overflow-hidden" style="aspect-ratio: 1151/146;">
-            <img src="{{ pool.up6_img }}" alt="" class="w-full h-full object-cover object-center" />
-        </div>
-        {% else %}
-        <div class="h-0.5" style="background-color: {{ color }};"></div>
-        {% endif %}
+        <div class="w-full overflow-hidden" style="aspect-ratio: 1151/146;"><img src="{{ pool.up6_img }}" alt="{{ pool.pool_name }}横幅" class="w-full h-full object-cover object-center" /></div>
+        {% else %}<div class="ef-pool-accent"></div>{% endif %}
         <div class="px-2 py-2">
             <div class="flex items-start justify-between gap-2">
-                <h2 class="flex-1 min-w-0 text-[#080808]/90 font-[Akrobat] font-bold text-xs break-words">{{ pool.pool_name }}</h2>
-                <span class="ef-pool-part shrink-0 text-[#080808]/50 font-[Bender]" data-pool-part></span>
+                <h2 class="ef-pool-name">{{ pool.pool_name }}</h2><span class="ef-pool-part" data-pool-part></span>
             </div>
-            <div class="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[9px] leading-4 text-[#080808]/55 font-[Bender]">
+            <div class="ef-pool-meta">
                 {% if pool.up_six_chars %}
-                <div class="flex flex-wrap items-center gap-0.5">
-                    <span class="text-[#77721E] text-[8px] font-[Akrobat] font-bold">UP</span>
-                    {% for item_id in pool.up_six_chars %}{% set avatar_url = item_id | ef_item_icon_url %}{% if avatar_url %}<img src="{{ avatar_url }}" alt="" class="w-4 h-4 rounded-xs bg-[#D3D6D1] object-cover" />{% endif %}{% endfor %}
-                </div>
+                <div class="flex flex-wrap items-center gap-0.5"><span class="text-[#77721E] text-[8px] font-[Akrobat] font-bold">UP</span>{% for item_id in pool.up_six_chars %}{% set avatar_url = item_id | ef_item_icon_url %}<span data-item-id="{{ item_id }}">{% if avatar_url %}<img src="{{ avatar_url }}" alt="UP" class="w-5 h-5 rounded-xs bg-[#D3D6D1] object-cover" />{% endif %}</span>{% endfor %}</div>
                 {% endif %}
-                <span class="whitespace-nowrap"><b class="text-[#080808]/85 text-[11px]">{{ pool.total_pulls }}</b> 抽</span>
-                <span class="whitespace-nowrap">6★ <b class="text-[#8F6D15] text-[11px]">{{ pool.total_six_stars }}</b>{% if pool.show_spook_stats %}<span class="text-[#080808]/30"> / </span><b class="text-[#A0524C] text-[11px]">{{ pool.total_six_spook }}</b> 歪{% endif %}</span>
-                <span class="whitespace-nowrap">已垫 <b class="text-[#080808]/85 text-[11px]">{{ pool.pity_count }}</b></span>
+                <span>{{ '跨期合计' if pool.is_rerun else '合计' }} <b>{{ pool.total_pulls }}</b> 抽</span>
+                <span>6★ <b>{{ pool.total_six_stars }}</b>{% if pool.show_spook_stats %} / 歪 <b>{{ pool.total_six_spook if pool.total_six_spook is not none else '-' }}</b>{% endif %}</span>
             </div>
+            {% if view.rerun_progress is not none %}{{ series_progress(view.rerun_progress) }}{% endif %}
         </div>
     </header>
-    <div class="ef-events flex flex-col gap-0.5 bg-white/35">{% for event in view.events %}{{ event_card(event) }}{% endfor %}</div>
+    <template class="ef-pool-continuation"><header class="ef-pool-head ef-pool-head-continued"><h2 class="ef-pool-name">{{ pool.pool_name }}</h2><span class="ef-pool-part" data-pool-part></span></header></template>
+    <div class="ef-periods">{% for period in view.periods %}{{ period_card(period, view) }}{% endfor %}</div>
 </article>
 {% endautoescape %}
 {% endmacro %}

@@ -6,15 +6,18 @@ window.paginateEndfieldGacha = ({ maxHeight, maxPools }) => {
   const fragmentsByPool = new Map();
   output.replaceChildren();
 
-  function newPage() {
+  function pageElement(continuation) {
     const element = template.content.firstElementChild.cloneNode(true);
-    if (pages.length) element.querySelectorAll("[data-overview]").forEach(section => section.remove());
+    if (continuation) element.querySelectorAll("[data-overview]").forEach(section => section.remove());
+    return element;
+  }
+
+  function newPage() {
+    const element = pageElement(pages.length > 0);
     output.append(element);
-    const page = { element, columns: Array.from(element.querySelectorAll(".ef-column")), categories: new Map() };
+    const page = { element, body: element.querySelector(".ef-sections"), pools: 0 };
     pages.push(page);
-    if (element.getBoundingClientRect().height > maxHeight) {
-      throw new Error("The report header exceeds the page height limit");
-    }
+    if (!fits(page)) throw new Error("The report header exceeds the page height limit");
     return page;
   }
 
@@ -22,105 +25,166 @@ window.paginateEndfieldGacha = ({ maxHeight, maxPools }) => {
     return Math.ceil(page.element.getBoundingClientRect().height) <= maxHeight;
   }
 
-  function makeFragment(source) {
+  function categorySection(source) {
+    const element = source.cloneNode(false);
+    const header = source.querySelector(".ef-category-head").cloneNode(true);
+    element.append(header);
+    const grid = document.createElement("div");
+    grid.className = "ef-category-columns";
+    const columns = Array.from({ length: Number(source.dataset.columns) }, () => {
+      const column = document.createElement("div");
+      column.className = "ef-column";
+      grid.append(column);
+      return column;
+    });
+    element.append(grid);
+    return { element, columns, poolKeys: new Set() };
+  }
+
+  function fullPageCapacity(source) {
+    const element = pageElement(true);
+    element.querySelector(".ef-sections").append(categorySection(source).element);
+    output.append(element);
+    const capacity = maxHeight - Math.ceil(element.getBoundingClientRect().height);
+    element.remove();
+    return capacity;
+  }
+
+  function shortestColumn(section) {
+    return section.columns.reduce((shortest, column) =>
+      column.getBoundingClientRect().height < shortest.getBoundingClientRect().height ? column : shortest);
+  }
+
+  function remember(page, section, source, fragment) {
+    const key = source.dataset.poolKey;
+    if (!fragmentsByPool.has(key)) fragmentsByPool.set(key, []);
+    fragmentsByPool.get(key).push(fragment);
+    section.poolKeys.add(key);
+    page.pools += 1;
+  }
+
+  function poolFragment(source, continuation) {
     const fragment = source.cloneNode(false);
-    fragment.append(source.querySelector(".ef-pool-head").cloneNode(true));
-    fragment.append(source.querySelector(".ef-events").cloneNode(false));
+    const header = continuation
+      ? source.querySelector(".ef-pool-continuation").content.firstElementChild
+      : source.querySelector(".ef-pool-head");
+    fragment.append(header.cloneNode(true));
+    fragment.append(source.querySelector(".ef-periods").cloneNode(false));
     return fragment;
   }
 
-  function recordFragment(page, task, fragment) {
-    const { poolKey: key, category } = task.source.dataset;
-    if (!page.categories.has(category)) page.categories.set(category, new Set());
-    page.categories.get(category).add(key);
-    if (!fragmentsByPool.has(key)) fragmentsByPool.set(key, []);
-    fragmentsByPool.get(key).push(fragment);
-  }
-
-  const queues = Array.from({ length: 3 }, () => ({ pools: [], next: 0 }));
-  const rightPoolOrder = { beginner: 0, standard: 1, joint: 2 };
-  for (const source of sources) {
-    const category = source.dataset.category;
-    const column = category === "special" ? 0 : category === "weapon" ? 1 : 2;
-    queues[column].pools.push({
-      source,
-      events: Array.from(source.querySelector(".ef-events").children),
-      height: source.getBoundingClientRect().height,
-      offset: 0,
-    });
-  }
-  // Stable sorting preserves newest-first pools within each right-column category.
-  queues[2].pools.sort((left, right) =>
-    rightPoolOrder[left.source.dataset.category] - rightPoolOrder[right.source.dataset.category]);
   let page = newPage();
-  const overview = page.element.querySelectorAll("[data-overview]");
-  overview.forEach(section => { section.style.display = "none"; });
-  const continuationCapacity = maxHeight - page.element.getBoundingClientRect().height;
-  overview.forEach(section => { section.style.removeProperty("display"); });
+  for (const source of sources) {
+    const capacity = fullPageCapacity(source);
+    const pools = Array.from(source.querySelector(".ef-category-pools").children);
+    let section = null;
 
-  while (true) {
-    let progressed = false;
-    for (let columnIndex = 0; columnIndex < queues.length; columnIndex += 1) {
-      const queue = queues[columnIndex];
-      const column = page.columns[columnIndex];
-      while (queue.next < queue.pools.length) {
-        const task = queue.pools[queue.next];
-        const { poolKey: key, category } = task.source.dataset;
-        const categoryPools = page.categories.get(category);
-        if (categoryPools && !categoryPools.has(key) && categoryPools.size >= maxPools) break;
-        const fragment = makeFragment(task.source);
-        const body = fragment.querySelector(".ef-events");
-        column.append(fragment);
-        const start = task.offset;
-        if (!task.events.length) {
-          const empty = document.createElement("p");
-          empty.className = "ef-pool-empty";
-          empty.textContent = "尚无六星或免费寻访记录";
-          body.append(empty);
+    // Keep a category together when it fits a fresh page instead of stranding
+    // its first short pool below the preceding category.
+    if (pools.length <= maxPools) {
+      const preview = categorySection(source);
+      page.body.append(preview.element);
+      for (const pool of pools) shortestColumn(preview).append(pool.cloneNode(true));
+      const columnHeight = Math.max(...preview.columns.map(column => column.getBoundingClientRect().height));
+      const fitsCurrentPage = fits(page);
+      preview.element.remove();
+      if (columnHeight <= capacity && !fitsCurrentPage) page = newPage();
+    }
+
+    function nextPage() {
+      if (section && !section.poolKeys.size) section.element.remove();
+      if (!page.pools && pages.length > 1) {
+        throw new Error("A complete gacha event exceeds the page height limit");
+      }
+      page = newPage();
+      section = null;
+    }
+
+    for (const pool of pools) {
+      const periods = Array.from(pool.querySelector(".ef-periods").children).map(period => ({
+        source: period,
+        events: Array.from(period.querySelector(".ef-events").children),
+      }));
+      const keepWhole = pool.getBoundingClientRect().height <= capacity;
+      let periodIndex = 0;
+      let eventIndex = 0;
+      let started = false;
+      let finished = false;
+
+      while (!finished) {
+        if (!section) {
+          section = categorySection(source);
+          page.body.append(section.element);
         }
-        while (task.offset < task.events.length) {
-          const event = task.events[task.offset].cloneNode(true);
-          body.append(event);
+        if (!section.poolKeys.has(pool.dataset.poolKey) && section.poolKeys.size >= maxPools) {
+          nextPage();
+          continue;
+        }
+        const column = shortestColumn(section);
+        if (keepWhole) {
+          const whole = pool.cloneNode(true);
+          whole.querySelector(".ef-pool-continuation").remove();
+          column.append(whole);
           if (!fits(page)) {
-            event.remove();
-            break;
+            whole.remove();
+            nextPage();
+            continue;
           }
-          task.offset += 1;
+          remember(page, section, pool, whole);
+          finished = true;
+          continue;
         }
-        const keepWhole = task.height <= continuationCapacity;
-        if (!fits(page) || (task.events.length && task.offset === start)
-          || (keepWhole && task.offset < task.events.length)) {
+
+        const fragment = poolFragment(pool, started);
+        const body = fragment.querySelector(".ef-periods");
+        column.append(fragment);
+        let added = 0;
+        while (periodIndex < periods.length) {
+          const period = periods[periodIndex];
+          const block = period.source.cloneNode(false);
+          block.append(period.source.querySelector(".ef-period-head").cloneNode(true));
+          const events = period.source.querySelector(".ef-events").cloneNode(false);
+          block.append(events);
+          body.append(block);
+          while (eventIndex < period.events.length) {
+            const event = period.events[eventIndex].cloneNode(true);
+            events.append(event);
+            if (!fits(page)) {
+              event.remove();
+              break;
+            }
+            eventIndex += 1;
+            added += 1;
+          }
+          if (!events.children.length) block.remove();
+          if (eventIndex < period.events.length) break;
+          periodIndex += 1;
+          eventIndex = 0;
+        }
+        if (!added) {
           fragment.remove();
-          task.offset = start;
-          break;
+          nextPage();
+          continue;
         }
-        recordFragment(page, task, fragment);
-        progressed = true;
-        if (task.offset < task.events.length) break;
-        queue.next += 1;
+        remember(page, section, pool, fragment);
+        started = true;
+        finished = periodIndex === periods.length;
       }
     }
-    if (queues.every(queue => queue.next === queue.pools.length)) break;
-    if (!progressed && pages.length > 1) {
-      throw new Error("A complete gacha event exceeds the page height limit");
-    }
-    page = newPage();
   }
 
   if (!sources.length) {
     const empty = document.createElement("p");
     empty.className = "ef-empty";
     empty.textContent = "所选范围暂无卡池记录";
-    page.element.querySelector(".ef-columns").append(empty);
+    page.body.append(empty);
   }
   for (const fragments of fragmentsByPool.values()) {
-    for (let index = 0; index < fragments.length; index += 1) {
-      fragments[index].querySelector("[data-pool-part]").textContent =
-        fragments.length > 1 ? `${index + 1}/${fragments.length}` : "";
+    for (const [index, fragment] of fragments.entries()) {
+      fragment.querySelector("[data-pool-part]").textContent = fragments.length > 1 ? `${index + 1}/${fragments.length}` : "";
     }
   }
-  for (let index = 0; index < pages.length; index += 1) {
-    const current = pages[index];
+  for (const [index, current] of pages.entries()) {
     current.element.querySelector("[data-page-number]").textContent = String(index + 1);
     current.element.querySelector("[data-page-total]").textContent = String(pages.length);
     if (!fits(current)) throw new Error("The paginated report exceeds the page height limit");

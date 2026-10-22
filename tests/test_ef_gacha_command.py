@@ -5,18 +5,21 @@ import pytest
 from sqlalchemy import update, inspect
 
 
-def _pull(pool_id="standard", *, seq=1, timestamp=1700000000, free=False):
+def _pull(
+    pool_id="standard", *, seq=1, timestamp=1700000000, free=False, item_type="char", pool_version=None, rarity=6
+):
     from nonebot_plugin_skland.schemas.endfield.gacha.base import EfCharGachaInfo, EfWeaponGachaInfo
 
     common = {
         "poolId": pool_id,
         "poolName": pool_id,
-        "rarity": 6,
+        "rarity": rarity,
         "isNew": True,
         "gachaTs": str(timestamp * 1000),
         "seqId": str(seq),
+        "poolVersion": pool_version,
     }
-    if pool_id.startswith("weapon"):
+    if item_type == "weapon":
         return EfWeaponGachaInfo(**common, weaponId="weapon_test", weaponName="测试武器", weaponType="Sword")
     return EfCharGachaInfo(**common, kind="draw", nameText="寻访", charId="char_test", charName="测试干员", isFree=free)
 
@@ -60,7 +63,7 @@ def _malformed_history_response(failure: str, *, is_weapon: bool) -> httpx.Respo
         return httpx.Response(200, json=["private-response-content"])
     if failure == "data":
         return httpx.Response(200, json={"code": 0, "data": None})
-    item = model_dump(_pull("weapon_test" if is_weapon else "standard"))
+    item = model_dump(_pull("weapon_test" if is_weapon else "standard", item_type="weapon" if is_weapon else "char"))
     item.pop("weaponId" if is_weapon else "charId")
     item.update(kind="draw", nameText="private-response-content")
     return httpx.Response(200, json={"code": 0, "data": {"list": [item], "hasMore": False}})
@@ -111,7 +114,6 @@ def test_weapon_response_ignores_gift_marker_and_preserves_raw_page_boundary(app
     response = EfWeaponGachaResponse(list=[_weapon_api_item(922, kind="gift_weapon"), *draws], hasMore=True)
 
     assert [item.seq_id_int for item in response.gacha_list] == [921, 920, 919, 918]
-    assert response.page_size == 5
     assert response.next_seq == "918"
 
 
@@ -130,12 +132,11 @@ def test_character_response_filters_untyped_events_and_preserves_raw_cursor(app)
     )
 
     assert [item.seq_id_int for item in response.gacha_list] == [12]
-    assert response.page_size == 3
     assert response.next_seq == "10"
 
 
 @pytest.mark.asyncio
-async def test_weapon_pagination_uses_raw_page_size_after_gift_filter(app, mocker):
+async def test_weapon_pagination_preserves_raw_cursor_after_gift_filter(app, mocker):
     import nonebot_plugin_skland.services.gacha as service
     from nonebot_plugin_skland.schemas import EndfieldPoolType
     from nonebot_plugin_skland.schemas.endfield.gacha.base import EfWeaponGachaResponse
@@ -158,7 +159,7 @@ async def test_weapon_pagination_uses_raw_page_size_after_gift_filter(app, mocke
 
     mocker.patch.object(service.SklandAPI, "get_ef_gacha_history", side_effect=fetch)
 
-    records = await service.get_all_ef_gacha_records("1", EndfieldPoolType.WEAPON, "role-token", concurrency=1)
+    records = await service.get_all_ef_gacha_records("1", EndfieldPoolType.WEAPON, "role-token")
 
     assert calls == [None, "918"]
     assert [record.seq_id_int for record in records] == list(range(921, 912, -1))
@@ -304,11 +305,18 @@ async def test_default_query_fetches_all_categories_and_deduplicates_role_histor
             (EndfieldPoolType.SPECIAL, "special_test"),
             (EndfieldPoolType.BEGINNER, "beginner"),
             (EndfieldPoolType.JOINT, "joint_test"),
+            (EndfieldPoolType.RERUN, "rerun_chr_test"),
             (EndfieldPoolType.WEAPON, "weapon_test"),
         ),
         1,
     ):
-        item = _pull(pool_id, seq=seq, free=pool_type == EndfieldPoolType.SPECIAL)
+        item = _pull(
+            pool_id,
+            seq=seq,
+            free=pool_type == EndfieldPoolType.SPECIAL,
+            item_type="weapon" if pool_type == EndfieldPoolType.WEAPON else "char",
+            pool_version=1 if pool_type == EndfieldPoolType.RERUN else None,
+        )
         case.pages[pool_type] = [item, item]
 
     await case.run()
@@ -316,15 +324,16 @@ async def test_default_query_fetches_all_categories_and_deduplicates_role_histor
     records = await get_character_gacha_records(case.character_ids[0], case.session)
     assert {(record.gacha_ts, record.pos) for record in records} == {
         (1600000000, 90),
-        *((1700000000, seq) for seq in range(1, 6)),
+        *((1700000000, seq) for seq in range(1, 7)),
     }
     assert next(record for record in records if record.pool_id == "special_test").is_free
     assert len(await get_character_gacha_records(case.character_ids[1], case.session)) == 1
     view = case.render.await_args.args[0]
-    assert view.record.total_pulls == 6
+    assert view.record.total_pulls == 7
+    assert view.record.rerun_total_pulls == 1
     assert view.record.joint_total_pulls == 1
     assert view.record.weapon_total_pulls == 1
-    assert view.new_count == 4
+    assert view.new_count == 5
     assert not view.is_cached
     assert view.role_id == "role-0"
 
@@ -419,7 +428,14 @@ async def test_malformed_history_page_reports_failure_without_partial_writes(
         assert request.url.path.endswith("/weapon")
         if failure_page == "later" and "seq_id" not in request.url.params:
             return httpx.Response(
-                200, json={"code": 0, "data": {"list": [model_dump(_pull("weapon_test", seq=2))], "hasMore": True}}
+                200,
+                json={
+                    "code": 0,
+                    "data": {
+                        "list": [model_dump(_pull("weapon_test", seq=2, item_type="weapon"))],
+                        "hasMore": True,
+                    },
+                },
             )
         return _malformed_history_response(failure, is_weapon=True)
 
@@ -467,7 +483,7 @@ async def test_later_page_failure_does_not_save_partial_categories(gacha_case, h
         if pool_type == EndfieldPoolType.STANDARD:
             return SimpleNamespace(gacha_list=[_pull(seq=1)], hasMore=False)
         if seq_id is None:
-            return SimpleNamespace(gacha_list=[_pull("special_test", seq=2)], hasMore=True)
+            return SimpleNamespace(gacha_list=[_pull("special_test", seq=2)], hasMore=True, next_seq="2")
         raise RequestException("后续分页失败")
 
     case.fetch.side_effect = fetch
@@ -562,3 +578,151 @@ async def test_page_send_failure_does_not_mark_done_or_lose_history(gacha_case, 
     assert "done" not in [call.args[1] for call in case.reaction.call_args_list]
     async with get_session() as fresh:
         assert len(await get_character_gacha_records(case.character_ids[0], fresh)) == 1
+
+
+@pytest.mark.asyncio
+async def test_sparse_rerun_pages_follow_raw_cursor_through_reward_only_page(app, mocker):
+    from nonebot.compat import model_dump
+
+    import nonebot_plugin_skland.services.gacha as service
+    from nonebot_plugin_skland.schemas import EndfieldPoolType
+
+    first = model_dump(_pull("rerun_chr_yvonne", seq=1283, pool_version=1))
+    last = [model_dump(_pull("rerun_chr_yvonne", seq=seq, pool_version=1)) for seq in (42, 41)]
+    pages = {
+        None: {"list": [first, {"kind": "gift_intel_book", "seqId": "1282"}], "hasMore": True},
+        "1282": {"list": [{"kind": "gift_intel_book", "seqId": "1266"}], "hasMore": True},
+        "1266": {"list": last, "hasMore": False},
+    }
+    cursors = []
+
+    def respond(request):
+        assert request.url.path == "/api/record/char"
+        assert request.url.params["pool_type"] == "E_CharacterGachaPoolType_Rerun"
+        cursor = request.url.params.get("seq_id")
+        cursors.append(cursor)
+        return httpx.Response(200, json={"code": 0, "data": pages[cursor]})
+
+    client_type = httpx.AsyncClient
+    transport = httpx.MockTransport(respond)
+    mocker.patch.object(httpx, "AsyncClient", side_effect=lambda **kwargs: client_type(transport=transport, **kwargs))
+
+    records = await service.get_all_ef_gacha_records("1", EndfieldPoolType.RERUN, "test-role-token")
+
+    assert [item.seq_id_int for item in records] == [1283, 42, 41]
+    assert all(item.poolVersion == 1 for item in records)
+    assert cursors == [None, "1282", "1266"]
+
+
+@pytest.mark.parametrize("next_cursor", [None, "10", "11"])
+@pytest.mark.asyncio
+async def test_unusable_rerun_cursor_fails_instead_of_saving_partial_history(app, mocker, next_cursor):
+    from nonebot.compat import model_dump
+
+    import nonebot_plugin_skland.services.gacha as service
+    from nonebot_plugin_skland.schemas import EndfieldPoolType
+    from nonebot_plugin_skland.exception import RequestException
+
+    def respond(request):
+        if "seq_id" not in request.url.params:
+            items = [model_dump(_pull("rerun_chr_yvonne", seq=10, pool_version=1))]
+        else:
+            items = [{"kind": "gift", "seqId": next_cursor}] if next_cursor is not None else []
+        return httpx.Response(200, json={"code": 0, "data": {"list": items, "hasMore": True}})
+
+    client_type = httpx.AsyncClient
+    transport = httpx.MockTransport(respond)
+    mocker.patch.object(httpx, "AsyncClient", side_effect=lambda **kwargs: client_type(transport=transport, **kwargs))
+    with pytest.raises(RequestException):
+        await service.get_all_ef_gacha_records("1", EndfieldPoolType.RERUN, "test-role-token")
+
+
+@pytest.mark.asyncio
+async def test_rerun_sync_reclassifies_cached_weapon_and_backfills_period_without_duplicates(gacha_case):
+    from nonebot_plugin_skland.schemas import EndfieldPoolType
+    from nonebot_plugin_skland.db_handler import get_character_gacha_records
+
+    case = gacha_case
+    legacy_weapon = _pull("rerun_wpn_yvonne", seq=20, item_type="weapon", rarity=4)
+    await _save_pull(case.session, case.character_ids[0], legacy_weapon)
+    await _save_pull(case.session, case.character_ids[1], legacy_weapon)
+    case.pages[EndfieldPoolType.RERUN] = [
+        _pull(
+            "rerun_chr_yvonne",
+            seq=seq,
+            timestamp=1700000010 + (seq - 100) // 10,
+            free=seq >= 130,
+            pool_version=1,
+            rarity=4,
+        )
+        for seq in range(100, 140)
+    ]
+    case.pages[EndfieldPoolType.WEAPON] = [
+        _pull("rerun_wpn_yvonne", seq=seq, item_type="weapon", pool_version=1, rarity=4) for seq in range(11, 21)
+    ]
+
+    await case.run()
+
+    records = await get_character_gacha_records(case.character_ids[0], case.session)
+    assert len(records) == 50
+    assert all(record.pool_version == 1 for record in records)
+    assert len([record for record in records if record.pos == 20]) == 1
+    other = await get_character_gacha_records(case.character_ids[1], case.session)
+    assert len(other) == 1
+    assert other[0].pool_version is None
+    view = case.render.await_args.args[0]
+    assert (view.record.total_pulls, view.record.char_total_pulls, view.record.weapon_total_pulls) == (50, 40, 10)
+    assert not view.record.standard_pools
+    assert view.record.rerun_pools[0].up_six_chars == ["char_test"]
+    assert view.new_count == 49
+    rerun = next(category for category in view.categories if category.key == "rerun").pools[0]
+    assert rerun.rerun_progress.paid_count == 30
+    assert rerun.rerun_progress.free_ten_pulls_unlocked == 1
+
+    await case.run()
+
+    assert case.render.await_args.args[0].new_count == 0
+    assert len(await get_character_gacha_records(case.character_ids[0], case.session)) == 50
+
+
+@pytest.mark.asyncio
+async def test_failed_rerun_page_does_not_commit_other_categories_or_period_backfill(gacha_case, mocker):
+    from nonebot.compat import model_dump
+
+    from nonebot_plugin_skland.schemas import EndfieldPoolType
+    from nonebot_plugin_skland.db_handler import get_character_gacha_records
+
+    case = gacha_case
+    old = _pull("rerun_wpn_yvonne", seq=80, item_type="weapon")
+    await _save_pull(case.session, case.character_ids[0], old)
+
+    def respond(request):
+        if request.url.path.endswith("/weapon"):
+            items = [model_dump(_pull("rerun_wpn_yvonne", seq=80, item_type="weapon", pool_version=1))]
+        elif request.url.params["pool_type"] == EndfieldPoolType.RERUN.value:
+            if "seq_id" in request.url.params:
+                return httpx.Response(200, text="invalid response")
+            return httpx.Response(
+                200,
+                json={"code": 0, "data": {"list": [model_dump(_pull("rerun_chr_yvonne", seq=2))], "hasMore": True}},
+            )
+        elif request.url.params["pool_type"] == EndfieldPoolType.STANDARD.value:
+            items = [model_dump(_pull(seq=1))]
+        else:
+            items = []
+        return httpx.Response(200, json={"code": 0, "data": {"list": items, "hasMore": False}})
+
+    mocker.stop(case.fetch)
+    client_type = httpx.AsyncClient
+    transport = httpx.MockTransport(respond)
+    mocker.patch.object(httpx, "AsyncClient", side_effect=lambda **kwargs: client_type(transport=transport, **kwargs))
+
+    await case.run()
+
+    records = await get_character_gacha_records(case.character_ids[0], case.session)
+    assert [(record.pool_id, record.pos, record.pool_version) for record in records] == [("rerun_wpn_yvonne", 80, None)]
+    view = case.render.await_args.args[0]
+    assert view.is_cached
+    assert view.new_count == 0
+    assert view.record.char_total_pulls == 0
+    assert view.record.weapon_total_pulls == 1

@@ -14,6 +14,7 @@ class EndfieldPoolType(Enum):
     SPECIAL = "E_CharacterGachaPoolType_Special"
     BEGINNER = "E_CharacterGachaPoolType_Beginner"
     JOINT = "E_CharacterGachaPoolType_Joint"
+    RERUN = "E_CharacterGachaPoolType_Rerun"
     WEAPON = ""
 
 
@@ -22,6 +23,7 @@ EndfieldCharPoolType = Literal[
     EndfieldPoolType.SPECIAL,
     EndfieldPoolType.BEGINNER,
     EndfieldPoolType.JOINT,
+    EndfieldPoolType.RERUN,
 ]
 EndfieldWeaponPoolType = Literal[EndfieldPoolType.WEAPON]
 
@@ -35,7 +37,6 @@ def _prepare_draw_page(values: Any, *, allow_missing_kind: bool = False) -> Any:
         return values
 
     values = dict(values)
-    values["raw_page_size"] = len(raw_list)
     values["raw_next_seq"] = str(raw_list[-1].get("seqId", "")) if raw_list and isinstance(raw_list[-1], dict) else ""
     # 仅武器旧响应允许省略 kind；角色接口仍须显式标记 draw。
     default_kind = "draw" if allow_missing_kind else None
@@ -56,6 +57,8 @@ class EfCharGachaInfo(BaseModel):
     """卡池ID"""
     poolName: str
     """卡池名称"""
+    poolVersion: int | None = None
+    """重构卡池期次；普通池或旧记录没有期次。"""
     charId: str
     """角色ID"""
     charName: str
@@ -105,6 +108,8 @@ class EfWeaponGachaInfo(BaseModel):
     """卡池ID"""
     poolName: str
     """卡池名称"""
+    poolVersion: int | None = None
+    """重构卡池期次；普通池或旧记录没有期次。"""
     weaponId: str
     """武器ID"""
     weaponName: str
@@ -155,7 +160,6 @@ class EfCharGachaResponse(BaseModel):
 
     gacha_list: list[EfCharGachaInfo] = Field(default=[], alias="list")
     hasMore: bool
-    raw_page_size: int = Field(default=0, exclude=True)
     raw_next_seq: str = Field(default="", exclude=True)
 
     @property
@@ -165,10 +169,6 @@ class EfCharGachaResponse(BaseModel):
     @property
     def next_seq(self) -> str:
         return self.raw_next_seq or (self.gacha_list[-1].seqId if self.gacha_list else "")
-
-    @property
-    def page_size(self) -> int:
-        return self.raw_page_size or len(self.gacha_list)
 
     @model_validator(mode="before")
     @classmethod
@@ -181,7 +181,6 @@ class EfWeaponGachaResponse(BaseModel):
 
     gacha_list: list[EfWeaponGachaInfo] = Field(default=[], alias="list")
     hasMore: bool
-    raw_page_size: int = Field(default=0, exclude=True)
     raw_next_seq: str = Field(default="", exclude=True)
 
     @property
@@ -191,10 +190,6 @@ class EfWeaponGachaResponse(BaseModel):
     @property
     def next_seq(self) -> str:
         return self.raw_next_seq or (self.gacha_list[-1].seqId if self.gacha_list else "")
-
-    @property
-    def page_size(self) -> int:
-        return self.raw_page_size or len(self.gacha_list)
 
     @model_validator(mode="before")
     @classmethod
@@ -220,6 +215,7 @@ class EfGachaPull(BaseModel):
     is_free: bool = False
     """是否为免费抽取（角色池专用）"""
     seq_id: int
+    pool_version: int | None = None
 
 
 class EfGachaGroup(BaseModel):

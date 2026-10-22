@@ -103,6 +103,9 @@ class GachaRecord(Model):
     """Gacha pool ID."""
     pool_name: Mapped[str] = mapped_column(Text)
     """Gacha pool name."""
+    pool_version: Mapped[int | None] = mapped_column(nullable=True)
+    """Endfield rerun period; unknown historical periods remain null."""
+
     item_type: Mapped[str] = mapped_column(Text, default="char", server_default="char")
     """Item type: char or weapon."""
     char_id: Mapped[str] = mapped_column(Text)

@@ -65,8 +65,8 @@ def test_group_ef_gacha_records_routes_joint_pool_separately(app):
 
 
 def test_category_projection_includes_joint_pools_and_respects_slicing(app):
-    from nonebot_plugin_skland.schemas.endfield.gacha.view import EfGachaView
     from nonebot_plugin_skland.services.gacha import group_ef_gacha_records
+    from nonebot_plugin_skland.schemas.endfield.gacha.view import EfGachaView
 
     grouped = group_ef_gacha_records(
         [

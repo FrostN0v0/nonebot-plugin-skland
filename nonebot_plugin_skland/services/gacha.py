@@ -80,77 +80,39 @@ async def get_all_ef_gacha_records(
     server_id: str,
     pool_type: EndfieldCharPoolType,
     role_token: str,
-    concurrency: int = 8,
 ) -> Sequence[EfCharGachaInfo]: ...
 @overload
 async def get_all_ef_gacha_records(
     server_id: str,
     pool_type: EndfieldWeaponPoolType,
     role_token: str,
-    concurrency: int = 8,
 ) -> Sequence[EfWeaponGachaInfo]: ...
+@overload
+async def get_all_ef_gacha_records(
+    server_id: str,
+    pool_type: EndfieldPoolType,
+    role_token: str,
+) -> Sequence[EfGachaInfo]: ...
 
 
 async def get_all_ef_gacha_records(
     server_id: str,
     pool_type: EndfieldPoolType,
     role_token: str,
-    concurrency: int = 8,
 ) -> Sequence[EfGachaInfo]:
-    """获取指定卡池类型下的所有终末地抽卡记录。
-
-    自动处理分页，并发请求数据直到获取全部记录。
-
-    Args:
-        server_id: Endfield server ID.
-        pool_type: Character or weapon pool category, including joint pools.
-        role_token: 角色令牌。
-        concurrency: 并发请求数量，默认为 8。
-
-    Returns:
-        Sequence[EfGachaInfo]: 抽卡记录列表。
-    """
-    if concurrency <= 0:
-        raise ValueError("concurrency must be greater than 0")
-
-    first_page = await SklandAPI.get_ef_gacha_history(pool_type, server_id, role_token)
-    if not first_page.hasMore:
-        return first_page.gacha_list
-    next_seq = getattr(first_page, "next_seq", "")
-    if not next_seq:
-        if not first_page.gacha_list:
-            return []
-        last_record = first_page.gacha_list[-1]
-        next_seq = getattr(last_record, "seqId", getattr(last_record, "seq_id_int", ""))
-
-    page_size = getattr(first_page, "page_size", len(first_page.gacha_list))
-    last_seq = int(next_seq)  # shared between workers
-    if page_size <= 0 or last_seq <= 0:
-        return first_page.gacha_list
-    last_seq_lock = asyncio.Lock()
-
-    # the worker fn
-    async def fetch_page() -> list[EfGachaInfo]:
-        nonlocal last_seq
-        records: list[EfGachaInfo] = []
-        while True:
-            async with last_seq_lock:
-                seq_id, last_seq = last_seq, last_seq - page_size
-            if seq_id <= 0:
-                break
-            seq_end = seq_id - page_size
-            page = await SklandAPI.get_ef_gacha_history(pool_type, server_id, role_token, str(seq_id), client)
-            gacha_infos = [i for i in page.gacha_list if seq_end <= i.seq_id_int < seq_id]
-            records.extend(gacha_infos)
-            if not page.hasMore:
-                break
-        return records
-
+    """沿原始分页游标读取；不同角色池共享序号，不能按页大小推算。"""
+    records: list[EfGachaInfo] = []
+    cursor: str | None = None
     async with httpx.AsyncClient() as client:
-        results = await asyncio.gather(*(fetch_page() for _ in range(concurrency)))
-
-    # sort by seq_id descending
-    return sorted(itertools.chain(first_page.gacha_list, *results), key=lambda x: x.seq_id_int, reverse=True)
+        while True:
+            page = await SklandAPI.get_ef_gacha_history(pool_type, server_id, role_token, cursor, client)
+            records.extend(page.gacha_list)
+            if not page.hasMore:
+                return records
+            next_cursor = page.next_seq
+            if not next_cursor or (cursor is not None and int(next_cursor) >= int(cursor)):
+                raise RequestException("获取终末地抽卡记录失败：分页游标未前进")
+            cursor = next_cursor
 
 
 async def sync_ef_gacha_records(
@@ -164,40 +126,38 @@ async def sync_ef_gacha_records(
     """Fetch complete categories and commit role-owned history before presentation."""
     grant_code = await SklandLoginAPI.get_grant_code(access_token, 1)
     role_token = await SklandLoginAPI.get_role_token_by_uid(uid, grant_code)
-    fetched: list[EfGachaInfo] = []
-    for pool_type in (
-        EndfieldPoolType.STANDARD,
-        EndfieldPoolType.SPECIAL,
-        EndfieldPoolType.BEGINNER,
-        EndfieldPoolType.JOINT,
-        EndfieldPoolType.WEAPON,
-    ):
-        fetched.extend(await get_all_ef_gacha_records(server_id, pool_type, role_token))
+    fetched = itertools.chain.from_iterable(
+        await asyncio.gather(
+            *(get_all_ef_gacha_records(server_id, pool_type, role_token) for pool_type in EndfieldPoolType)
+        )
+    )
 
     # No database writes occur until every category has been fetched successfully.
     existing = await get_character_gacha_records(character_id, session)
-    seen = {(record.gacha_ts, record.pos) for record in existing}
+    by_identity = {(record.gacha_ts, record.pos): record for record in existing}
     added: list[GachaRecord] = []
     for item in fetched:
         identity = (item.gacha_ts_sec, item.seq_id_int)
-        if identity in seen:
+        if record := by_identity.get(identity):
+            if record.pool_version is None and item.poolVersion is not None:
+                record.pool_version = item.poolVersion
             continue
-        seen.add(identity)
-        added.append(
-            GachaRecord(
-                character_id=character_id,
-                item_type=item.item_type,
-                pool_id=item.poolId,
-                pool_name=item.poolName,
-                char_id=item.item_id,
-                char_name=item.item_name,
-                rarity=item.rarity,
-                is_new=item.isNew,
-                is_free=item.is_free_pull,
-                gacha_ts=identity[0],
-                pos=identity[1],
-            )
+        record = GachaRecord(
+            character_id=character_id,
+            item_type=item.item_type,
+            pool_id=item.poolId,
+            pool_name=item.poolName,
+            pool_version=item.poolVersion,
+            char_id=item.item_id,
+            char_name=item.item_name,
+            rarity=item.rarity,
+            is_new=item.isNew,
+            is_free=item.is_free_pull,
+            gacha_ts=identity[0],
+            pos=identity[1],
         )
+        by_identity[identity] = record
+        added.append(record)
 
     # Build detached statistics while ORM records are still available.
     grouped = group_ef_gacha_records(existing + added)
@@ -277,22 +237,8 @@ def group_gacha_records(records: list[GachaRecord]) -> GroupedGachaRecord:
     return GroupedGachaRecord(pools=final_pools_data)
 
 
-def _infer_pool_category(pool_id: str) -> str:
-    """根据 pool_id 推导卡池类别"""
-    pid = pool_id.lower()
-    if pid.startswith("joint"):
-        return "joint"
-    if pid.startswith("special"):
-        return "special"
-    if pid.startswith("wepon") or pid.startswith("weapon"):
-        return "weapon"
-    if pid == "beginner":
-        return "beginner"
-    return "standard"
-
-
 def group_ef_gacha_records(records: list[GachaRecord]) -> EfGroupedGachaRecord:
-    """将终末地抽卡记录按卡池分组，并根据 pool_id 分类"""
+    """按卡池归集记录，统一使用模型提供的角色/武器分类。"""
     temp_grouped_records = defaultdict(lambda: defaultdict(list))
     for record in records:
         temp_grouped_records[record.pool_id][record.gacha_ts].append(record)
@@ -300,6 +246,7 @@ def group_ef_gacha_records(records: list[GachaRecord]) -> EfGroupedGachaRecord:
     beginner_pools: list[EfGachaPoolInfo] = []
     standard_pools: list[EfGachaPoolInfo] = []
     special_pools: list[EfGachaPoolInfo] = []
+    rerun_pools: list[EfGachaPoolInfo] = []
     joint_pools: list[EfGachaPoolInfo] = []
     weapon_pools: list[EfGachaPoolInfo] = []
 
@@ -317,6 +264,7 @@ def group_ef_gacha_records(records: list[GachaRecord]) -> EfGroupedGachaRecord:
                         is_new=p.is_new,
                         is_free=p.is_free,
                         seq_id=p.pos,
+                        pool_version=p.pool_version,
                     )
                     for p in pulls
                 ],
@@ -331,11 +279,13 @@ def group_ef_gacha_records(records: list[GachaRecord]) -> EfGroupedGachaRecord:
             pool_type=pool_type,
             records=gacha_groups,
         )
-        category = _infer_pool_category(pool_id)
+        category = pool_info.pool_category
         if category == "beginner":
             beginner_pools.append(pool_info)
         elif category == "special":
             special_pools.append(pool_info)
+        elif category == "rerun":
+            rerun_pools.append(pool_info)
         elif category == "joint":
             joint_pools.append(pool_info)
         elif category == "weapon":
@@ -347,6 +297,7 @@ def group_ef_gacha_records(records: list[GachaRecord]) -> EfGroupedGachaRecord:
         beginner_pools=beginner_pools,
         standard_pools=standard_pools,
         special_pools=special_pools,
+        rerun_pools=rerun_pools,
         joint_pools=joint_pools,
         weapon_pools=weapon_pools,
     )

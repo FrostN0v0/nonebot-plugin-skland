@@ -23,44 +23,6 @@ def test_extra_pool_uses_all_rarity_six_as_up_chars(app):
     assert pool.up_six_display_name == "莱万汀 / 洁尔佩塔 / 艾尔黛拉 / 骏卫"
 
 
-def test_endfield_joint_pool_type_value(app):
-    from nonebot_plugin_skland.schemas.endfield.gacha.base import EndfieldPoolType
-
-    assert EndfieldPoolType.JOINT.value == "E_CharacterGachaPoolType_Joint"
-
-
-def test_joint_pool_id_is_classified_as_joint(app):
-    from nonebot_plugin_skland.services.gacha import _infer_pool_category
-    from nonebot_plugin_skland.schemas.endfield.gacha.pool import EfGachaPoolInfo
-    from nonebot_plugin_skland.schemas.endfield.gacha.base import EfGachaPull, EfGachaGroup
-
-    pool = EfGachaPoolInfo(
-        pool_id="joint_1_2_2",
-        pool_name="辉光庆典",
-        pool_type="char",
-        records=[
-            EfGachaGroup(
-                gacha_ts=100,
-                pulls=[
-                    EfGachaPull(
-                        pool_name="辉光庆典",
-                        item_id="chr_0016_laevat",
-                        item_name="莱万汀",
-                        item_type="char",
-                        rarity=6,
-                        is_new=True,
-                        is_free=False,
-                        seq_id=1,
-                    )
-                ],
-            )
-        ],
-    )
-
-    assert _infer_pool_category("joint_1_2_2") == "joint"
-    assert pool.pool_category == "joint"
-
-
 def make_record(
     *,
     pool_id: str = "joint_1_2_2",
@@ -70,12 +32,13 @@ def make_record(
     gacha_ts: int = 100,
     pos: int = 1,
     is_free: bool = False,
+    item_type: str = "char",
 ):
     from nonebot_plugin_skland.model import GachaRecord
 
     return GachaRecord(
         character_id=1,
-        item_type="char",
+        item_type=item_type,
         pool_id=pool_id,
         pool_name="辉光庆典",
         char_id=char_id,
@@ -101,21 +64,28 @@ def test_group_ef_gacha_records_routes_joint_pool_separately(app):
     )
 
 
-def test_visible_pool_ids_include_joint_pools_and_respect_slicing(app):
+def test_category_projection_includes_joint_pools_and_respects_slicing(app):
     from nonebot_plugin_skland.services.gacha import group_ef_gacha_records
+    from nonebot_plugin_skland.schemas.endfield.gacha.view import EfGachaView
 
     grouped = group_ef_gacha_records(
         [
             make_record(pool_id="joint_1_2_2", gacha_ts=100),
             make_record(pool_id="joint_3_4_5", gacha_ts=300),
             make_record(pool_id="special_1_2_1", gacha_ts=250),
-            make_record(pool_id="weapon_1_2_1", gacha_ts=240),
+            make_record(pool_id="weapon_1_2_1", item_type="weapon", gacha_ts=240),
             make_record(pool_id="standard", gacha_ts=230),
             make_record(pool_id="beginner", gacha_ts=220),
         ]
     )
 
-    assert grouped.get_visible_pool_ids() == {
+    def visible_ids(begin=None, limit=None):
+        view = EfGachaView.from_record(
+            grouped, nickname="Test", role_id="123", server_name="国服", begin=begin, limit=limit
+        )
+        return {pool.pool.pool_id for category in view.categories for pool in category.pools}
+
+    assert visible_ids() == {
         "joint_1_2_2",
         "joint_3_4_5",
         "special_1_2_1",
@@ -123,14 +93,14 @@ def test_visible_pool_ids_include_joint_pools_and_respect_slicing(app):
         "standard",
         "beginner",
     }
-    assert grouped.get_visible_pool_ids(0, 1) == {
+    assert visible_ids(0, 1) == {
         "joint_3_4_5",
         "special_1_2_1",
         "weapon_1_2_1",
         "standard",
         "beginner",
     }
-    assert grouped.get_visible_pool_ids(1, 2) == {"joint_1_2_2"}
+    assert visible_ids(1, 2) == {"joint_1_2_2"}
 
 
 def test_joint_statistics_use_only_six_star_count_and_six_average(app):

@@ -1,4 +1,4 @@
-{% from "ef_gacha_macros.html.jinja2" import pool_card %}
+{% from "ef_gacha_macros.html.jinja2" import category_header, pool_card %}
 {% autoescape true %}
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -11,212 +11,64 @@
 {% set record = props.record %}
 <div id="ef-pages"></div>
 <template id="ef-page-template">
-<section class="ef-page bound-roles-dossier relative flex flex-col p-4 gap-4 text-[#080808]">
-<header class="bound-roles-header relative overflow-hidden rounded-[4px] px-4 pt-4 pb-5 text-white">
-<div class="bound-roles-hatch pointer-events-none absolute -top-8 right-[-20px] h-40 w-24 -rotate-[14deg] opacity-20"></div>
-<div class="relative flex items-center justify-between gap-4">
-<div class="flex min-w-0 items-center gap-3 flex-1">
-{% if props.avatar_url %}<img src="{{ props.avatar_url }}" alt="" class="w-12 h-12 shrink-0 border border-white/35 object-cover" />{% else %}<div class="w-12 h-12 shrink-0 border border-white/35 flex items-center justify-center font-[Akrobat] text-[#E3D600] text-xl">EF</div>{% endif %}
-<div class="min-w-0"><img src="../images/endfield/name_title.png" alt="" class="h-2.5 w-auto brightness-0 invert opacity-70" /><h1 class="mt-1 text-xl leading-7 font-bold font-[Akrobat] break-words">{{ props.nickname }}</h1><div class="mt-1 text-[10px] font-[Bender] text-white/65">UID {{ props.role_id }}{% if props.server_name %} · {{ '国服' if props.server_name == 'China' else props.server_name }}{% endif %}</div></div>
-</div>
-<div data-overview class="flex items-center gap-4 shrink-0"><div class="text-center"><div class="font-[Akrobat] text-[32px] leading-9">{{ record.total_pulls }}<span class="text-xs text-white/65 ml-1">抽</span></div><span class="text-[10px] text-white/60">累计寻访</span></div><div class="border-l border-white/15 pl-4 text-[10px] text-white/60"><div>角色池 <b class="font-[Akrobat] text-sm text-[#E3D600]">{{ record.char_total_pulls }}</b></div><div class="mt-1">武器池 <b class="font-[Akrobat] text-sm text-white/85">{{ record.weapon_total_pulls }}</b></div></div></div>
-</div>
-<div class="absolute inset-x-0 bottom-0 flex h-1"><span class="w-8 bg-[#92999C]"></span><span class="flex-1 bg-[#E3D600]"></span></div>
-</header>
-<div data-overview>
-        {% set special_total_spook = record.special_total_spook %}
-        {% set special_up_avg = record.special_up_avg %}
-        {% set weapon_total_spook = record.weapon_total_spook %}
-        {% set weapon_up_avg = record.weapon_up_avg %}
-        {% set joint_six_avg = record.joint_six_avg %}
-        {% set standard_six_avg = record.standard_six_avg %}
-        {# 统计卡片 - 均等宽度 #}
-        <div class="flex flex-row gap-2">
-                {# 限定池统计 #}
-                <div class="flex-1 bg-[#E6E6E6]/75 rounded-[4px] p-3 bound-roles-account border border-white/35 flex flex-col justify-between">
-                    <div class="flex items-center gap-1.5 mb-1">
-                        <div class="w-1 h-4 rounded-full bg-[#A69637]"></div>
-                        <span class="text-[#080808]/85 font-[Akrobat] font-bold text-sm">限定池</span>
-                    </div>
-                    <div class="text-center mb-1">
-                        <span class="text-[#080808]/85 font-[Akrobat] font-bold text-2xl">{{ record.special_total_pulls }}</span>
-                        <span class="text-[#080808]/60 text-sm font-[Akrobat]">抽</span>
-                    </div>
-                    <div class="flex justify-around text-center gap-1">
-                        <div class="flex flex-col">
-                            <span class="font-[Akrobat] font-bold text-base">
-                                <span class="text-[#8F6D15]">{{ record.special_total_six }}</span><span class="text-[#080808]/50">/</span><span class="text-[#A0524C]">{{ special_total_spook if special_total_spook is not none else "-" }}</span>
-                            </span>
-                            <span class="text-[#080808]/50 text-[10px]">6★/歪</span>
-                        </div>
-                        <div class="flex flex-col">
-                            <span class="text-[#080808]/85 font-[Akrobat] font-bold text-base">{{ "%.1f"|format(special_up_avg) if special_up_avg is not none else "-" }}</span>
-                            <span class="text-[#080808]/50 text-[10px]">UP平均</span>
-                        </div>
-                    </div>
-                    {# 限定池跨池小保底进度条 #}
-                    <div class="mt-1.5">
-                        <div class="flex justify-between text-[10px] text-[#080808]/50 mb-0.5">
-                            <span>小保底</span>
-                            <span>{{ record.special_pity }}/80</span>
-                        </div>
-                        <div class="w-full h-2 bg-[#080808]/10 rounded-full overflow-hidden">
-                            <div class="h-full rounded-full green-blur-bar" style="width: {{ (record.special_pity / 80 * 100) | int }}%;"></div>
-                        </div>
-                    </div>
-
-                </div>
-
-                {# 武器池统计 #}
-                <div class="flex-1 bg-[#E6E6E6]/75 rounded-[4px] p-3 bound-roles-account border border-white/35 flex flex-col justify-between">
-                    <div class="flex items-center gap-1.5 mb-1">
-                        <div class="w-1 h-4 rounded-full bg-[#B48755]"></div>
-                        <span class="text-[#080808]/85 font-[Akrobat] font-bold text-sm">武器池</span>
-                    </div>
-                    <div class="text-center mb-1">
-                        <span class="text-[#080808]/85 font-[Akrobat] font-bold text-2xl">{{ record.weapon_total_pulls }}</span>
-                        <span class="text-[#080808]/60 text-sm font-[Akrobat]">抽</span>
-                    </div>
-                    <div class="flex justify-around text-center gap-1">
-                        <div class="flex flex-col">
-                            <span class="font-[Akrobat] font-bold text-base">
-                                <span class="text-[#8F6D15]">{{ record.weapon_total_six }}</span><span class="text-[#080808]/50">/</span><span class="text-[#A0524C]">{{ weapon_total_spook if weapon_total_spook is not none else "-" }}</span>
-                            </span>
-                            <span class="text-[#080808]/50 text-[10px]">6★/歪</span>
-                        </div>
-                        <div class="flex flex-col">
-                            <span class="text-[#080808]/85 font-[Akrobat] font-bold text-base">{{ "%.1f"|format(weapon_up_avg) if weapon_up_avg is not none else "-" }}</span>
-                            <span class="text-[#080808]/50 text-[10px]">UP平均</span>
-                        </div>
-                    </div>
-                    {# 武器池保底进度条 #}
-                    <div class="mt-1.5">
-                        <div class="flex justify-between text-[10px] text-[#080808]/50 mb-0.5">
-                            <span>保底</span>
-                            <span>{{ record.weapon_pity }}/80</span>
-                        </div>
-                        <div class="w-full h-2 bg-[#080808]/10 rounded-full overflow-hidden">
-                            <div class="h-full rounded-full green-blur-bar" style="width: {{ (record.weapon_pity / 80 * 100) | int }}%;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                {# 联合寻访统计 #}
-                {% if record.joint_pools %}
-                <div class="flex-1 bg-[#E6E6E6]/75 rounded-[4px] p-3 bound-roles-account border border-white/35 flex flex-col justify-between">
-                    <div class="flex items-center gap-1.5 mb-1">
-                        <div class="w-1 h-4 rounded-full bg-[#8B7B96]"></div>
-                        <span class="text-[#080808]/85 font-[Akrobat] font-bold text-sm">联合寻访</span>
-                    </div>
-                    <div class="text-center mb-1">
-                        <span class="text-[#080808]/85 font-[Akrobat] font-bold text-2xl">{{ record.joint_total_pulls }}</span>
-                        <span class="text-[#080808]/60 text-sm font-[Akrobat]">抽</span>
-                    </div>
-                    <div class="flex justify-around text-center gap-1">
-                        <div class="flex flex-col">
-                            <span class="text-[#8F6D15] font-[Akrobat] font-bold text-base">{{ record.joint_total_six }}</span>
-                            <span class="text-[#080808]/50 text-[10px]">6★</span>
-                        </div>
-                        <div class="flex flex-col">
-                            <span class="text-[#080808]/85 font-[Akrobat] font-bold text-base">{{ "%.1f"|format(joint_six_avg) if joint_six_avg is not none else "-" }}</span>
-                            <span class="text-[#080808]/50 text-[10px]">6★平均</span>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
-                {# 常驻池统计 #}
-                <div class="flex-1 bg-[#E6E6E6]/75 rounded-[4px] p-3 bound-roles-account border border-white/35 flex flex-col justify-between">
-                    <div class="flex items-center gap-1.5 mb-1">
-                        <div class="w-1 h-4 rounded-full bg-[#548671]"></div>
-                        <span class="text-[#080808]/85 font-[Akrobat] font-bold text-sm">常驻池</span>
-                    </div>
-                    <div class="text-center mb-1">
-                        <span class="text-[#080808]/85 font-[Akrobat] font-bold text-2xl">{{ record.standard_total_pulls }}</span>
-                        <span class="text-[#080808]/60 text-sm font-[Akrobat]">抽</span>
-                    </div>
-                    <div class="flex justify-around text-center gap-1">
-                        <div class="flex flex-col">
-                            <span class="text-[#8F6D15] font-[Akrobat] font-bold text-base">{{ record.standard_total_six }}</span>
-                            <span class="text-[#080808]/50 text-[10px]">6★</span>
-                        </div>
-                        <div class="flex flex-col">
-                            <span class="text-[#080808]/85 font-[Akrobat] font-bold text-base">{{ "%.1f"|format(standard_six_avg) if standard_six_avg is not none else "-" }}</span>
-                            <span class="text-[#080808]/50 text-[10px]">6★平均</span>
-                        </div>
-                    </div>
-                    {# 常驻池保底进度条 #}
-                    <div class="mt-1.5">
-                        <div class="flex justify-between text-[10px] text-[#080808]/50 mb-0.5">
-                            <span>保底</span>
-                            <span>{{ record.standard_pity }}/80</span>
-                        </div>
-                        <div class="w-full h-2 bg-[#080808]/10 rounded-full overflow-hidden">
-                            <div class="h-full rounded-full green-blur-bar" style="width: {{ (record.standard_pity / 80 * 100) | int }}%;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                {# 新手池统计 #}
-                {% if record.beginner_pools %}
-                <div class="flex-1 bg-[#E6E6E6]/75 rounded-[4px] p-3 bound-roles-account border border-white/35 flex flex-col justify-between">
-                    <div class="flex items-center gap-1.5 mb-1">
-                        <div class="w-1 h-4 rounded-full bg-[#56889A]"></div>
-                        <span class="text-[#080808]/85 font-[Akrobat] font-bold text-sm">新手池</span>
-                    </div>
-                    <div class="text-center mb-1">
-                        <span class="text-[#080808]/85 font-[Akrobat] font-bold text-2xl">{{ record.beginner_total_pulls }}</span>
-                        <span class="text-[#080808]/60 text-sm font-[Akrobat]">抽</span>
-                    </div>
-                    <div class="flex justify-around text-center gap-1">
-                        <div class="flex flex-col">
-                            <span class="text-[#8F6D15] font-[Akrobat] font-bold text-base">{{ record.beginner_pools | sum(attribute='total_six_stars') }}</span>
-                            <span class="text-[#080808]/50 text-[10px]">6★</span>
-                        </div>
-                        <div class="flex flex-col">
-                            <span class="text-[#080808]/85 font-[Akrobat] font-bold text-base">{{ record.beginner_total_pulls }}/40</span>
-                            <span class="text-[#080808]/50 text-[10px]">进度</span>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
-            {# 武库配额 #}
-            <div class="flex-1 bg-[#E6E6E6]/75 rounded-[4px] p-3 bound-roles-account border border-white/35 flex flex-col">
-                <div class="flex items-center gap-1.5 mb-1.5">
-                    <div class="w-1 h-4 rounded-full bg-[#696F64]"></div>
-                    <span class="text-[#080808]/85 font-[Akrobat] font-bold text-sm">武库配额</span>
-                </div>
-                <div class="flex flex-col gap-1.5 flex-1 justify-center">
-                    <div class="flex justify-around text-center">
-                        <div class="flex flex-col items-center">
-                            <span class="text-[#080808]/55 text-[9px]">产出</span>
-                            <span class="text-[#548671] font-[Akrobat] font-bold text-base">{{ record.char_arsenal_quota_earned }}</span>
-                        </div>
-                        <div class="flex flex-col items-center">
-                            <span class="text-[#080808]/55 text-[9px]">消耗</span>
-                            <span class="text-[#A69637] font-[Akrobat] font-bold text-base">{{ record.weapon_arsenal_quota_consumed }}</span>
-                        </div>
-                    </div>
-                    <div class="flex justify-center">
-                        <div class="h-px w-3/4 bg-[#080808]/10 rounded-full"></div>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <span class="text-[#080808]/55 text-[9px]">净值</span>
-                        <span class="font-[Akrobat] font-bold text-xl {% if record.arsenal_quota_net >= 0 %}text-[#548671]{% else %}text-[#A69637]{% endif %}">
-                            {{ record.arsenal_quota_net }}
-                        </span>
-                    </div>
+<section class="ef-page bound-roles-dossier relative flex flex-col p-4 gap-3 text-[#080808]">
+    <header class="bound-roles-header relative overflow-hidden rounded-[4px] px-4 pt-4 pb-5 text-white">
+        <div class="bound-roles-hatch pointer-events-none absolute -top-8 right-[-20px] h-40 w-24 -rotate-[14deg] opacity-20"></div>
+        <div class="relative flex items-center justify-between gap-4">
+            <div class="flex min-w-0 items-center gap-3 flex-1">
+                {% if props.avatar_url %}<img src="{{ props.avatar_url }}" alt="玩家头像" class="w-12 h-12 shrink-0 border border-white/35 object-cover" />{% else %}<div class="w-12 h-12 shrink-0 border border-white/35 flex items-center justify-center font-[Akrobat] text-[#E3D600] text-xl">EF</div>{% endif %}
+                <div class="min-w-0">
+                    <img src="../images/endfield/name_title.png" alt="明日方舟：终末地" class="h-2.5 w-auto brightness-0 invert opacity-70" />
+                    <h1 class="mt-1 text-xl leading-7 font-bold font-[Akrobat] break-words">{{ props.nickname }}</h1>
+                    <div class="mt-1 text-[10px] font-[Bender] text-white/65">UID {{ props.role_id }}{% if props.server_name %} · {{ '国服' if props.server_name == 'China' else props.server_name }}{% endif %}</div>
                 </div>
             </div>
+            <div data-overview class="flex items-center gap-4 shrink-0">
+                <div class="text-center"><div class="font-[Akrobat] text-[32px] leading-9">{{ record.total_pulls }}<span class="text-xs text-white/65 ml-1">抽</span></div><span class="text-[10px] text-white/60">已记录寻访</span></div>
+                <div class="border-l border-white/15 pl-4 text-[10px] text-white/60"><div>角色 <b class="font-[Akrobat] text-sm text-[#E3D600]">{{ record.char_total_pulls }}</b></div><div class="mt-1">武器 <b class="font-[Akrobat] text-sm text-white/85">{{ record.weapon_total_pulls }}</b></div></div>
+            </div>
         </div>
-</div>
-<div class="flex flex-wrap justify-between gap-x-3 text-[10px] font-[Bender] {{ 'text-[#855F25]' if props.is_cached else 'text-[#080808]/60' }}"><span>{% if props.is_cached %}本地记录 · 本次未更新{% else %}已更新 · 新增 {{ props.new_count }} 条{% endif %}{% if props.notice %} · {{ props.notice }}{% endif %}</span><span class="whitespace-nowrap">第 <span data-page-number>1</span> / <span data-page-total>1</span> 页</span></div>
-<div class="ef-columns grid grid-cols-3 gap-3 items-start"><div class="ef-column flex flex-col gap-2 min-w-0"></div><div class="ef-column flex flex-col gap-2 min-w-0"></div><div class="ef-column flex flex-col gap-2 min-w-0"></div></div>
-<footer class="text-center text-[#080808]/65 text-[11px] tracking-wider font-[Bender] pt-2">Generated by nonebot-plugin-skland</footer>
+        <div class="absolute inset-x-0 bottom-0 flex h-1"><span class="w-8 bg-[#92999C]"></span><span class="flex-1 bg-[#E3D600]"></span></div>
+    </header>
+    <div data-overview class="ef-stat-grid">
+        {% for category in props.categories %}
+        <section class="ef-stat-card bound-roles-account" data-category="{{ category.key }}">
+            <h2 class="ef-stat-title">{{ category.title }}</h2>
+            <div class="ef-stat-total">{{ category.total_pulls }}<span>抽{% if category.free_pulls %} · 含免费 {{ category.free_pulls }} 抽{% endif %}</span></div>
+            <div class="ef-stat-details">
+                <span>6★ <b>{{ category.six_count }}</b>{% if category.key in ('special', 'rerun', 'weapon', 'rerun_weapon') %} / 歪 <b>{{ category.spook_count if category.spook_count is not none else '-' }}</b>{% endif %}</span>
+                <span>{{ category.average_label }} <b>{{ '%.1f'|format(category.average) if category.average is not none else '-' }}</b></span>
+            </div>
+        </section>
+        {% endfor %}
+        <section class="ef-stat-card bound-roles-account" data-category="quota">
+            <h2 class="ef-stat-title">武库配额</h2>
+            <div class="ef-stat-total">{{ record.arsenal_quota_net }}<span>净值</span></div>
+            <div class="ef-stat-details"><span>产出 <b>{{ record.char_arsenal_quota_earned }}</b></span><span>消耗 <b>{{ record.weapon_arsenal_quota_consumed }}</b></span></div>
+        </section>
+    </div>
+    <div class="flex flex-wrap justify-between gap-x-3 text-[10px] font-[Bender] {{ 'text-[#855F25]' if props.is_cached else 'text-[#080808]/60' }}">
+        <span>{% if props.is_cached %}本地记录 · 本次未更新{% else %}已更新 · 新增 {{ props.new_count }} 条{% endif %}{% if props.notice %} · {{ props.notice }}{% endif %}</span>
+        <span class="whitespace-nowrap">第 <span data-page-number>1</span> / <span data-page-total>1</span> 页</span>
+    </div>
+    <main class="ef-sections"></main>
+    <footer class="ef-footer">
+        <div>Generated by nonebot-plugin-skland</div>
+    </footer>
 </section>
 </template>
-<div id="ef-source" class="ef-source">{% for pool in props.pools %}{{ pool_card(pool, loop.index0) }}{% endfor %}</div>
+<div id="ef-source" class="ef-source">
+    {% for category in props.categories %}
+    {% if category.pools %}
+    <section class="ef-category" data-category="{{ category.key }}" data-columns="{{ [category.pools | length, 3] | min }}">
+        {{ category_header(category) }}
+        <div class="ef-category-pools">
+            {% for pool in category.pools %}{{ pool_card(pool, category.key) }}{% endfor %}
+        </div>
+    </section>
+    {% endif %}
+    {% endfor %}
+</div>
 <script>{% include "ef_gacha.js" %}</script>
 </body>
 </html>

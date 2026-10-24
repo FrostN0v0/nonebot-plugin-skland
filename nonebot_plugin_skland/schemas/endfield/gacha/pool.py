@@ -36,28 +36,29 @@ class EfGachaPoolInfo(BaseModel):
 
     @property
     def pool_category(self) -> str:
-        """根据 pool_id 推导卡池类别
-
-        - pool_id 以 'special' 开头 → 'special'
-        - pool_id 以 'weapon' 开头 → 'weapon'
-        - pool_id == 'standard' → 'standard'
-        - pool_id == 'beginner' → 'beginner'
-        """
+        """物品类型优先；池ID只补充已知的历史命名。"""
         pid = self.pool_id.lower()
+        if self.pool_type.lower() == "weapon" or pid.startswith(("weapon", "wepon", "rerun_wpn_")):
+            return "weapon"
+        if pid.startswith("rerun_chr_"):
+            return "rerun"
         if pid.startswith("joint"):
             return "joint"
         if pid.startswith("special"):
             return "special"
-        if pid.startswith("weapon") or pid.startswith("wepon"):
-            return "weapon"
         if pid == "beginner":
             return "beginner"
         return "standard"
 
     @property
+    def is_rerun(self) -> bool:
+        """只根据已知重构池身份启用重构规则。"""
+        return self.pool_id.lower().startswith(("rerun_chr_", "rerun_wpn_"))
+
+    @property
     def show_spook_stats(self) -> bool:
         """是否展示六星歪卡统计"""
-        return self.pool_category in {"special", "weapon"} and bool(self.up_six_chars)
+        return self.pool_category in {"special", "rerun", "weapon"} and bool(self.up_six_chars)
 
     @model_validator(mode="before")
     @classmethod
@@ -165,6 +166,64 @@ class EfGachaPoolInfo(BaseModel):
                 prev_seq = p.seq_id
             ten_pulls.add((group.gacha_ts, current_start))
         return len(ten_pulls)
+
+    @property
+    def rerun_weapon_batches(self) -> list[list[EfGachaPull]]:
+        """付费申领批次，按时间正序；只数实际draw，不数序号间隙。
+
+        秒级时间戳可能合并多次申领，因此每十件拆为一批。不同或未知
+        期次分别分段，保留不足十件的残缺批次供进度标记未知。
+        """
+        batches: list[list[EfGachaPull]] = []
+        for group in reversed(self.records):
+            pending: list[EfGachaPull] = []
+            for pull in reversed(group.pulls):
+                if pull.is_free:
+                    continue
+                if pending and pending[-1].pool_version != pull.pool_version:
+                    batches.append(pending)
+                    pending = []
+                pending.append(pull)
+                if len(pending) == 10:
+                    batches.append(pending)
+                    pending = []
+            if pending:
+                batches.append(pending)
+        return batches
+
+    @property
+    def rerun_weapon_claim_count(self) -> int | None:
+        """存在残缺历史时，不能把完整批次数冒充完整累计。"""
+        batches = self.rerun_weapon_batches
+        return len(batches) if all(len(batch) == 10 for batch in batches) else None
+
+    def rerun_weapon_period_pity(self, pool_version: int | None) -> int | None:
+        """指定期次末尾的完整申领垫数；未知前史不能冒充当期起点。"""
+        if pool_version is None:
+            return None
+        pulls = self.all_pulls_chronological
+        positions = {pull.seq_id: index for index, pull in enumerate(pulls)}
+        last_position = next(
+            (index for index in range(len(pulls) - 1, -1, -1) if pulls[index].pool_version == pool_version),
+            None,
+        )
+        if last_position is None:
+            return None
+        count = 0
+        for batch in reversed(self.rerun_weapon_batches):
+            if positions[batch[0].seq_id] > last_position:
+                continue
+            batch_version = batch[0].pool_version
+            if batch_version is None:
+                return None
+            if batch_version != pool_version:
+                return count
+            if len(batch) != 10:
+                return None
+            if any(pull.rarity == 6 for pull in batch):
+                return count
+            count += 1
+        return count
 
     @property
     def arsenal_quota_consumed(self) -> int:

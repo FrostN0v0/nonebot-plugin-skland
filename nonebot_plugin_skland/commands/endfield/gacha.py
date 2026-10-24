@@ -89,7 +89,7 @@ async def ef_gacha_history_handler(
         await UniMessage.text("已同步，暂无抽卡记录").send(reply_to=True)
         return
 
-    for pool in gacha_data.special_pools + gacha_data.joint_pools + gacha_data.weapon_pools:
+    for pool in gacha_data.special_pools + gacha_data.rerun_pools + gacha_data.joint_pools + gacha_data.weapon_pools:
         local_pool = ef_gacha_pool_data.get_pool(pool.pool_id)
         if local_pool:
             pool.up_six_chars = local_pool.up_six_char_ids

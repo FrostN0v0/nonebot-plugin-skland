@@ -401,6 +401,69 @@ def test_query_parsing_uses_or_within_and_across_dimensions(app, operator_catalo
     ]
 
 
+@pytest.mark.parametrize(
+    ("chinese", "numeric"),
+    [
+        ("一星", "1星"),
+        ("二星", "2星"),
+        ("三星", "3星"),
+        ("四星", "4星"),
+        ("五星", "5星"),
+        ("六星", "6星"),
+        ("六★", "6★"),
+        ("五星级", "5星级"),
+        ("四-六星", "4-6星"),
+        ("六~四星", "6~4星"),
+        ("四-6星", "4-6星"),
+    ],
+)
+def test_chinese_star_filters_match_numeric_filters(app, operator_catalog, chinese, numeric):
+    from nonebot_plugin_skland.schemas import OperatorRosterQuery
+
+    actual = OperatorRosterQuery.from_input(operator_catalog, filters=(chinese,))
+    expected = OperatorRosterQuery.from_input(operator_catalog, filters=(numeric,))
+    assert actual == expected
+    assert actual.tags == expected.tags
+    owned = {entry.char_id: _owned_character(entry.char_id) for entry in operator_catalog.entries}
+    assert [entry.char_id for entry in operator_catalog.entries if actual.matches(entry, owned[entry.char_id])] == [
+        entry.char_id for entry in operator_catalog.entries if expected.matches(entry, owned[entry.char_id])
+    ]
+
+
+@pytest.mark.parametrize(
+    ("chinese", "numeric"),
+    [("四", "4"), ("五,六", "5,6"), ("四 五 六", "4 5 6"), ("四-六", "4-6"), ("六~四", "6~4")],
+)
+def test_chinese_rarity_options_match_numeric_options(app, operator_catalog, chinese, numeric):
+    from nonebot_plugin_skland.schemas import OperatorRosterQuery
+
+    assert OperatorRosterQuery.from_raw(operator_catalog, rarities=chinese) == OperatorRosterQuery.from_raw(
+        operator_catalog, rarities=numeric
+    )
+
+
+def test_chinese_stars_merge_without_rewriting_names_or_potential(app, operator_catalog):
+    from nonebot_plugin_skland.schemas import OperatorRosterQuery
+
+    query = OperatorRosterQuery.from_input(
+        operator_catalog, filters=("四星", "五星", "六星", "潜6", "名字:四月"), rarities="五,六"
+    )
+    assert query.stars == frozenset({4, 5, 6})
+    assert query.potentials == frozenset({6})
+    assert query.name == "四月"
+
+
+@pytest.mark.parametrize(
+    ("token", "message"),
+    [("七星", "无效星级"), ("零星", "无效星级"), ("四五六星", "星级范围必须在 1-6"), ("六星近卫", "无法识别筛选词")],
+)
+def test_chinese_star_filters_keep_existing_validation(app, operator_catalog, token, message):
+    from nonebot_plugin_skland.schemas import OperatorRosterQuery
+
+    with pytest.raises(ValueError, match=message):
+        OperatorRosterQuery.from_input(operator_catalog, filters=(token,))
+
+
 def test_query_supports_unfiltered_rarity_potential_aliases_and_conflicts(app, operator_catalog):
     from nonebot_plugin_skland.schemas import OperatorSort, OperatorOwnership, OperatorRosterQuery
 

@@ -86,6 +86,28 @@ async def _wait_for_send(qq, count):
     pytest.fail("Expected QQ button message was not sent")
 
 
+@pytest.mark.asyncio
+async def test_account_button_rule_uses_real_nonebot_dispatch(qq):
+    matcher = qq.module._account_button_click
+    assert await matcher.check_rule(qq.bot, _click("dispatch-check"), {"has_state": True})
+    assert not await matcher.check_rule(qq.bot, _message(), {})
+
+
+@pytest.mark.parametrize("private", [False, True], ids=["group", "c2c"])
+@pytest.mark.asyncio
+async def test_account_reply_sequences_and_callback_event_id(qq, mocker, private):
+    event = _message(private=private)
+    send = mocker.patch.object(qq.bot, "send_to_c2c" if private else "send_to_group", new=mocker.AsyncMock())
+    for index in range(4):
+        await Bot.send(qq.bot, event, "synthetic response")
+        assert send.await_args.kwargs["msg_seq"] == index + 1
+        assert send.await_args.kwargs["msg_id"] == event.id
+    clicked = _click("callback-check", private=private)
+    await Bot.send(qq.bot, clicked, "synthetic result")
+    assert send.await_args.kwargs["event_id"] == clicked.event_id
+    assert "msg_id" not in send.await_args.kwargs
+
+
 def test_optional_sdk_and_intent_gate(qq, mocker):
     module = qq.module
     with _context(qq.bot, _message()):
@@ -142,6 +164,7 @@ async def test_binding_buttons_validate_actor_and_reply_once(qq, private):
             assert not request.future.done()
         if not private:
             await module._handle_account_button(qq.bot, _click(nonce, group="group-b"))
+            assert qq.ack.await_args.kwargs["code"] == 1
             assert not request.future.done()
         deadline = request.deadline
         request.deadline = 0
@@ -281,6 +304,8 @@ async def test_unbind_buttons_preserve_database_contract(qq, mocker, make_user_s
             await task
         accounts = list(await session.scalars(select(SkUser).where(SkUser.owner_id == 701)))
         assert len(accounts) == remaining
+        if selection == "1" and confirm == "confirm":
+            assert [account.skland_user_id for account in accounts] == ["remote-2"]
         if confirm is not None:
             assert qq.calls[-1][0] is final_click
         waiter.assert_not_awaited()

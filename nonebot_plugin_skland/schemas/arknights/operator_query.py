@@ -162,6 +162,11 @@ def _parse_levels(raw: str | None, label: str) -> frozenset[int]:
     return frozenset(levels)
 
 
+def _parse_stars(raw: str | None) -> frozenset[int]:
+    normalized = str(raw).translate(str.maketrans("一二三四五六", "123456")) if raw is not None else None
+    return _parse_levels(normalized, "星级")
+
+
 def _parse_ownership(raw: str | None) -> OperatorOwnership:
     if raw is None or not str(raw).strip():
         return OperatorOwnership.OWNED
@@ -291,7 +296,7 @@ def _parse_query_tokens(catalog: OperatorCatalog, tokens: tuple[str, ...]) -> _O
                     patch.all_stars = True
                     patch.stars.clear()
                 elif not patch.all_stars:
-                    patch.stars.update(_parse_levels(rarity_text, "星级"))
+                    patch.stars.update(_parse_stars(rarity_text))
                 continue
             if value := profession_aliases.get(normalized):
                 patch.professions.add(value)
@@ -432,7 +437,7 @@ class OperatorRosterQuery(BaseModel):
             raise ValueError(f"排序方式不能同时为“{explicit_sort.label}”和“{patch.sort.label}”")
         parsed_sort = explicit_sort or patch.sort or OperatorSort.RELEASE
 
-        parsed_stars = set(_parse_levels(rarities, "星级"))
+        parsed_stars = set(_parse_stars(rarities))
         if _is_all_value(rarities) or patch.all_stars:
             parsed_stars.clear()
         else:

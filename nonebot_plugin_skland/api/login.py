@@ -48,7 +48,7 @@ class SklandLoginAPI:
             )
             if status := response.json().get("status"):
                 if status != 0:
-                    raise RequestException(f"获得cred失败：{response.json().get('messgae')}")
+                    raise RequestException(f"获得cred失败：{response.json().get('message')}")
             return CRED(**response.json().get("data"))
 
     @classmethod

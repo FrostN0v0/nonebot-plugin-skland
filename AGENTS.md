@@ -299,6 +299,8 @@ class Config(BaseModel):
 
 `api/login.py` 的 `SklandLoginAPI` 负责 token/cred 互换、cred_token 刷新、二维码扫码登录、role token 获取等。
 
+`SklandLoginAPI.get_cred()` 在现有非零 `status` 错误分支中读取响应的 `message`，保留服务端错误描述；不改变成功 CRED 解析或认证判断。`tests/test_auth.py` 使用离线 HTTP 传输覆盖错误消息字段，避免拼写错误将失败原因显示为 `None`。
+
 ### Token 自动刷新
 
 `services/auth.py` 的 `refresh_credentials` 统一执行凭证刷新；`CredentialState` 用于不持有数据库事务的账号同步。该模块不发送消息，也不使用 `None` 或错误字符串表示接口失败。

@@ -402,25 +402,26 @@ def test_query_parsing_uses_or_within_and_across_dimensions(app, operator_catalo
 
 
 @pytest.mark.parametrize(
-    ("chinese", "numeric"),
+    ("chinese", "numeric", "expected_stars"),
     [
-        ("一星", "1星"),
-        ("二星", "2星"),
-        ("三星", "3星"),
-        ("四星", "4星"),
-        ("五星", "5星"),
-        ("六星", "6星"),
-        ("六★", "6★"),
-        ("五星级", "5星级"),
-        ("四-六星", "4-6星"),
-        ("六~四星", "6~4星"),
-        ("四-6星", "4-6星"),
+        ("一星", "1星", {1}),
+        ("二星", "2星", {2}),
+        ("三星", "3星", {3}),
+        ("四星", "4星", {4}),
+        ("五星", "5星", {5}),
+        ("六星", "6星", {6}),
+        ("六★", "6★", {6}),
+        ("五星级", "5星级", {5}),
+        ("四-六星", "4-6星", {4, 5, 6}),
+        ("六~四星", "6~4星", {4, 5, 6}),
+        ("四-6星", "4-6星", {4, 5, 6}),
     ],
 )
-def test_chinese_star_filters_match_numeric_filters(app, operator_catalog, chinese, numeric):
+def test_chinese_star_filters_match_numeric_filters(app, operator_catalog, chinese, numeric, expected_stars):
     from nonebot_plugin_skland.schemas import OperatorRosterQuery
 
     actual = OperatorRosterQuery.from_input(operator_catalog, filters=(chinese,))
+    assert actual.stars == frozenset(expected_stars)
     expected = OperatorRosterQuery.from_input(operator_catalog, filters=(numeric,))
     assert actual == expected
     assert actual.tags == expected.tags
@@ -431,15 +432,21 @@ def test_chinese_star_filters_match_numeric_filters(app, operator_catalog, chine
 
 
 @pytest.mark.parametrize(
-    ("chinese", "numeric"),
-    [("四", "4"), ("五,六", "5,6"), ("四 五 六", "4 5 6"), ("四-六", "4-6"), ("六~四", "6~4")],
+    ("chinese", "numeric", "expected_stars"),
+    [
+        ("四", "4", {4}),
+        ("五,六", "5,6", {5, 6}),
+        ("四 五 六", "4 5 6", {4, 5, 6}),
+        ("四-六", "4-6", {4, 5, 6}),
+        ("六~四", "6~4", {4, 5, 6}),
+    ],
 )
-def test_chinese_rarity_options_match_numeric_options(app, operator_catalog, chinese, numeric):
+def test_chinese_rarity_options_match_numeric_options(app, operator_catalog, chinese, numeric, expected_stars):
     from nonebot_plugin_skland.schemas import OperatorRosterQuery
 
-    assert OperatorRosterQuery.from_raw(operator_catalog, rarities=chinese) == OperatorRosterQuery.from_raw(
-        operator_catalog, rarities=numeric
-    )
+    actual = OperatorRosterQuery.from_raw(operator_catalog, rarities=chinese)
+    assert actual.stars == frozenset(expected_stars)
+    assert actual == OperatorRosterQuery.from_raw(operator_catalog, rarities=numeric)
 
 
 def test_chinese_stars_merge_without_rewriting_names_or_potential(app, operator_catalog):

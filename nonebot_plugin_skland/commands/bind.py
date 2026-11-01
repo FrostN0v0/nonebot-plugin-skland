@@ -5,6 +5,7 @@ from typing import Literal
 from datetime import datetime, timedelta
 
 from nonebot import logger
+from nonebot.adapters import Event
 from nonebot_plugin_user import UserSession
 from nonebot_plugin_orm import async_scoped_session
 from nonebot_plugin_waiter.unimsg import prompt_until
@@ -12,6 +13,7 @@ from nonebot_plugin_alconna import Match, Arparma, MsgTarget, UniMessage
 
 from ..services import binding
 from ..api import SklandLoginAPI
+from ..integrations import qq_account
 from ..utils.message import send_reaction
 from ..render import render_bound_roles_card
 from ..account import exclusive_account_operation
@@ -47,12 +49,13 @@ async def _send_changed_binding_plan(
     user_session: UserSession,
     plan: BoundRolesPlan,
     text: str,
+    reply_event: Event | None = None,
 ) -> None:
     image = await _render_plan_card(plan)
     if image is None:
-        await UniMessage(text).send(at_sender=True)
+        await UniMessage(text).send(target=reply_event, at_sender=True)
         return
-    await _card_message(user_session, image, text).send(reply_to=True)
+    await _card_message(user_session, image, text).send(target=reply_event, reply_to=reply_event is None)
 
 
 async def _confirm_account_binding(
@@ -63,6 +66,7 @@ async def _confirm_account_binding(
     mode: Literal["add", "update", "upsert"],
     user_session: UserSession,
     session: async_scoped_session,
+    use_buttons: bool = False,
 ) -> None:
     try:
         prepared = await binding.prepare_account_binding(owner_id, pending, snapshot, session, mode=mode)
@@ -91,19 +95,23 @@ async def _confirm_account_binding(
         ).send(reply_to=True)
         return
 
-    response = await prompt_until(
-        _card_message(
-            user_session,
-            image,
-            "请核对角色列表,回复「确认」保存账号,回复「取消」放弃(60 秒)",
-        ),
-        lambda message: message.extract_plain_text().strip() in {"确认", "取消"},
-        timeout=60,
-        retry=2,
-        retry_prompt="仅接受「确认」或「取消」,请重新回复",
-        timeout_prompt="确认超时,未保存账号",
-        limited_prompt="确认次数已用尽,未保存账号",
-    )
+    context = qq_account.current_context() if use_buttons else None
+    if context is not None:
+        response = await qq_account.confirm_binding(image, *context)
+    else:
+        response = await prompt_until(
+            _card_message(
+                user_session,
+                image,
+                "请核对角色列表,回复「确认」保存账号,回复「取消」放弃(60 秒)",
+            ),
+            lambda message: message.extract_plain_text().strip() in {"确认", "取消"},
+            timeout=60,
+            retry=2,
+            retry_prompt="仅接受「确认」或「取消」,请重新回复",
+            timeout_prompt="确认超时,未保存账号",
+            limited_prompt="确认次数已用尽,未保存账号",
+        )
     if response is None:
         return
     if response.extract_plain_text().strip() == "取消":
@@ -217,6 +225,7 @@ async def qrcode_handler(
                 mode="upsert",
                 user_session=user_session,
                 session=session,
+                use_buttons=True,
             )
     except AccountOperationInProgress:
         await UniMessage("已有账号管理操作进行中").send(at_sender=True)
@@ -227,6 +236,8 @@ async def unbind_handler(
     session: async_scoped_session,
 ) -> None:
     owner_id = user_session.user_id
+    context = qq_account.current_context()
+    reply_event = None
     try:
         async with exclusive_account_operation(owner_id):
             selection_plan = await binding.load_bound_roles_plan(
@@ -244,19 +255,22 @@ async def unbind_handler(
                 return
 
             valid_indexes = {str(account.index) for account in selection_plan.card.accounts}
-            response = await prompt_until(
-                _card_message(
-                    user_session,
-                    selection_image,
-                    "请回复账号序号,或回复「全部」「取消」(60 秒)",
-                ),
-                lambda message: message.extract_plain_text().strip() in valid_indexes | {"全部", "取消"},
-                timeout=60,
-                retry=2,
-                retry_prompt="账号序号无效,请回复卡片中的账号序号、「全部」或「取消」",
-                timeout_prompt="解绑选择超时,未做任何更改",
-                limited_prompt="账号序号输入次数已用尽,未做任何更改",
-            )
+            if context is not None:
+                response = await qq_account.select_unbind_account(selection_plan, selection_image, *context)
+            else:
+                response = await prompt_until(
+                    _card_message(
+                        user_session,
+                        selection_image,
+                        "请回复账号序号,或回复「全部」「取消」(60 秒)",
+                    ),
+                    lambda message: message.extract_plain_text().strip() in valid_indexes | {"全部", "取消"},
+                    timeout=60,
+                    retry=2,
+                    retry_prompt="账号序号无效,请回复卡片中的账号序号、「全部」或「取消」",
+                    timeout_prompt="解绑选择超时,未做任何更改",
+                    limited_prompt="账号序号输入次数已用尽,未做任何更改",
+                )
             if response is None:
                 return
             selection = response.extract_plain_text().strip()
@@ -289,26 +303,43 @@ async def unbind_handler(
                 if selection == "全部"
                 else "确认解绑将删除所选账号的角色和抽卡记录,回复「确认」继续(30 秒)"
             )
-            confirmation = await prompt_until(
-                _card_message(user_session, confirmation_image, confirmation_text),
-                lambda _message: True,
-                timeout=30,
-                retry=0,
-                timeout_prompt="解绑确认超时,未做任何更改",
-            )
+            if context is not None:
+                button_response = await qq_account.prompt_buttons(
+                    confirmation_image,
+                    *context,
+                    text=confirmation_text.replace("回复「确认」", "点击「确认解绑」"),
+                    options=[("confirm", "确认解绑", 1), ("cancel", "取消", 0)],
+                    timeout=30,
+                    timeout_prompt="解绑确认超时,未做任何更改",
+                    failure_prompt="解绑确认按钮发送失败（{reason}）,未做任何更改",
+                )
+                if button_response is None:
+                    return
+                choice, reply_event = button_response
+                confirmation = UniMessage("确认" if choice == "confirm" else "取消")
+            else:
+                confirmation = await prompt_until(
+                    _card_message(user_session, confirmation_image, confirmation_text),
+                    lambda _message: True,
+                    timeout=30,
+                    retry=0,
+                    timeout_prompt="解绑确认超时,未做任何更改",
+                )
             if confirmation is None:
                 return
             if confirmation.extract_plain_text().strip() != "确认":
-                await UniMessage("已取消解绑操作").send(at_sender=True)
+                await UniMessage("已取消解绑操作").send(target=reply_event, at_sender=True)
                 return
 
             try:
                 await binding.commit_account_unbind(prepared, session)
             except BindingStateChangedError as error:
                 if error.plan is None:
-                    await UniMessage("绑定数据已变化,请重新操作").send(at_sender=True)
+                    await UniMessage("绑定数据已变化,请重新操作").send(target=reply_event, at_sender=True)
                 else:
-                    await _send_changed_binding_plan(user_session, error.plan, "绑定数据已变化,请重新操作")
+                    await _send_changed_binding_plan(
+                        user_session, error.plan, "绑定数据已变化,请重新操作", reply_event=reply_event
+                    )
                 return
 
             overview = await binding.load_bound_roles_plan(
@@ -318,8 +349,8 @@ async def unbind_handler(
             )
             send_reaction(user_session, "done")
             if not overview.card.accounts:
-                await UniMessage("解绑成功,已清除全部绑定数据").send(at_sender=True)
+                await UniMessage("解绑成功,已清除全部绑定数据").send(target=reply_event, at_sender=True)
                 return
-            await _send_changed_binding_plan(user_session, overview, "解绑成功")
+            await _send_changed_binding_plan(user_session, overview, "解绑成功", reply_event=reply_event)
     except AccountOperationInProgress:
         await UniMessage("已有账号管理操作进行中").send(at_sender=True)

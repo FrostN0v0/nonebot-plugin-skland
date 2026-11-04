@@ -189,21 +189,19 @@ class Notifications:
         return None
 
     def update(self, notice, **fields):
-        allowed = {
-            "status",
-            "text_sent",
-            "image_sent",
-            "lease",
-            "next_attempt",
-            "error",
+        statements = {
+            "status": "UPDATE task_notice SET status=? WHERE task_id=? AND version=?",
+            "text_sent": "UPDATE task_notice SET text_sent=? WHERE task_id=? AND version=?",
+            "image_sent": "UPDATE task_notice SET image_sent=? WHERE task_id=? AND version=?",
+            "lease": "UPDATE task_notice SET lease=? WHERE task_id=? AND version=?",
+            "next_attempt": "UPDATE task_notice SET next_attempt=? WHERE task_id=? AND version=?",
+            "error": "UPDATE task_notice SET error=? WHERE task_id=? AND version=?",
         }
-        if not fields or not fields.keys() <= allowed:
+        if not fields or not fields.keys() <= statements.keys():
             raise ValueError("invalid delivery update")
         with self.store.db() as db:
-            db.execute(
-                "UPDATE task_notice SET " + ",".join(f"{key}=?" for key in fields) + " WHERE task_id=? AND version=?",
-                (*fields.values(), notice["task_id"], notice["version"]),
-            )
+            for field, value in fields.items():
+                db.execute(statements[field], (value, notice["task_id"], notice["version"]))
 
     async def send(self, bot, notice, message):
         async with self.lock:

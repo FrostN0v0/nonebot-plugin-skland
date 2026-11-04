@@ -70,8 +70,8 @@ MAA_REMOTE_DATA_DIR=<MAA_DATA_DIR> <GATEWAY_PYTHON> -m uvicorn --app-dir <MAA_MO
 | `<ACME_WEBROOT>` | HTTP-01 challenge 文件目录 |
 | `<GATEWAY_PORT>` | 与网关监听一致的回环端口 |
 | `<MAA_DATA_DIR>` | bot 与网关共用的 MAA 专用目录 |
-| `<CERTBOT_BIN>` / `<CERTBOT_LOG_DIR>` | certbot 可执行文件及专属日志目录 |
-| `<NGINX_RELOAD_COMMAND>` | 本机成功部署证书后的 reload 命令，如 `systemctl reload nginx` |
+| `<CERTBOT_BIN>` / `<CERTBOT_LOG_DIR>` | certbot 可执行文件及专属日志目录，均填绝对路径 |
+| `<NGINX_RELOAD_COMMAND>` | 本机成功部署证书后执行的一条 reload 命令，可执行文件填绝对路径，如 `/usr/bin/systemctl reload nginx`；参数含空格时加引号，不支持管道、重定向、变量展开或多条命令 |
 | `<RENEW_ENV_PATH>` / `<RENEW_SCRIPT_PATH>` / `<ADMIN_PYTHON>` | root 专用续期配置、脚本和 Python 的绝对路径 |
 | `<NGINX_LOG_DIR>` / `<NGINX_USER>` / `<NGINX_LOG_GROUP>` | Nginx 专属错误日志目录及其用户/组 |
 | `<GATEWAY_USER>` / `<MAA_SHARED_GROUP>` | 网关系统用户及共享组 |
@@ -84,7 +84,9 @@ MAA_REMOTE_DATA_DIR=<MAA_DATA_DIR> <GATEWAY_PYTHON> -m uvicorn --app-dir <MAA_MO
 
 IP 证书的签发方式及更新频率按所选 ACME 客户端说明配置，不直接套用域名示例。签发成功后填写证书链和私钥路径，检查 Nginx 配置再加载 HTTPS。安装续期单元为 `maa-cert-renew.service` 和 `maa-cert-renew.timer`，确认 timer 已启用；证书目录及 renewal 配置保留给 ACME 客户端，私钥不放入 `SKLAND`。
 
-续期环境文件仅 root 可读；状态文件写入共享目录并继承共享组，bot 只读状态。管理员可用 `/MAA证书` 查询剩余时间与检查异常，不向普通用户开放。此指令不会发起续期。
+续期环境文件仅 root 可读写；续期脚本、配置的可执行文件及其父目录由 root 管理，不允许 bot、网关用户或其他非特权用户修改。脚本以参数列表启动 certbot，reload 配置按单条命令解析并转义后交给 certbot 的部署 hook；不能填写 shell 脚本片段，复杂操作应放入 root 管理的独立可执行脚本。`<CERT_NAME>` 以字母或数字开头，其余字符限字母、数字、点、下划线和连字符。
+
+状态文件写入共享目录并继承共享组，bot 只读状态。管理员可用 `/MAA证书` 查询剩余时间与检查异常，不向普通用户开放。此指令不会发起续期。
 
 ## 三天保留
 

@@ -1,5 +1,6 @@
 from nonebot import get_driver
 
+from .config import config
 from .schemas.help import HelpEntry, HelpCategory
 
 HELP_PREFIX = min(get_driver().config.command_start, key=lambda value: (len(value), value), default="")
@@ -392,6 +393,24 @@ HELP_ENTRIES = (
         ),
     ),
 )
+
+if config.maa.enabled:
+    HELP_ENTRIES += (
+        HelpEntry(
+            func="MAA 远控",
+            category="other",
+            command="maa",
+            brief_des="QQ 按钮菜单控制电脑上的 MAA，查看任务结果与截图",
+            condition="QQ 官方 bot · 私聊绑定 / 群聊操作",
+            examples=("maa", "MAA绑定", "MAA结果"),
+            detail_des=(
+                "私聊发送 `MAA绑定`，按回复填写 MAA 远程控制设置，测试连接后回群使用菜单  \n"
+                "支持一键长草、基建、刷理智、公招、信用、领奖、肉鸽、截图与停止  \n"
+                "任务沿用 MAA 本机配置；任务结果主动返回发起会话，群内截图也会公开显示  \n"
+                "MAA 的 SUCCESS 回报不包含具体结束原因；停止请求通过后续心跳确认"
+            ),
+        ),
+    )
 
 HELP_CATEGORIES: dict[str, HelpCategory] = {entry.func: entry.category for entry in HELP_ENTRIES}
 

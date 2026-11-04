@@ -13,6 +13,18 @@
 
 ## 技术栈与关键依赖
 
+### 可选 MAA 远控
+
+- `integrations/maa/` 为本插件内的 QQ 官方 bot 可选模块，`skland.maa.enabled` 默认关闭；仅启用时导入 runtime，不缩减森空岛其他功能的适配器支持。
+- 可选依赖安装命令为 `uv add 'nonebot-plugin-skland[maa]'`。`public_url` 填公网 HTTPS 根地址，`data_dir` 默认为 localstore 数据目录下 `maa/`，独立网关使用同一目录。
+- 命令由 `integrations/maa/matcher.py` 使用 Alconna 注册，`/maa` 和 `/MAA绑定` 等快捷入口共用 Commands；不使用正则消息分发，不提供文字菜单或模式切换。
+- 使用 `UserSession.user_id` 识别设备归属，按钮保存该归属并验证 bot、QQ 用户、会话、有效期及一次性使用；文字与图片使用 UniMessage 导出。绑定密钥仅私聊返回。
+- `core.py` 使用独立 SQLite 队列与通知事务供低权限网关共享，不访问森空岛 ORM 数据库。旧独立远控的身份命名方式不兼容，需要新目录并重新绑定。
+- 网关通过 `uvicorn --app-dir <MAA_MODULE_DIR> gateway:app` 加载同目录 core/protocol；不执行 Skland 包入口，不读取 NoneBot/QQ/森空岛凭证。不要使用会初始化父包的启动方式。
+- 持久通知返回发起会话，文本/截图分别记录发送进度，限制重试。停止通过心跳确认；SUCCESS 不等同于正常完成。任务、审计、通知、日志和截图保留三天，绑定保留至解绑。
+- 普通用户均可绑定自己的设备，证书状态仅超级用户可查，不放入普通帮助或按钮。用户说明在 `docs/maa.md`，部署说明在 `docs/maa-deployment.md`，脱敏模板在 `examples/maa/`。
+- 本地检查为 `uv run python -m unittest discover -s tests/maa -p 'test_*.py' -q` 和 `uv run pytest tests/test_maa_integration.py -q`；不连接服务器，不自动启动服务或签发证书。
+
 - **Python**: >= 3.10
 - **Bot 框架**: NoneBot2
 - **命令系统**: nonebot-plugin-alconna / arclet-alconna

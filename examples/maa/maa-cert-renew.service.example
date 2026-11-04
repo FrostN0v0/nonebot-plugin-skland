@@ -1,0 +1,15 @@
+[Unit]
+Description=Renew MAA HTTPS certificate
+After=network-online.target nginx.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=<RENEW_ENV_PATH>
+ExecStart=<ADMIN_PYTHON> <RENEW_SCRIPT_PATH>
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/etc/letsencrypt /var/lib/letsencrypt <ACME_WEBROOT> <CERTBOT_LOG_DIR> <MAA_DATA_DIR>
+LogNamespace=skland-maa

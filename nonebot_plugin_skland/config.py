@@ -47,7 +47,15 @@ class CustomSource(BaseModel):
         return self.uri
 
 
+class MaaConfig(BaseModel):
+    enabled: bool = False
+    public_url: str = ""
+    data_dir: Path | None = None
+
+
 class ScopedConfig(BaseModel):
+    maa: MaaConfig = Field(default_factory=MaaConfig)
+    """QQ 官方 bot 的可选 MAA 远控模块。"""
     github_proxy_url: str = "https://gh-proxy.com/"
     """GitHub 代理 URL"""
     github_token: str = ""

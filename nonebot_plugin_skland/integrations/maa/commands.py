@@ -7,8 +7,8 @@ from .core import RemoteError
 
 HELP = (
     "【MAA 远程管理】\n"
-    "群里发送 /maa，使用竖版按钮菜单。\n"
-    "/MAA绑定 — 仅私聊生成连接设置\n"
+    "私聊或群聊发送 /maa，使用竖版按钮菜单。\n"
+    "/MAA绑定 — 网页填写设备标识符，QQ 确认后在原浏览器领取设置\n"
     "/MAA状态 — 设备在线状态\n"
     "/MAA 心跳 — 查询远程任务是否空闲\n"
     "/MAA 开始 一键长草 — 执行本机预设\n"
@@ -81,24 +81,14 @@ class Commands:
                 )
             except (OSError, ValueError, KeyError, TypeError):
                 return "证书检查信息暂不可用，请管理员查看续期服务。", None
-        if operation in {"绑定", "解绑"} and not private:
+        if operation == "解绑" and not private:
             return (
                 "绑定配置和解绑仅限私聊，请私聊机器人发送 /MAA绑定 或 /MAA解绑。",
                 None,
             )
         if operation == "绑定":
-            base = validate_base_url(self.public_url)
-            key = self.store.issue(owner)
             return (
-                "【MAA 绑定设置 · 请勿转发】\n"
-                "在电脑 MAA 的远程控制设置中填写：\n"
-                f"获取任务端点：{base}/maa/getTask\n"
-                f"汇报任务端点：{base}/maa/reportStatus\n"
-                f"用户标识符：{key}\n"
-                "启用远程控制后测试连接，再私聊 /MAA状态。\n"
-                "轮询间隔建议设为 5000 毫秒（5 秒）。\n"
-                "首次连接须在 15 分钟内完成；连接后密钥持续有效，解绑立即撤销。\n"
-                "若需重新生成尚未连接的密钥，可再次发送 /MAA绑定。"
+                "绑定由 QQ 网页确认流程处理，请发送 /MAA绑定 获取网页链接。"
             ), None
         if operation == "解绑":
             self.store.revoke(owner)

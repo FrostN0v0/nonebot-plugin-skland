@@ -401,10 +401,11 @@ if config.maa.enabled:
             category="other",
             command="maa",
             brief_des="QQ 按钮菜单控制电脑上的 MAA，查看任务结果与截图",
-            condition="QQ 官方 bot · 私聊绑定 / 群聊操作",
+            condition="QQ 官方 bot · 群聊 / 私聊",
             examples=("maa", "MAA绑定", "MAA结果"),
             detail_des=(
-                "私聊发送 `MAA绑定`，按回复填写 MAA 远程控制设置，测试连接后回群使用菜单  \n"
+                "发送 `MAA绑定`，在网页填写设备标识符，回原 QQ 会话核对校验码并确认  \n"
+                "设备位置：MAA设置-远程控制-设备标识符；回原浏览器领取连接设置后测试连接  \n"
                 "支持一键长草、基建、刷理智、公招、信用、领奖、肉鸽、截图与停止  \n"
                 "任务沿用 MAA 本机配置；任务结果主动返回发起会话，群内截图也会公开显示  \n"
                 "MAA 的 SUCCESS 回报不包含具体结束原因；停止请求通过后续心跳确认"

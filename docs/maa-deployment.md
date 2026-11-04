@@ -13,7 +13,7 @@ uv add 'nonebot-plugin-skland[maa]'
 配置默认关闭。将 `maa` 合并进已有的 `SKLAND` JSON；保留其他配置：
 
 ```dotenv
-SKLAND='{"maa":{"enabled":true,"public_url":"https://maa.example.com","data_dir":"/var/lib/skland-maa"}}'
+SKLAND='{"maa":{"enabled":true,"public_url":"https://maa.example.com","data_dir":"/var/lib/skland-maa","binding_state_dir":"/var/lib/skland-maa-binding","binding_socket":"/var/lib/skland-maa-ipc/broker.sock"}}'
 ```
 
 也可使用仓库约定的嵌套字段形式；与上面的 JSON 示例二选一，其他森空岛配置保持原值：
@@ -22,6 +22,8 @@ SKLAND='{"maa":{"enabled":true,"public_url":"https://maa.example.com","data_dir"
 skland__maa__enabled=true
 skland__maa__public_url=https://maa.example.com
 skland__maa__data_dir=/var/lib/skland-maa
+skland__maa__binding_state_dir=/var/lib/skland-maa-binding
+skland__maa__binding_socket=/var/lib/skland-maa-ipc/broker.sock
 ```
 
 | 字段 | 默认值 | 填写说明 |
@@ -29,6 +31,8 @@ skland__maa__data_dir=/var/lib/skland-maa
 | `skland.maa.enabled` | `false` | 是否加载 MAA 命令、菜单、通知与清理任务 |
 | `skland.maa.public_url` | 空字符串 | 外部 HTTPS 根地址，不带 `/maa/getTask`；回环 HTTP 仅供本地测试 |
 | `skland.maa.data_dir` | localstore 插件数据目录下的 `maa/` | 与网关 `MAA_REMOTE_DATA_DIR` 指向同一绝对目录 |
+| `skland.maa.binding_state_dir` | localstore 插件数据目录下的 `maa-binding/` | bot 私有目录，不能位于网关可写的目录树 |
+| `skland.maa.binding_socket` | 未设置 | Unix socket 路径，未配置时网页绑定不可用 |
 
 机器人需要 QQ 适配器、单聊与群消息事件、INTERACTION_CREATE 事件、Markdown/内嵌键盘权限。主动汇报还需要 QQ 主动消息权限，平台频控或禁言仍可能导致失败。普通用户可绑定自己的设备；证书状态查询仅超级用户可用，不出现在用户操作手册和按钮菜单。
 
@@ -58,6 +62,23 @@ MAA_REMOTE_DATA_DIR=<MAA_DATA_DIR> <GATEWAY_PYTHON> -m uvicorn --app-dir <MAA_MO
 ```
 
 连接密钥只保存哈希，首次连接绑定设备；汇报检查设备、任务归属及状态。上传大小不超过 12 MiB，截图解码后另有限制。单进程最多同时处理两份回报，网关服务限制进程资源。模板只限制网关服务，不修改 SSH、安全组或 bot 的权限。
+
+## 网页绑定服务
+
+网页服务与远控网关使用不同的 Unix 账户和组。按 [binding.service.example](../examples/maa/binding.service.example) 配置服务，监听回环 `<BINDING_PORT>`，通过 Nginx 精确公开 `/maa/bind` 与 `/maa/bind/`。
+网页不读取绑定 SQLite、QQ 凭证或证书私钥，只能通过 Unix socket 调用 `submit`、`status`、`redeem`；创建申请与 QQ 确认由 bot 执行。
+
+由管理员预先创建 `<BINDING_STATE_DIR>`（bot 所有，`0700`）及独立 `<BINDING_SOCKET_DIR>`（bot 所有、组为 `<BINDING_GROUP>`，`0750`），socket 填为该目录中的 `<BINDING_SOCKET>`。
+网页用户不能写 socket 所在目录；bot 创建 socket 并设为 `0660`。目录及其父目录不能位于网关或网页可写的树中。
+若 bot 服务启用了 `ProtectSystem`，仅为 bot 增加两个专用目录的写权限。无需改变 bot 的全局用户、森空岛数据权限或其他服务。
+
+模板设置 CPU 25%、内存 128 MiB、并发 12，并对网页单独限流和限连接。网页每四秒查询一次，后台标签暂停，故障退避至三十秒，十分钟后停止。
+绑定申请最多 100 份，每份最多三个浏览器；过期状态由 bot 定期清理。申请不是登录认证，必须由 QQ 发起者核对网页校验码；本人确认他人的网页仍可能误绑定。
+
+启动 bot 后启动网页服务，未加载 broker 时网页会返回暂不可用。开启 QQ 群聊和单聊消息、按钮权限；确认消息发送失败时支持 `/MAA绑定 查询` 从原会话重新获取。
+密钥仅在已确认浏览器领取一次，丢失后重新申请；首次连接有效期十五分钟，并校验申请中的设备标识符。现有已连接绑定继续可用。
+
+`/超管菜单` 仅 QQ 私聊且 SUPERUSER 可用，列出本模块及 Skland 管理命令；不会加入用户帮助目录。
 
 ## HTTPS 与自动续期
 

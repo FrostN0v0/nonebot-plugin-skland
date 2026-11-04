@@ -66,7 +66,7 @@ class StateTests(Fixture):
         assert "已提交" in reply
         assert self.connect()["tasks"][0]["type"] == "LinkStart-Base"
         reply, _ = self.commands.handle("绑定", False, self.owner)
-        assert "仅限私聊" in reply
+        assert "网页确认流程" in reply
         assert self.key not in reply
         reply, _ = self.commands.handle("状态", False, digest("bot:c2c:bob"))
         assert "尚未绑定" in reply
@@ -103,7 +103,6 @@ class StateTests(Fixture):
         self.connect()
         before = self.store.path.read_bytes()
         for text in [
-            "绑定",
             "解绑",
         ]:
             message, image = self.commands.handle(text, False, self.owner)
@@ -235,10 +234,10 @@ class StateTests(Fixture):
 
     def test_binding_output_only_private_and_no_secret_in_status(self):
         message, _ = self.commands.handle("绑定", True, self.owner)
-        key = message.split("用户标识符：")[1].splitlines()[0]
-        self.store.poll(key, self.device)
+        assert "用户标识符：" not in message
+        self.connect()
         status, _ = self.commands.handle("状态", True, self.owner)
-        assert key not in status
+        assert self.key not in status
         assert self.device not in status
         assert "在线" in status
 

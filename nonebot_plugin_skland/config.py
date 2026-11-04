@@ -51,6 +51,8 @@ class MaaConfig(BaseModel):
     enabled: bool = False
     public_url: str = ""
     data_dir: Path | None = None
+    binding_state_dir: Path | None = None
+    binding_socket: Path | None = None
 
 
 class ScopedConfig(BaseModel):

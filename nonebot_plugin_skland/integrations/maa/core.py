@@ -87,6 +87,8 @@ class Store:
                     PRIMARY KEY(task_id,version)
                 );
             """)
+            if "expected_device" not in {row[1] for row in db.execute("PRAGMA table_info(binding)")}:
+                db.execute("ALTER TABLE binding ADD COLUMN expected_device TEXT")
         # Both services share the group, but only the file owner can chmod it.
         if stat.S_IMODE(self.path.stat().st_mode) != 0o660:
             self.path.chmod(0o660)
@@ -122,7 +124,7 @@ class Store:
             )
             return result.rowcount == 1
 
-    def issue(self, owner):
+    def issue(self, owner, expected_device=None):
         now = self.clock()
         key = "maa_" + secrets.token_urlsafe(32)
         with self.db() as db:
@@ -135,8 +137,8 @@ class Store:
                 db.execute("DELETE FROM binding WHERE id=?", (old["id"],))
             binding_id = uuid.uuid4().hex
             db.execute(
-                "INSERT INTO binding(id,owner,key_hash,created) VALUES(?,?,?,?)",
-                (binding_id, owner, digest(key), now),
+                "INSERT INTO binding(id,owner,key_hash,created,expected_device) VALUES(?,?,?,?,?)",
+                (binding_id, owner, digest(key), now, expected_device),
             )
             self.audit(db, binding_id, "bind", "pending")
         return key
@@ -162,6 +164,8 @@ class Store:
             raise RemoteError("authentication")
         if row["device"] is None:
             if not claim or self.clock() - row["created"] > 900:
+                raise RemoteError("authentication")
+            if row["expected_device"] and not secrets.compare_digest(row["expected_device"], device):
                 raise RemoteError("authentication")
             db.execute("UPDATE binding SET device=? WHERE id=?", (device, row["id"]))
             self.audit(db, row["id"], "bind", "connected")

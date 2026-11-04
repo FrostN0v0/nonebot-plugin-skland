@@ -1,4 +1,7 @@
 limit_req_zone $binary_remote_addr zone=maa_remote:1m rate=5r/s;
+limit_req_zone $binary_remote_addr zone=maa_binding:1m rate=2r/s;
+limit_conn_zone $binary_remote_addr zone=maa_binding_perip:1m;
+limit_conn_zone $server_name zone=maa_binding_total:1m;
 limit_conn_zone $binary_remote_addr zone=maa_perip:1m;
 limit_conn_zone $server_name zone=maa_total:1m;
 
@@ -53,6 +56,26 @@ server {
         proxy_pass http://127.0.0.1:<GATEWAY_PORT>;
         proxy_connect_timeout 3s;
         proxy_read_timeout 30s;
+    }
+    location = /maa/bind {
+        limit_req zone=maa_binding burst=12 nodelay;
+        limit_conn maa_binding_perip 4;
+        limit_conn maa_binding_total 12;
+        limit_except GET { deny all; }
+        proxy_pass http://127.0.0.1:<BINDING_PORT>;
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 10s;
+    }
+    location ^~ /maa/bind/ {
+        limit_req zone=maa_binding burst=12 nodelay;
+        limit_conn maa_binding_perip 4;
+        limit_conn maa_binding_total 12;
+        limit_except GET POST { deny all; }
+        client_max_body_size 2k;
+        proxy_request_buffering off;
+        proxy_pass http://127.0.0.1:<BINDING_PORT>;
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 10s;
     }
     location / { return 404; }
 }

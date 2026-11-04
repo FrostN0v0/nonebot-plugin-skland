@@ -14,10 +14,12 @@ from nonebot.adapters.qq.exception import ActionFailed, NetworkError
 from nonebot.adapters.qq import C2CMessageCreateEvent, InteractionCreateEvent, GroupMessageCreateEvent
 
 from .matcher import control
-from .commands import Commands
 from .notify import Notifications
+from .binding_qq import BindingFlow
+from . import admin_menu as admin_menu
 from ...config import DATA_DIR, config
 from .core import Store, RemoteError, digest
+from .commands import Commands, validate_base_url
 from .menu import Menus, page_for, keyboard_message
 
 driver = get_driver()
@@ -26,11 +28,21 @@ commands = Commands(store, config.maa.public_url)
 menus = Menus()
 log = logger.bind(skland_maa=True)
 notifications = Notifications(store, log)
+binding_flow = BindingFlow(
+    (config.maa.binding_state_dir or DATA_DIR / "maa-binding") / "pairing.sqlite3",
+    config.maa.binding_socket, store,
+    validate_base_url(config.maa.public_url), log,
+)
 workers: list[asyncio.Task] = []
 log_sink: int | None = None
 
 
 async def operate(send, bot, event, operation, argument, private, owner):
+    if operation == "绑定":
+        await binding_flow.command(send, bot, event, owner, private, argument)
+        return
+    if operation == "解绑" and private:
+        await asyncio.to_thread(binding_flow.store.invalidate, owner)
     page = page_for(operation, private)
     if page:
         title, options = page
@@ -98,6 +110,19 @@ async def is_maa_callback(event: Event):
 click = on_notice(rule=is_maa_callback, priority=4, block=True)
 
 
+async def is_binding_callback(event: Event):
+    return (isinstance(event, InteractionCreateEvent) and event.type == 11
+            and (event.data.resolved.button_data or "").startswith("maabind:"))
+
+
+binding_click = on_notice(rule=is_binding_callback, priority=3, block=True)
+
+
+@binding_click.handle()
+async def handle_binding_click(bot: QQBot, event: InteractionCreateEvent):
+    await binding_flow.click(bot, event)
+
+
 @click.handle()
 async def handle_click(bot: QQBot, event: InteractionCreateEvent):
     if event.chat_type not in (1, 2):
@@ -146,6 +171,7 @@ async def notify_results():
     while True:
         try:
             await notifications.tick({key: bot for key, bot in get_bots().items() if isinstance(bot, QQBot)})
+            await binding_flow.tick({key: bot for key, bot in get_bots().items() if isinstance(bot, QQBot)})
         except (OSError, sqlite3.Error) as error:
             log.error(f"MAA notification worker failure type={type(error).__name__}")
         await asyncio.sleep(2)
@@ -154,6 +180,7 @@ async def notify_results():
 @driver.on_startup
 async def startup():
     global log_sink
+    await binding_flow.start()
     log_sink = logger.add(
         store.directory / "logs/maa.log",
         rotation="00:00",
@@ -170,5 +197,6 @@ async def shutdown():
         task.cancel()
     await asyncio.gather(*workers, return_exceptions=True)
     workers.clear()
+    await binding_flow.close()
     if log_sink is not None:
         logger.remove(log_sink)

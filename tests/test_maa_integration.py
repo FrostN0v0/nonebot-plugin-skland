@@ -25,6 +25,11 @@ def maa(app, tmp_path, mocker):
     store = Store(tmp_path / "maa")
     mocker.patch.object(module, "store", store)
     mocker.patch.object(module, "commands", Commands(store, "https://maa.example.com"))
+    from nonebot_plugin_skland.integrations.maa.binding_qq import BindingFlow
+
+    binding = BindingFlow(tmp_path / "binding/pairing.sqlite3", None, store, "https://maa.example.com", module.log)
+    binding.server = object()  # This test exercises QQ routing, not the Unix listener.
+    mocker.patch.object(module, "binding_flow", binding)
     return module
 
 
@@ -67,7 +72,7 @@ def test_alconna_commands_and_shortcuts(maa):
 
 
 @pytest.mark.asyncio
-async def test_private_bind_uses_user_session_and_group_cannot_issue_key(maa):
+async def test_both_scenes_create_web_request_without_disclosing_key(maa):
     from nonebot.adapters.qq import Message, GroupMessageCreateEvent
 
     from nonebot_plugin_skland.integrations.maa.core import digest
@@ -78,22 +83,22 @@ async def test_private_bind_uses_user_session_and_group_cannot_issue_key(maa):
     session = SimpleNamespace(user_id=101)
     await maa.handle(matcher, bot, private_event("/maa绑定"), command.parse("/maa绑定"), session)
     reply = str(matcher.send.call_args.args[0])
-    assert "用户标识符：maa_" in reply
-    assert "https://maa.example.com/maa/getTask" in reply
+    assert "https://maa.example.com/maa/bind?request=" in reply
+    assert "用户标识符：maa_" not in reply
     owner = digest(f"{bot.self_id}:user:101")
-    assert maa.store.view(owner)[0]
+    assert maa.store.view(owner)[0] is None
 
     group = GroupMessageCreateEvent.model_construct(
         id="group-bind",
         group_openid="test-group",
         content="/maa绑定",
         attachments=[],
-        author=SimpleNamespace(member_openid="alice"),
+        author=SimpleNamespace(member_openid="bob"),
         message=Message("/maa绑定"),
     )
     await maa.handle(matcher, bot, group, command.parse("/maa绑定"), session)
     reply = str(matcher.send.call_args.args[0])
-    assert "仅限私聊" in reply
+    assert "https://maa.example.com/maa/bind?request=" in reply
     assert "用户标识符" not in reply
 
 
@@ -200,7 +205,46 @@ def test_disabled_module_does_not_register_help(app):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(("text", "expected"), [("/MAA绑定", "用户标识符：maa_"), ("/maa状态", "尚未绑定")])
+async def test_private_control_and_result_origin(maa):
+    from nonebot_plugin_skland.integrations.maa.core import digest
+    from nonebot_plugin_skland.integrations.maa.matcher import command
+
+    bot = qq_bot()
+    owner = digest(f"{bot.self_id}:user:101")
+    key = maa.store.issue(owner)
+    maa.store.poll(key, "device")
+    matcher = SimpleNamespace(send=AsyncMock(), finish=AsyncMock())
+    await maa.handle(
+        matcher, bot, private_event("/maa 开始 基建"), command.parse("/maa 开始 基建"), SimpleNamespace(user_id=101)
+    )
+    assert "已提交" in str(matcher.send.call_args.args[0])
+    task = maa.store.poll(key, "device")["tasks"][0]
+    with maa.store.db() as db:
+        row = db.execute("SELECT * FROM task_origin WHERE task_id=?", (task["id"],)).fetchone()
+    assert (row["scene"], row["target"]) == ("private", "alice")
+
+
+@pytest.mark.asyncio
+async def test_admin_menu_private_and_superuser_only_and_hidden(maa, mocker):
+    from nonebot_plugin_skland.extras import HELP_ENTRIES
+    from nonebot_plugin_skland.integrations.maa import admin_menu as admin
+
+    matcher = SimpleNamespace(send=AsyncMock())
+    bot = qq_bot()
+    event = private_event("/超管菜单")
+    mocker.patch.object(admin, "SUPERUSER", new=AsyncMock(return_value=False))
+    await admin.show_admin_menu(bot, event, matcher)
+    matcher.send.assert_not_awaited()
+    mocker.patch.object(admin, "SUPERUSER", new=AsyncMock(return_value=True))
+    await admin.show_admin_menu(bot, object(), matcher)
+    matcher.send.assert_not_awaited()
+    await admin.show_admin_menu(bot, event, matcher)
+    assert "/MAA证书" in str(matcher.send.call_args.args[0])
+    assert "超管菜单" not in str(HELP_ENTRIES)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("text", "expected"), [("/MAA绑定", "/maa/bind?request="), ("/maa状态", "尚未绑定")])
 async def test_registered_matcher_resolves_framework_dependencies(maa, mocker, make_user_session, text, expected):
     from nonebot_plugin_orm import get_session
     from nonebot_plugin_user import UserSession
@@ -209,7 +253,7 @@ async def test_registered_matcher_resolves_framework_dependencies(maa, mocker, m
     from nonebot_plugin_skland.integrations.maa.matcher import control
 
     bot = qq_bot()
-    event = private_event(text, message_id="matcher-shortcut")
+    event = private_event(text, message_id="matcher-shortcut-" + text)
     send = mocker.patch.object(control, "send", new=AsyncMock())
     cached = DependencyCache()
     async with get_session() as session:
@@ -243,7 +287,7 @@ async def test_bare_command_opens_home_menu(maa, text, main_args):
     message = matcher.send.call_args.args[0]
     assert "MAA 远程控制" in str(message)
     keyboard = message[1].data["keyboard"].content
-    assert keyboard.rows[0].buttons[0].render_data.label == "生成绑定设置"
+    assert keyboard.rows[0].buttons[0].render_data.label == "绑定设备"
 
 
 @pytest.mark.parametrize("enabled", [False, True])

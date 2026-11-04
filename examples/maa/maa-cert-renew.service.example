@@ -6,7 +6,10 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 EnvironmentFile=<RENEW_ENV_PATH>
-ExecStart=<ADMIN_PYTHON> <RENEW_SCRIPT_PATH>
+ExecStart=<CERTBOT_BIN> renew --quiet --cert-name=<CERT_NAME> --max-log-backups 3 --logs-dir=<CERTBOT_LOG_DIR> --deploy-hook "<NGINX_RELOAD_COMMAND>"
+ExecStopPost=<ADMIN_PYTHON> <RENEW_SCRIPT_PATH>
+TimeoutStartSec=180
+TimeoutStopSec=30
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict

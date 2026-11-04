@@ -81,11 +81,6 @@ class Commands:
                 )
             except (OSError, ValueError, KeyError, TypeError):
                 return "证书检查信息暂不可用，请管理员查看续期服务。", None
-        if operation == "解绑" and not private:
-            return (
-                "绑定配置和解绑仅限私聊，请私聊机器人发送 /MAA绑定 或 /MAA解绑。",
-                None,
-            )
         if operation == "绑定":
             return ("绑定由 QQ 网页确认流程处理，请发送 /MAA绑定 获取网页链接。"), None
         if operation == "解绑":
@@ -97,10 +92,10 @@ class Commands:
         if operation in {"状态", "结果"}:
             binding, task = self.store.view(owner)
             if not binding:
-                return "尚未绑定，请私聊 /MAA绑定。", None
+                return "尚未绑定，请发送 /MAA绑定。", None
             if not binding["device"]:
                 state = (
-                    "等待首次连接"
+                    "等待首次连接：请核对本次网页的两个端点和用户标识符，填写后点击 MAA 的测试连接。"
                     if self.store.clock() - binding["created"] <= 900
                     else "绑定密钥已过期，请重新 /MAA绑定"
                 )

@@ -194,7 +194,12 @@ class BindingStore:
             if not row or row["state"] != "approved":
                 raise BindingError("未获确认或连接设置已经领取；如领取失败，请重新 /MAA绑定。")
             try:
-                key = self.issue(parent["identity"], row["device"])
+                scene, target = parent["target"].split(":", 1)
+                key = self.issue(
+                    parent["identity"],
+                    row["device"],
+                    origin={"bot_id": parent["bot"], "scene": scene, "target": target},
+                )
             except ValueError as error:
                 raise BindingError(str(error)) from None
             db.execute("UPDATE candidate SET state='delivered' WHERE id=?", (row["id"],))

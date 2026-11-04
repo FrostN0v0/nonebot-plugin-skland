@@ -54,7 +54,7 @@ class BindingFlow:
                 return
             binding, _ = await asyncio.to_thread(self.remote.view, owner)
             if binding and binding["device"]:
-                await send("已绑定设备；更换设备请先私聊 /MAA解绑。")
+                await send("已绑定设备；更换设备请先发送 /MAA解绑。")
                 return
             if self.server is None:
                 await send("网页绑定服务尚未启动，请管理员完成绑定服务配置并重启 bot。")
@@ -120,6 +120,19 @@ class BindingFlow:
             except Exception as error:  # noqa: BLE001 -- Don't log platform payloads.
                 self.log.warning(f"MAA binding notice failure type={type(error).__name__}")
             await asyncio.to_thread(self.store.notice_result, row["id"], success)
+        connected = await asyncio.to_thread(self.remote.claim_connection_notice, set(bots))
+        if connected:
+            success = False
+            try:
+                message = "MAA 首次连接成功，设备已绑定。发送 /MAA状态 查看状态，或 /maa 使用菜单。"
+                if connected["scene"] == "private":
+                    await bots[connected["bot_id"]].send_to_c2c(openid=connected["target"], message=message)
+                else:
+                    await bots[connected["bot_id"]].send_to_group(group_openid=connected["target"], message=message)
+                success = True
+            except Exception as error:  # noqa: BLE001 -- Never log platform payloads.
+                self.log.warning(f"MAA connection notice failure type={type(error).__name__}")
+            await asyncio.to_thread(self.remote.connection_notice_result, connected["binding_id"], success)
         with self.store.db() as db:
             alive = {row[0] for row in db.execute("SELECT id FROM entry")}
         self.origins = {k: v for k, v in self.origins.items() if k in alive}

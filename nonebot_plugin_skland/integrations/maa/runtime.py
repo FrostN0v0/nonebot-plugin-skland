@@ -16,7 +16,6 @@ from nonebot.adapters.qq import C2CMessageCreateEvent, InteractionCreateEvent, G
 from .matcher import control
 from .notify import Notifications
 from .binding_qq import BindingFlow
-from . import admin_menu as admin_menu
 from ...config import DATA_DIR, config
 from .core import Store, RemoteError, digest
 from .commands import Commands, validate_base_url
@@ -43,7 +42,7 @@ async def operate(send, bot, event, operation, argument, private, owner):
     if operation == "绑定":
         await binding_flow.command(send, bot, event, owner, private, argument)
         return
-    if operation == "解绑" and private:
+    if operation == "解绑":
         await asyncio.to_thread(binding_flow.store.invalidate, owner)
     page = page_for(operation, private)
     if page:

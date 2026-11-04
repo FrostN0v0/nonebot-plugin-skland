@@ -37,6 +37,14 @@ def digest(value):
     return hashlib.sha256(value.encode()).hexdigest()
 
 
+def device_matches(expected, actual):
+    # MAA may emit Guid "N" (32 hex) or "D" (hyphenated) format.
+    try:
+        return secrets.compare_digest(uuid.UUID(expected).bytes, uuid.UUID(actual).bytes)
+    except ValueError:
+        return secrets.compare_digest(expected, actual)
+
+
 class Store:
     def __init__(self, directory, clock=time.time):
         self.directory = Path(directory)
@@ -86,6 +94,11 @@ class Store:
                     error TEXT NOT NULL DEFAULT '',
                     PRIMARY KEY(task_id,version)
                 );
+                CREATE TABLE IF NOT EXISTS binding_origin (
+                    binding_id TEXT PRIMARY KEY REFERENCES binding(id) ON DELETE CASCADE,
+                    bot_id TEXT NOT NULL, scene TEXT NOT NULL, target TEXT NOT NULL,
+                    notice TEXT NOT NULL DEFAULT 'pending'
+                );
             """)
             if "expected_device" not in {row[1] for row in db.execute("PRAGMA table_info(binding)")}:
                 db.execute("ALTER TABLE binding ADD COLUMN expected_device TEXT")
@@ -124,7 +137,7 @@ class Store:
             )
             return result.rowcount == 1
 
-    def issue(self, owner, expected_device=None):
+    def issue(self, owner, expected_device=None, origin=None):
         now = self.clock()
         key = "maa_" + secrets.token_urlsafe(32)
         with self.db() as db:
@@ -141,7 +154,31 @@ class Store:
                 (binding_id, owner, digest(key), now, expected_device),
             )
             self.audit(db, binding_id, "bind", "pending")
+            if origin:
+                db.execute(
+                    "INSERT INTO binding_origin(binding_id,bot_id,scene,target) VALUES(?,?,?,?)",
+                    (binding_id, origin["bot_id"], origin["scene"], origin["target"]),
+                )
         return key
+
+    def claim_connection_notice(self, bots):
+        with self.db() as db:
+            rows = db.execute(
+                "SELECT o.* FROM binding_origin o JOIN binding b ON b.id=o.binding_id "
+                "WHERE b.device IS NOT NULL AND o.notice='pending'"
+            ).fetchall()
+            for row in rows:
+                if row["bot_id"] in bots:
+                    db.execute("UPDATE binding_origin SET notice='sending' WHERE binding_id=?", (row["binding_id"],))
+                    return dict(row)
+        return None
+
+    def connection_notice_result(self, binding_id, success):
+        with self.db() as db:
+            db.execute(
+                "UPDATE binding_origin SET notice=? WHERE binding_id=?",
+                ("sent" if success else "failed", binding_id),
+            )
 
     def revoke(self, owner):
         with self.db() as db:
@@ -165,11 +202,11 @@ class Store:
         if row["device"] is None:
             if not claim or self.clock() - row["created"] > 900:
                 raise RemoteError("authentication")
-            if row["expected_device"] and not secrets.compare_digest(row["expected_device"], device):
+            if row["expected_device"] and not device_matches(row["expected_device"], device):
                 raise RemoteError("authentication")
             db.execute("UPDATE binding SET device=? WHERE id=?", (device, row["id"]))
             self.audit(db, row["id"], "bind", "connected")
-        elif not secrets.compare_digest(row["device"], device):
+        elif not device_matches(row["device"], device):
             raise RemoteError("authentication")
         return row
 

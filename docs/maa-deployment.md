@@ -78,15 +78,13 @@ MAA_REMOTE_DATA_DIR=<MAA_DATA_DIR> <GATEWAY_PYTHON> -m uvicorn --app-dir <MAA_MO
 启动 bot 后启动网页服务，未加载 broker 时网页会返回暂不可用。开启 QQ 群聊和单聊消息、按钮权限；确认消息发送失败时支持 `/MAA绑定 查询` 从原会话重新获取。
 密钥仅在已确认浏览器领取一次，丢失后重新申请；首次连接有效期十五分钟，并校验申请中的设备标识符。现有已连接绑定继续可用。
 
-`/超管菜单` 仅 QQ 私聊且 SUPERUSER 可用，列出本模块及 Skland 管理命令；不会加入用户帮助目录。
-
 ## HTTPS 与自动续期
 
 以下模板不含真实地址、证书或部署路径：
 
 - [nginx.conf.example](../examples/maa/nginx.conf.example)：TLS、精确路由、请求大小与连接限制；80 端口仅开放 ACME challenge。`limit_*_zone` 放在 Nginx 的 `http` 上下文。
 - [renew.env.example](../examples/maa/renew.env.example)：续期脚本的证书、目录和命令字段。
-- [renew_certificate.py](../examples/maa/renew_certificate.py)：调用 certbot 续期，成功更新证书后执行 Nginx reload，并发布不含证书正文的状态文件。
+- [renew_certificate.py](../examples/maa/renew_certificate.py)：读取 systemd 提供的续期执行结果，发布不含证书正文的状态文件，不启动外部命令。
 - [maa-cert-renew.service.example](../examples/maa/maa-cert-renew.service.example) 与 [maa-cert-renew.timer.example](../examples/maa/maa-cert-renew.timer.example)：每六小时检查，随机延迟最多十五分钟，关机错过后补执行。
 
 填写这些参数：
@@ -114,7 +112,9 @@ MAA_REMOTE_DATA_DIR=<MAA_DATA_DIR> <GATEWAY_PYTHON> -m uvicorn --app-dir <MAA_MO
 
 IP 证书的签发方式及更新频率按所选 ACME 客户端说明配置，不直接套用域名示例。签发成功后填写证书链和私钥路径，检查 Nginx 配置再加载 HTTPS。安装续期单元为 `maa-cert-renew.service` 和 `maa-cert-renew.timer`，确认 timer 已启用；证书目录及 renewal 配置保留给 ACME 客户端，私钥不放入 `SKLAND`。
 
-续期环境文件仅 root 可读写；续期脚本、配置的可执行文件及其父目录由 root 管理，不允许 bot、网关用户或其他非特权用户修改。脚本以参数列表启动 certbot，reload 配置按单条命令解析并转义后交给 certbot 的部署 hook；不能填写 shell 脚本片段，复杂操作应放入 root 管理的独立可执行脚本。`<CERT_NAME>` 以字母或数字开头，其余字符限字母、数字、点、下划线和连字符。
+续期环境文件仅 root 可读写；脚本、服务单元、可执行文件及其父目录由 root 管理，不允许 bot、网关用户或其他非特权用户修改。将 certbot 路径、证书名称和 reload 命令直接填入服务单元，由 `ExecStart` 执行续期；Python 不读取环境变量拼接或执行命令。reload hook 仅填写固定命令，不写 shell 脚本片段，复杂操作放入 root 管理的独立可执行脚本。`<CERT_NAME>` 以字母或数字开头，其余字符限字母、数字、点、下划线和连字符。
+
+`ExecStopPost` 在续期成功、失败或超时后均发布状态，根据 systemd 的 `SERVICE_RESULT`、`EXIT_CODE` 和 `EXIT_STATUS` 判断结果；缺失结果时按异常处理。服务限制续期最多三分钟，状态发布最多三十秒。
 
 状态文件写入共享目录并继承共享组，bot 只读状态。管理员可用 `/MAA证书` 查询剩余时间与检查异常，不向普通用户开放。此指令不会发起续期。
 

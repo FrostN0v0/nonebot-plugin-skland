@@ -1,0 +1,39 @@
+[Unit]
+Description=Isolated MAA remote-control gateway
+After=network.target
+
+[Service]
+User=<GATEWAY_USER>
+Group=<MAA_SHARED_GROUP>
+WorkingDirectory=<MAA_MODULE_DIR>
+ExecStart=<GATEWAY_PYTHON> -m uvicorn --app-dir <MAA_MODULE_DIR> gateway:app --host 127.0.0.1 --port <GATEWAY_PORT> --workers 1 --limit-concurrency 24 --timeout-keep-alive 5 --no-access-log --no-proxy-headers
+Environment=MAA_REMOTE_DATA_DIR=<MAA_DATA_DIR>
+Environment=PYTHONDONTWRITEBYTECODE=1
+Restart=on-failure
+RestartSec=5
+UMask=0007
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=<MAA_DATA_DIR>
+InaccessiblePaths=<BOT_PRIVATE_DIR> <CERTBOT_PRIVATE_DIR> /etc/letsencrypt
+CapabilityBoundingSet=
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET
+IPAddressDeny=any
+IPAddressAllow=localhost
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+LockPersonality=yes
+MemoryHigh=256M
+MemoryMax=384M
+CPUQuota=75%
+TasksMax=48
+LimitNOFILE=256
+LogNamespace=skland-maa
+
+[Install]
+WantedBy=multi-user.target

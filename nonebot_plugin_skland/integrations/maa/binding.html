@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MAA 绑定</title><link rel="stylesheet" href="/maa/bind/binding.css">
+<script src="/maa/bind/binding.js" defer></script></head>
+<body><main><h1>MAA 绑定</h1>
+<p>填写设备标识符后，回到发起绑定的 QQ 会话，核对网页校验码并确认。请保持当前网页打开。</p>
+<form id="form"><label for="device">设备标识符</label><p class="hint">位置：MAA设置-远程控制-设备标识符</p>
+<input id="device" autocomplete="off" maxlength="64" required placeholder="MAA设置-远程控制-设备标识符">
+<button id="submit" type="submit">申请绑定</button></form>
+<section id="result" hidden><p>网页校验码</p><strong id="code"></strong><p id="status" role="status"></p>
+<button id="redeem" type="button" hidden>领取连接设置（仅可领取一次）</button></section>
+<section id="settings" hidden><p>复制到 MAA 远程控制设置中，请勿分享用户标识符。</p>
+<label for="task">获取任务端点</label><input id="task" readonly>
+<label for="report">汇报任务端点</label><input id="report" readonly>
+<label for="key">用户标识符</label><input id="key" readonly>
+<p>轮询间隔设为 5000 毫秒，启用远程控制，15 分钟内完成首次连接。设备标识符必须与本次申请一致。</p></section>
+<p id="error" role="alert"></p><p class="hint">确认消息未出现时，在原 QQ 会话发送「/MAA绑定 查询」。链接十分钟有效。换浏览器须重新申请；领取失败或刷新后丢失设置时，请重新 /MAA绑定。</p>
+</main></body></html>

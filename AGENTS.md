@@ -13,6 +13,23 @@
 
 ## 技术栈与关键依赖
 
+### 可选 MAA 远控
+
+- `integrations/maa/` 为本插件内的 QQ 官方 bot 可选模块，`skland.maa.enabled` 默认关闭；仅启用时导入 runtime，不缩减森空岛其他功能的适配器支持。
+- 可选依赖安装命令为 `uv add 'nonebot-plugin-skland[maa]'`。`public_url` 填公网 HTTPS 根地址，`data_dir` 默认为 localstore 数据目录下 `maa/`，独立网关使用同一目录。
+- 命令由 `integrations/maa/matcher.py` 使用 Alconna 注册，`/maa` 和 `/MAA绑定` 等快捷入口共用 Commands；不使用正则消息分发，不提供文字菜单或模式切换。
+- 使用 `UserSession.user_id` 识别设备归属，按钮保存该归属并验证 bot、QQ 用户、会话、有效期及一次性使用；文字与图片使用 UniMessage 导出。群聊或私聊 `/MAA绑定` 创建网页申请，只有 QQ 发起者在原会话核对校验码并确认后，对应浏览器才可领取一次密钥；首次连接核对申请中的设备标识符。
+- `binding_state_dir` 为 bot 私有状态，不能位于任何公网服务可写的树中；独立网页账户通过 `binding_socket` 的有限 Unix RPC 调用 submit/status/redeem，不能创建或确认绑定。网页与远控网关使用不同用户及资源/请求限制；待确认申请十分钟过期，后台停止轮询并在故障时退避。
+- `core.py` 使用独立 SQLite 队列与通知事务供低权限网关共享，不访问森空岛 ORM 数据库。旧独立远控的身份命名方式不兼容，需要新目录并重新绑定。
+- 网关通过 `uvicorn --app-dir <MAA_MODULE_DIR> gateway:app` 加载同目录 core/protocol；不执行 Skland 包入口，不读取 NoneBot/QQ/森空岛凭证。不要使用会初始化父包的启动方式。
+- 持久通知返回发起会话，文本/截图分别记录发送进度，限制重试。停止通过心跳确认；SUCCESS 不等同于正常完成。任务、审计、通知、日志和截图保留三天，绑定保留至解绑。
+- 普通用户均可绑定自己的设备，证书状态仅超级用户可查，不放入普通帮助或按钮。用户说明在 `docs/maa.md`，部署说明在 `docs/maa-deployment.md`，脱敏模板在 `examples/maa/`。
+- 续期通过 root 管理的 systemd 单元固定 `ExecStart` 运行 certbot；Python 仅由 `ExecStopPost` 读取服务结果并发布状态，不从环境拼接或执行外部命令。通知更新使用固定 SQL 语句及参数绑定，多字段更新在同一事务内完成。
+- 续期状态先写入 `MAA_RENEW_STAGING_DIR` 指定的 root 专用 0700 目录（共享目录树之外且同一文件系统），再经固定的目录文件描述符原子发布；不得在共享目录中打开可预测的临时路径。`public_url` 仅接受根路径，语法与端口错误统一反馈配置错误。
+- MAA 回归用例仅在本地保留和运行，不随本次 PR 提交；不连接服务器，不自动启动服务或签发证书。
+- 网页绑定确认和首次连接通知复用发起会话的被动回复上下文：普通消息用 `msg_id`，按钮交互用 `event_id`，回复序号递增；不把普通消息的事件 ID 当作消息回复 ID。失败日志仅记录异常类型、HTTP 状态和平台错误码，不包含响应正文或凭证。
+- 任务发起者的 QQ OpenID 存入 MAA 专用 `task_origin.user_id`；群内执行结束通知用官方 Markdown `qqbot-at-user` 标签提及该发起者，私聊不加群提及。SUCCESS 通知保留标题、任务名称和编号，正文仅显示“MAA 回报 SUCCESS”。
+
 - **Python**: >= 3.10
 - **Bot 框架**: NoneBot2
 - **命令系统**: nonebot-plugin-alconna / arclet-alconna

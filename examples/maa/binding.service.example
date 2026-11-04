@@ -1,0 +1,31 @@
+[Unit]
+Description=Isolated MAA browser binding worker
+After=network.target
+
+[Service]
+User=<BINDING_USER>
+Group=<BINDING_GROUP>
+WorkingDirectory=<MAA_MODULE_DIR>
+Environment=MAA_BINDING_SOCKET=<BINDING_SOCKET>
+Environment=MAA_PUBLIC_URL=https://<MAA_HOST>
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=<GATEWAY_PYTHON> -m uvicorn binding_gateway:app --host 127.0.0.1 --port <BINDING_PORT> --workers 1 --limit-concurrency 12 --no-access-log --no-proxy-headers
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+InaccessiblePaths=<BOT_PRIVATE_DIR> <MAA_DATA_DIR> <BINDING_STATE_DIR> /etc/letsencrypt
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET
+IPAddressDeny=any
+IPAddressAllow=localhost
+MemoryMax=128M
+CPUQuota=25%
+TasksMax=24
+LimitNOFILE=128
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

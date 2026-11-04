@@ -1,0 +1,4 @@
+[Journal]
+MaxRetentionSec=3day
+MaxFileSec=1day
+SystemMaxUse=64M

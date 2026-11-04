@@ -1,10 +1,11 @@
 """QQ owner confirmation and browser binding, shared by group and private handlers."""
 
 import re
+import time
 import asyncio
 
-from nonebot.adapters.qq import MessageSegment
 from nonebot.adapters.qq.models import MessageKeyboard
+from nonebot.adapters.qq import MessageSegment, InteractionCreateEvent
 
 from .binding_rpc import serve
 from .binding_state import BindingError, BindingStore
@@ -12,6 +13,16 @@ from .binding_state import BindingError, BindingStore
 
 def target_for(event, private):
     return ("private:" + event.get_user_id()) if private else ("group:" + event.group_openid)
+
+
+def reply_parameters(origin):
+    # Message events carry both IDs, but their passive reply must use msg_id.
+    # Interaction replies instead use the callback event_id, never its id.
+    reference = {"msg_id": origin["msg_id"]} if origin["msg_id"] else {"event_id": origin["event_id"]}
+    if not next(iter(reference.values())):
+        raise ValueError("missing passive reply reference")
+    origin["seq"] += 1
+    return {**reference, "msg_seq": origin["seq"]}
 
 
 def confirmation(row):
@@ -61,9 +72,13 @@ class BindingFlow:
                 return
             entry = await asyncio.to_thread(self.store.create, bot.self_id, event.get_user_id(), target, owner)
             self.origins[entry] = {
-                "msg_id": getattr(event, "id", None),
-                "event_id": getattr(event, "event_id", None),
+                "msg_id": None if isinstance(event, InteractionCreateEvent) else event.id,
+                "event_id": event.event_id if isinstance(event, InteractionCreateEvent) else None,
                 "seq": 1,
+                "owner": owner,
+                "bot_id": bot.self_id,
+                "target": target,
+                "expires": time.monotonic() + 1500,
             }
             await send(
                 f"MAA 绑定\n请用最终接收连接设置的浏览器打开：\n{self.public_url}/maa/bind?request={entry}\n"
@@ -105,37 +120,50 @@ class BindingFlow:
             try:
                 origin = self.origins.get(row["entry_id"])
                 if origin:
-                    origin["seq"] += 1
                     scene, target = row["target"].split(":", 1)
-                    kwargs = {"message": confirmation(row), "msg_seq": origin["seq"]}
-                    if origin["event_id"]:
-                        kwargs["event_id"] = origin["event_id"]
-                    else:
-                        kwargs["msg_id"] = origin["msg_id"]
+                    kwargs = {"message": confirmation(row), **reply_parameters(origin)}
                     if scene == "private":
                         await bots[row["bot"]].send_to_c2c(openid=target, **kwargs)
                     else:
                         await bots[row["bot"]].send_to_group(group_openid=target, **kwargs)
                     success = True
             except Exception as error:  # noqa: BLE001 -- Don't log platform payloads.
-                self.log.warning(f"MAA binding notice failure type={type(error).__name__}")
+                self.log.warning(
+                    f"MAA binding notice failure type={type(error).__name__} "
+                    f"status={getattr(error, 'status_code', None)} code={getattr(error, 'code', None)}"
+                )
             await asyncio.to_thread(self.store.notice_result, row["id"], success)
         connected = await asyncio.to_thread(self.remote.claim_connection_notice, set(bots))
         if connected:
             success = False
             try:
                 message = "MAA 首次连接成功，设备已绑定。发送 /MAA状态 查看状态，或 /maa 使用菜单。"
+                origin = next(
+                    (
+                        value
+                        for value in reversed(list(self.origins.values()))
+                        if value["owner"] == connected["owner"]
+                        and value["bot_id"] == connected["bot_id"]
+                        and value["target"] == connected["scene"] + ":" + connected["target"]
+                        and value["expires"] > time.monotonic()
+                    ),
+                    None,
+                )
+                if origin is None:
+                    raise ValueError("passive reply context expired")
+                kwargs = {"message": message, **reply_parameters(origin)}
                 if connected["scene"] == "private":
-                    await bots[connected["bot_id"]].send_to_c2c(openid=connected["target"], message=message)
+                    await bots[connected["bot_id"]].send_to_c2c(openid=connected["target"], **kwargs)
                 else:
-                    await bots[connected["bot_id"]].send_to_group(group_openid=connected["target"], message=message)
+                    await bots[connected["bot_id"]].send_to_group(group_openid=connected["target"], **kwargs)
                 success = True
             except Exception as error:  # noqa: BLE001 -- Never log platform payloads.
-                self.log.warning(f"MAA connection notice failure type={type(error).__name__}")
+                self.log.warning(
+                    f"MAA connection notice failure type={type(error).__name__} "
+                    f"status={getattr(error, 'status_code', None)} code={getattr(error, 'code', None)}"
+                )
             await asyncio.to_thread(self.remote.connection_notice_result, connected["binding_id"], success)
-        with self.store.db() as db:
-            alive = {row[0] for row in db.execute("SELECT id FROM entry")}
-        self.origins = {k: v for k, v in self.origins.items() if k in alive}
+        self.origins = {k: v for k, v in self.origins.items() if v["expires"] > time.monotonic()}
 
     async def start(self):
         if self.socket:

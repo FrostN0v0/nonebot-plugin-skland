@@ -102,6 +102,8 @@ class Store:
             """)
             if "expected_device" not in {row[1] for row in db.execute("PRAGMA table_info(binding)")}:
                 db.execute("ALTER TABLE binding ADD COLUMN expected_device TEXT")
+            if "user_id" not in {row[1] for row in db.execute("PRAGMA table_info(task_origin)")}:
+                db.execute("ALTER TABLE task_origin ADD COLUMN user_id TEXT NOT NULL DEFAULT ''")
         # Both services share the group, but only the file owner can chmod it.
         if stat.S_IMODE(self.path.stat().st_mode) != 0o660:
             self.path.chmod(0o660)
@@ -164,7 +166,7 @@ class Store:
     def claim_connection_notice(self, bots):
         with self.db() as db:
             rows = db.execute(
-                "SELECT o.* FROM binding_origin o JOIN binding b ON b.id=o.binding_id "
+                "SELECT o.*,b.owner FROM binding_origin o JOIN binding b ON b.id=o.binding_id "
                 "WHERE b.device IS NOT NULL AND o.notice='pending'"
             ).fetchall()
             for row in rows:
@@ -249,6 +251,8 @@ class Store:
         if origin is not None and (
             origin.get("scene") not in {"group", "private"}
             or not all(isinstance(origin.get(key), str) and 0 < len(origin[key]) <= 128 for key in ("bot_id", "target"))
+            or not isinstance(origin.get("user_id", ""), str)
+            or len(origin.get("user_id", "")) > 128
         ):
             raise RemoteError("无法确定任务结果通知的会话，未提交任务。")
         now = self.clock()
@@ -294,8 +298,8 @@ class Store:
             )
             if origin is not None:
                 db.execute(
-                    "INSERT INTO task_origin(task_id,bot_id,scene,target) VALUES(?,?,?,?)",
-                    (task_id, origin["bot_id"], origin["scene"], origin["target"]),
+                    "INSERT INTO task_origin(task_id,bot_id,scene,target,user_id) VALUES(?,?,?,?,?)",
+                    (task_id, origin["bot_id"], origin["scene"], origin["target"], origin.get("user_id", "")),
                 )
             self.audit(db, row["id"], TASK_TYPES[name], "queued")
         return task_id

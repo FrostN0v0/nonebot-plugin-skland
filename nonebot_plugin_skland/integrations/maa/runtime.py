@@ -67,6 +67,7 @@ async def operate(send, bot, event, operation, argument, private, owner):
                 "bot_id": bot.self_id,
                 "scene": "private" if private else "group",
                 "target": event.get_user_id() if private else event.group_openid,
+                "user_id": event.get_user_id(),
             },
         )
     except RemoteError as error:

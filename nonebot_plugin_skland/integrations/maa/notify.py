@@ -4,12 +4,27 @@
 
 import uuid
 import asyncio
+from html import escape
 
 from nonebot.adapters.qq import MessageSegment
 
 from .core import RETENTION, TASK_TYPES
 
 NAMES = {value: key for key, value in TASK_TYPES.items()}
+
+
+def notification_message(notice):
+    text = notice["text"]
+    if (
+        notice["scene"] == "group"
+        and notice.get("user_id")
+        and notice.get("type", "").startswith("LinkStart")
+        and notice["version"] in {"ended", "ended_stop_requested", "failed", "stopped"}
+    ):
+        # QQ group @user tags are supported in Markdown, not plain-text messages.
+        member = escape(notice["user_id"], quote=True)
+        return MessageSegment.markdown(f'<qqbot-at-user id="{member}" />\n\n' + text.replace("\n", "\n\n"))
+    return text
 
 
 def error_summary(error):
@@ -87,12 +102,12 @@ def outcome(row, stops, now):
             return (
                 "ended_stop_requested",
                 "执行已结束",
-                "期间有停止请求；具体结束原因未由 MAA 提供。",
+                "期间有停止请求",
             )
         return (
             "ended",
             "执行已结束",
-            "MAA 回报 SUCCESS；未提供正常完成、本机停止或异常结束的具体原因。",
+            "MAA 回报 SUCCESS",
         )
     return (
         "reported",
@@ -173,8 +188,9 @@ class Notifications:
                 (now,),
             )
             rows = db.execute(
-                "SELECT n.*,o.bot_id,o.scene,o.target FROM task_notice n "
+                "SELECT n.*,o.bot_id,o.scene,o.target,o.user_id,t.type FROM task_notice n "
                 "JOIN task_origin o ON o.task_id=n.task_id "
+                "JOIN task t ON t.id=n.task_id "
                 "WHERE n.status='pending' AND n.attempts<3 AND n.next_attempt<=? "
                 "AND n.lease<=? ORDER BY n.created,n.rowid LIMIT 100",
                 (now, now),
@@ -225,7 +241,7 @@ class Notifications:
             try:
                 bot = bots[notice["bot_id"]]
                 if not notice["text_sent"]:
-                    await asyncio.wait_for(self.send(bot, notice, notice["text"]), 30)
+                    await asyncio.wait_for(self.send(bot, notice, notification_message(notice)), 30)
                     await asyncio.to_thread(self.update, notice, text_sent=1)
                 if notice["image"] and not notice["image_sent"]:
                     image = self.store.images / notice["image"]

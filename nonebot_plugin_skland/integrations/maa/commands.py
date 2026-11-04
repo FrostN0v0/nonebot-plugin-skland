@@ -23,18 +23,27 @@ HELP = (
 
 
 def validate_base_url(value):
-    parsed = urlsplit(value)
+    message = "管理员需配置 HTTPS 的 skland.maa.public_url 根地址（本地测试可用回环 HTTP）。"
+    try:
+        parsed = urlsplit(value)
+        parsed.port  # Validate malformed and out-of-range ports as well.
+    except ValueError:
+        raise RemoteError(message) from None
     local = parsed.hostname in {"127.0.0.1", "localhost", "::1"}
     if (
         not parsed.netloc
+        or not parsed.hostname
+        or parsed.path not in {"", "/"}
         or parsed.username
         or parsed.password
         or parsed.query
         or parsed.fragment
+        or "?" in value
+        or "#" in value
         or parsed.scheme not in {"http", "https"}
         or (parsed.scheme == "http" and not local)
     ):
-        raise RemoteError("管理员需配置 HTTPS 的 skland.maa.public_url（本地测试可用回环 HTTP）。")
+        raise RemoteError(message)
     return value.rstrip("/")
 
 

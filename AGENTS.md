@@ -24,6 +24,7 @@
 - 持久通知返回发起会话，文本/截图分别记录发送进度，限制重试。停止通过心跳确认；SUCCESS 不等同于正常完成。任务、审计、通知、日志和截图保留三天，绑定保留至解绑。
 - 普通用户均可绑定自己的设备，证书状态仅超级用户可查，不放入普通帮助或按钮。用户说明在 `docs/maa.md`，部署说明在 `docs/maa-deployment.md`，脱敏模板在 `examples/maa/`。
 - 续期模板仅信任 root 管理的环境与可执行文件：certbot 使用参数列表且不经过 shell，reload 配置仅接受绝对可执行路径的一条命令，转义后作为 Certbot 部署 hook。通知更新使用固定 SQL 语句及参数绑定，多字段更新在同一事务内完成。
+- 续期状态先写入 `MAA_RENEW_STAGING_DIR` 指定的 root 专用 0700 目录（共享目录树之外且同一文件系统），再经固定的目录文件描述符原子发布；不得在共享目录中打开可预测的临时路径。`public_url` 仅接受根路径，语法与端口错误统一反馈配置错误。
 - 本地检查为 `uv run python -m unittest discover -s tests/maa -p 'test_*.py' -q` 和 `uv run pytest tests/test_maa_integration.py -q`；不连接服务器，不自动启动服务或签发证书。
 
 - **Python**: >= 3.10

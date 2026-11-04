@@ -16,6 +16,14 @@ uv add 'nonebot-plugin-skland[maa]'
 SKLAND='{"maa":{"enabled":true,"public_url":"https://maa.example.com","data_dir":"/var/lib/skland-maa"}}'
 ```
 
+也可使用仓库约定的嵌套字段形式；与上面的 JSON 示例二选一，其他森空岛配置保持原值：
+
+```dotenv
+skland__maa__enabled=true
+skland__maa__public_url=https://maa.example.com
+skland__maa__data_dir=/var/lib/skland-maa
+```
+
 | 字段 | 默认值 | 填写说明 |
 | --- | --- | --- |
 | `skland.maa.enabled` | `false` | 是否加载 MAA 命令、菜单、通知与清理任务 |
@@ -73,6 +81,7 @@ MAA_REMOTE_DATA_DIR=<MAA_DATA_DIR> <GATEWAY_PYTHON> -m uvicorn --app-dir <MAA_MO
 | `<CERTBOT_BIN>` / `<CERTBOT_LOG_DIR>` | certbot 可执行文件及专属日志目录，均填绝对路径 |
 | `<NGINX_RELOAD_COMMAND>` | 本机成功部署证书后执行的一条 reload 命令，可执行文件填绝对路径，如 `/usr/bin/systemctl reload nginx`；参数含空格时加引号，不支持管道、重定向、变量展开或多条命令 |
 | `<RENEW_ENV_PATH>` / `<RENEW_SCRIPT_PATH>` / `<ADMIN_PYTHON>` | root 专用续期配置、脚本和 Python 的绝对路径 |
+| `<RENEW_STAGING_DIR>` | root 专用的状态暂存目录，与 `<MAA_DATA_DIR>` 位于同一文件系统，不能放入 bot/网关可写的目录树 |
 | `<NGINX_LOG_DIR>` / `<NGINX_USER>` / `<NGINX_LOG_GROUP>` | Nginx 专属错误日志目录及其用户/组 |
 | `<GATEWAY_USER>` / `<MAA_SHARED_GROUP>` | 网关系统用户及共享组 |
 
@@ -87,6 +96,8 @@ IP 证书的签发方式及更新频率按所选 ACME 客户端说明配置，�
 续期环境文件仅 root 可读写；续期脚本、配置的可执行文件及其父目录由 root 管理，不允许 bot、网关用户或其他非特权用户修改。脚本以参数列表启动 certbot，reload 配置按单条命令解析并转义后交给 certbot 的部署 hook；不能填写 shell 脚本片段，复杂操作应放入 root 管理的独立可执行脚本。`<CERT_NAME>` 以字母或数字开头，其余字符限字母、数字、点、下划线和连字符。
 
 状态文件写入共享目录并继承共享组，bot 只读状态。管理员可用 `/MAA证书` 查询剩余时间与检查异常，不向普通用户开放。此指令不会发起续期。
+
+安装续期服务前，由 root 在自己管理的父目录中创建 `<RENEW_STAGING_DIR>`，所有者设为 root、权限设为 `0700`；其父目录也不得允许 bot/网关用户修改。脚本在这里安全创建随机临时文件，设置共享组与只读权限后，将文件原子替换到共享目录。发布时固定共享目录的文件描述符且拒绝目录符号链接，不会跟随预先植入的 `tls_status.tmp` 或 `tls_status.json` 链接写入其他文件。
 
 ## 三天保留
 

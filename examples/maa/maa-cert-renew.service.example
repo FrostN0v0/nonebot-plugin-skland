@@ -11,5 +11,5 @@ NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=yes
-ReadWritePaths=/etc/letsencrypt /var/lib/letsencrypt <ACME_WEBROOT> <CERTBOT_LOG_DIR> <MAA_DATA_DIR>
+ReadWritePaths=/etc/letsencrypt /var/lib/letsencrypt <ACME_WEBROOT> <CERTBOT_LOG_DIR> <MAA_DATA_DIR> <RENEW_STAGING_DIR>
 LogNamespace=skland-maa

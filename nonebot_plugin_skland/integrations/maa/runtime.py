@@ -80,8 +80,8 @@ async def handle(matcher: Matcher, bot: Bot, event: Event, result: Arparma, user
         matcher.send,
         bot,
         event,
-        result.main_args.get("operation", "管理"),
-        result.main_args.get("argument", ""),
+        result.main_args.get("operation") or "管理",
+        result.main_args.get("argument") or "",
         isinstance(event, C2CMessageCreateEvent),
         owner,
     )

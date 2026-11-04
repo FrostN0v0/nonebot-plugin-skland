@@ -200,37 +200,50 @@ def test_disabled_module_does_not_register_help(app):
 
 
 @pytest.mark.asyncio
-async def test_registered_matcher_resolves_framework_dependencies(maa, mocker, make_user_session):
+@pytest.mark.parametrize(("text", "expected"), [("/MAA绑定", "用户标识符：maa_"), ("/maa状态", "尚未绑定")])
+async def test_registered_matcher_resolves_framework_dependencies(maa, mocker, make_user_session, text, expected):
     from nonebot_plugin_orm import get_session
     from nonebot_plugin_user import UserSession
     from nonebot.internal.params import DependencyCache
-    from nonebot_plugin_alconna.model import CommandResult
-    from nonebot_plugin_alconna.consts import ALCONNA_RESULT, ALCONNA_EXTENSION
 
-    from nonebot_plugin_skland.integrations.maa.matcher import command, control
+    from nonebot_plugin_skland.integrations.maa.matcher import control
 
     bot = qq_bot()
-    event = private_event("/MAA绑定", message_id="matcher-bind")
+    event = private_event(text, message_id="matcher-shortcut")
     send = mocker.patch.object(control, "send", new=AsyncMock())
     cached = DependencyCache()
     async with get_session() as session:
         user_session = await make_user_session(session, 303, private=True)
     cached.set_result(user_session)
     matcher = control()
+    state = {}
+    dependencies = {get_args(UserSession)[1].dependency: cached}
     with matcher.ensure_context(bot, event):
         async with AsyncExitStack() as stack:
+            assert await control.check_rule(bot, event, state, stack, dependencies)
             await matcher.run(
                 bot,
                 event,
-                {
-                    ALCONNA_RESULT: CommandResult(result=command.parse("/MAA绑定")),
-                    ALCONNA_EXTENSION: control.executor.select(bot, event),
-                },
+                state,
                 stack=stack,
-                dependency_cache={get_args(UserSession)[1].dependency: cached},
+                dependency_cache=dependencies,
             )
     assert send.call_args is not None, repr(control.handlers)
-    assert "用户标识符：maa_" in str(send.call_args.args[0])
+    assert expected in str(send.call_args.args[0])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("text", ["/maa", "/MAA"])
+@pytest.mark.parametrize("main_args", [{}, {"operation": None, "argument": None}])
+async def test_bare_command_opens_home_menu(maa, text, main_args):
+    matcher = SimpleNamespace(send=AsyncMock(), finish=AsyncMock())
+    await maa.handle(
+        matcher, qq_bot(), private_event(text), SimpleNamespace(main_args=main_args), SimpleNamespace(user_id=101)
+    )
+    message = matcher.send.call_args.args[0]
+    assert "MAA 远程控制" in str(message)
+    keyboard = message[1].data["keyboard"].content
+    assert keyboard.rows[0].buttons[0].render_data.label == "生成绑定设置"
 
 
 @pytest.mark.parametrize("enabled", [False, True])

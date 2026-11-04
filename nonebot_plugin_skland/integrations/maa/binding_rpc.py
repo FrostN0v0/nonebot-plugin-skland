@@ -52,7 +52,9 @@ async def serve(store, path):
             await writer.wait_closed()
 
     server = await asyncio.start_unix_server(handle, path=str(path), limit=LIMIT)
-    os.chmod(path, 0o660)
+    # A dedicated web group needs write permission to connect to this Unix socket.
+    # Its parent is bot-owned and not group-writable; no data files are shared.
+    os.chmod(path, 0o660)  # nosec B103 -- Required socket access for the dedicated web group.
     os.chown(path, -1, path.parent.stat().st_gid)
     return server
 

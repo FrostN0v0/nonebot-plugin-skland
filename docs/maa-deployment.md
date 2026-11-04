@@ -133,12 +133,3 @@ IP 证书的签发方式及更新频率按所选 ACME 客户端说明配置，�
 
 本模块通过 `UserSession.user_id` 识别用户，不使用旧独立模块的 QQ OpenID 哈希命名方式。**不要直接覆盖旧部署或复用旧数据库并期待自动迁移**：使用新的 MAA 数据目录，按用户重新绑定，重新填写连接密钥后停用旧入口。没有自动数据库迁移，也不会修改森空岛绑定数据。
 
-## 本地检查
-
-```bash
-uv sync --extra maa
-uv run python -m unittest discover -s tests/maa -p 'test_*.py' -q
-uv run pytest tests/test_maa_integration.py -q
-```
-
-前者隔离加载 MAA 状态与 HTTP 模块，后者使用 NoneBug 环境和模拟 QQ 事件验证 Alconna、绑定及菜单，不连接真实设备。

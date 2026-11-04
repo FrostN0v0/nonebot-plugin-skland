@@ -30,8 +30,10 @@ log = logger.bind(skland_maa=True)
 notifications = Notifications(store, log)
 binding_flow = BindingFlow(
     (config.maa.binding_state_dir or DATA_DIR / "maa-binding") / "pairing.sqlite3",
-    config.maa.binding_socket, store,
-    validate_base_url(config.maa.public_url), log,
+    config.maa.binding_socket,
+    store,
+    validate_base_url(config.maa.public_url),
+    log,
 )
 workers: list[asyncio.Task] = []
 log_sink: int | None = None
@@ -111,8 +113,11 @@ click = on_notice(rule=is_maa_callback, priority=4, block=True)
 
 
 async def is_binding_callback(event: Event):
-    return (isinstance(event, InteractionCreateEvent) and event.type == 11
-            and (event.data.resolved.button_data or "").startswith("maabind:"))
+    return (
+        isinstance(event, InteractionCreateEvent)
+        and event.type == 11
+        and (event.data.resolved.button_data or "").startswith("maabind:")
+    )
 
 
 binding_click = on_notice(rule=is_binding_callback, priority=3, block=True)

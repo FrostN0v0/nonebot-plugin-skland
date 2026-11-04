@@ -31,8 +31,10 @@ async def serve(store, path):
                 raise ValueError
             op = request.get("op")
             keys = ("entry", "session", "device") if op == "submit" else ("entry", "session")
-            if not isinstance(op, str) or op not in {"submit", "status", "redeem"} or not all(
-                isinstance(request.get(k), str) and len(request[k]) <= 128 for k in keys
+            if (
+                not isinstance(op, str)
+                or op not in {"submit", "status", "redeem"}
+                or not all(isinstance(request.get(k), str) and len(request[k]) <= 128 for k in keys)
             ):
                 raise ValueError
             response = {"result": await asyncio.to_thread(getattr(store, op), *(request[k] for k in keys))}

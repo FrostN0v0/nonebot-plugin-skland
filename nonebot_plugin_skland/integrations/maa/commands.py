@@ -87,9 +87,7 @@ class Commands:
                 None,
             )
         if operation == "绑定":
-            return (
-                "绑定由 QQ 网页确认流程处理，请发送 /MAA绑定 获取网页链接。"
-            ), None
+            return ("绑定由 QQ 网页确认流程处理，请发送 /MAA绑定 获取网页链接。"), None
         if operation == "解绑":
             self.store.revoke(owner)
             return (

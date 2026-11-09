@@ -1,0 +1,18 @@
+[Unit]
+Description=Renew MAA HTTPS certificate
+After=network-online.target nginx.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=<RENEW_ENV_PATH>
+ExecStart=<CERTBOT_BIN> renew --quiet --cert-name=<CERT_NAME> --max-log-backups 3 --logs-dir=<CERTBOT_LOG_DIR> --deploy-hook "<NGINX_RELOAD_COMMAND>"
+ExecStopPost=<ADMIN_PYTHON> <RENEW_SCRIPT_PATH>
+TimeoutStartSec=180
+TimeoutStopSec=30
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/etc/letsencrypt /var/lib/letsencrypt <ACME_WEBROOT> <CERTBOT_LOG_DIR> <MAA_DATA_DIR> <RENEW_STAGING_DIR>
+LogNamespace=skland-maa

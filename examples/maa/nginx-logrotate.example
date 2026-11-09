@@ -1,0 +1,14 @@
+<NGINX_LOG_DIR>/error.log {
+    daily
+    rotate 3
+    maxage 3
+    missingok
+    ifempty
+    compress
+    delaycompress
+    create 0640 <NGINX_USER> <NGINX_LOG_GROUP>
+    sharedscripts
+    postrotate
+        /usr/bin/systemctl kill --kill-who=main --signal=USR1 nginx.service 2>/dev/null || true
+    endscript
+}

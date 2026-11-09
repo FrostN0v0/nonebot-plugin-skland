@@ -1,0 +1,10 @@
+[Unit]
+Description=Check MAA HTTPS certificate renewal every six hours
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:20:00
+RandomizedDelaySec=15m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

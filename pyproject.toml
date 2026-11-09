@@ -26,6 +26,13 @@ dependencies = [
 homepage = "https://github.com/FrostN0v0/nonebot-plugin-skland"
 repository = "https://github.com/FrostN0v0/nonebot-plugin-skland"
 
+[project.optional-dependencies]
+maa = [
+    "fastapi>=0.115.0",
+    "nonebot-adapter-qq>=1.6.0",
+    "uvicorn>=0.30.0",
+]
+
 [dependency-groups]
 dev = [
     "nonebot-adapter-discord>=0.1.8",

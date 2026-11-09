@@ -25,9 +25,9 @@ from nonebot_plugin_alconna import At, Match, MsgId, Arparma, MsgTarget
 from nonebot_plugin_alconna.builtins.extensions import ReplyRecordExtension
 
 from . import hook as hook
-from .config import Config
 from .matcher import skland
 from .extras import extra_data
+from .config import Config, config
 from . import tasks as tasks  # noqa: F401
 
 __plugin_meta__ = PluginMetadata(
@@ -44,6 +44,9 @@ __plugin_meta__ = PluginMetadata(
     },
 )
 __plugin_meta__.extra.update(extra_data)
+
+if config.maa.enabled:
+    from .integrations.maa import runtime as maa_runtime  # noqa: F401
 
 
 @skland.assign("role", or_not=True)

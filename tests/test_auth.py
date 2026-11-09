@@ -4,6 +4,23 @@ import httpx
 import pytest
 
 
+@pytest.mark.asyncio
+async def test_get_cred_reports_upstream_message_on_failure(app, mocker):
+    from nonebot_plugin_skland.api import SklandLoginAPI
+    from nonebot_plugin_skland.exception import RequestException
+
+    def respond(request):
+        assert request.url.path == "/api/v1/user/auth/generate_cred_by_code"
+        return httpx.Response(200, json={"status": 1, "message": "授权码已失效", "data": None})
+
+    client_type = httpx.AsyncClient
+    transport = httpx.MockTransport(respond)
+    mocker.patch.object(httpx, "AsyncClient", side_effect=lambda **kwargs: client_type(transport=transport, **kwargs))
+
+    with pytest.raises(RequestException, match="获得cred失败：授权码已失效"):
+        await SklandLoginAPI.get_cred("synthetic-grant-code")
+
+
 @pytest.mark.parametrize(
     ("failures", "expected_trace", "final_error"),
     [

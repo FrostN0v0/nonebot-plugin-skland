@@ -396,6 +396,7 @@ class Config(BaseModel):
 
 - 唯一用户快捷入口为 `方舟干员`，映射到 `skland box`；`fuzzy=True` 允许追加参数，`compact=False` 强制筛选词之间使用空格。启动加载快捷指令缓存后会删除缓存中的 `干员盒` 和 `图鉴` 入口。
 - `matcher.py` 使用 `MultiVar(str, "*")` 接收任意数量的自然筛选词；QQ 号或 @ 目标位于筛选词之前，裸数字不作为星级或潜能。
+- 星级自然筛选与 `-ra` / `--rarity` 共用 `_parse_stars()`，仅在星级入口将中文一至六转换为 1–6，再交给 `_parse_levels()` 处理列表、区间及范围校验；支持 `六星`、`六★`、`四-六星` 和混合数字区间。不会全局改写名称或潜能，连续的 `四五六星` 不代表星级列表。中文与数字等价测试还须断言固定的预期星级集合，避免两条路径都退回默认值时误通过。
 - `commands/box.py` 将自然筛选词和高级 Options 一次性交给 `OperatorRosterQuery.from_input()`，不维护两套筛选路径；结果按 `roster_render_max` 分块并发渲染，QQClient 使用合并转发，其他平台逐图发送。
 - `schemas/arknights/operator_query.py` 统一解析持有状态、星级、职业、分支、部署位置、性别、势力、种族、潜能、名称和排序。相同集合维度合并为 OR，不同维度为 AND；冲突的持有状态、排序和名称直接报错，无法识别的连写词提示使用空格。
 - `schemas/arknights/operators.py` 的 `OperatorCard`、`OperatorModule`、`OperatorRoster` 负责玩家数据合并和排序，单向依赖查询模型；API 中存在但本地目录尚未收录的持有干员通过 fallback 条目保留。

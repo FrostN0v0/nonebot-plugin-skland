@@ -9,15 +9,13 @@ from collections.abc import Iterator
 from contextlib import nullcontext, contextmanager
 
 from nonebot import logger
-from playwright.async_api import Page
-from playwright.async_api import Request
+from playwright.async_api import Page, Request
 from playwright.async_api import Error as PlaywrightError
 
-from .compact import template_to_html
 from .config import CACHE_DIR, config
 from .utils.files import atomic_write
-from .compact import html_to_pic, open_html_page
 from .compact import template_to_pic as base_template_to_pic
+from .compact import html_to_pic, open_html_page, template_to_html
 
 PendingImage = tuple[str, Path]
 PageReadiness = Literal["networkidle", "resources"]

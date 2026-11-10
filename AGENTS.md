@@ -60,7 +60,8 @@ nonebot_plugin_skland/
 │   └── sign.py          # Signing, ordered cache persistence, filtering, and formatting
 ├── integrations/
 │   ├── __init__.py      # 可选集成包边界，不聚合导出
-│   └── picmenu.py       # 已加载 PicMenu Next 时注册专属帮助模板
+│   ├── picmenu.py       # 已加载 PicMenu Next 时注册专属帮助模板
+│   └── qq_account.py    # 可选 QQ 官方账号按钮、回调校验与账号选择分页
 ├── utils/
 │   ├── __init__.py      # Package boundary without implicit exports
 │   ├── background.py    # Configured background selection
@@ -315,7 +316,7 @@ class Config(BaseModel):
 ### 账号绑定与管理
 
 - 同一 NoneBot 用户可绑定多个森空岛账号；token/cred 仅允许私聊，二维码入口保持群聊可用。
-- token、cred 和扫码所得凭证都先调用一次 binding API，渲染确认后的完整账号角色卡；只有命令发起者回复“确认”后才原子写入。
+- token、cred 和扫码所得凭证都先调用一次 binding API，渲染确认后的完整账号角色卡；只有命令发起者通过当前交互方式确认后才原子写入。
 - `services/binding.py` 负责凭证和身份准备、确认快照复核及绑定/解绑的原子提交；`commands/bind.py` 只编排展示、waiter、扫码轮询与撤回。工作状态使用内部 dataclass，跨模块业务异常位于 `exception.py`。
 - `account.sync_account()` 使用普通凭证快照执行 API 请求，再重新读取账号并事务性同步角色/默认映射；不构造未持久化的 `SkUser` 充当临时凭证对象。同步保留仍有效的默认角色，清空指向已移除角色的默认映射，由用户重新选择；个人和全体角色更新共用此流程。
 - `skland char` 返回全部账号和角色；`skland char set <game> <index>` 按游戏独立序号切换插件默认角色，所有业务功能使用该角色所属账号的凭证。
@@ -330,6 +331,9 @@ class Config(BaseModel):
 - `BoundRoleCardItem.player_uid` 对方舟返回 `binding_uid`，对终末地返回 `game_role_id`；内部字段继续保留用于身份识别与确认校验。模板显式开启 Jinja autoescape，避免依赖 htmlrender 默认不转义的环境。
 - `BoundRoleCardItem.server_label` 按方舟渠道 ID 将 `1` / `2` 显示为“官服” / “bilibili服”，兼容 `server_name` 保存渠道编号的记录；终末地接口区服名 `China` 显示为“国服”。未知渠道沿用原区服名，不修改数据库、API 请求和角色身份匹配使用的原始名称或服务器 ID。
 - `skland unbind` 先选择账号序号或“全部”，再二次确认；删除当前默认角色后清空默认，不自动切换到其他账号。
+- QQ 官方群聊和单聊在对应机器人的 `intent.interaction=True` 时，扫码确认及解绑的两个步骤使用回调按钮；私聊 token/cred 与其他适配器保留 waiter 文字交互。`integrations/qq_account.py` 仅在 QQ 分支内导入可选 SDK，不修改宿主事件配置。按钮请求绑定 bot、发起者和会话，随机 nonce 只保存在内存，校验可用动作与绝对截止时间；先占用再 ACK，ACK 成功后唤醒原命令，超时、取消或异常清理请求。QQ 键盘不发送可选 `group_id`，防重复由服务端请求状态处理。
+- QQ 按钮交互的请求、等待 Future 和账号互斥均为进程内状态；命令与回调必须由同一 Bot 进程处理，不提供跨进程协作。
+- QQ 解绑每页最多 20 个账号，翻页通过对应交互事件的 `event_id` 发送键盘，最终结果通过确认按钮的外层 `event_id` 向对应会话发送，不以交互 ID 构造客户端引用。原命令发送选择与确认的两张图片及两个键盘，沿用 SDK 递增的 `msg_seq`。角色卡展示与账号准备、快照复核、原子提交继续沿用现有边界，按钮回调不直接访问数据库。
 - `UserSession.user_id` 会读取 `User.id` ORM 属性；解绑及角色选择流程必须在 `rollback()` / `commit()` 前保存普通整数身份，后续确认、错误反馈与提交后总览不得重新读取已过期的用户 ORM 属性。渲染和 waiter 期间不持有数据库事务。
 - `utils/qrcode.py` 保留安全头像下载、原生黑白点阵、M 级纠错和 4 模块静区；命令约 100 秒后撤回二维码。扫码者身份不能由插件验证，最终绑定以命令发起者确认的角色卡为准。
 
@@ -547,6 +551,7 @@ uv run pytest -s tests/test_skland_api.py
 - `tests/test_bound_roles.py` 覆盖 binding API 规范化、角色卡投影、序号、默认徽标、两游戏玩家 UID 选择、内部 ID 隐藏、昵称转义、四种展示模式及空态/不可用角色。
 - `tests/test_multi_account_migration.py` 覆盖旧结构升级、数据保护检查、生成主键和不可表示数据的 downgrade 拒绝。
 - `tests/test_bind.py` 覆盖 token/cred 确认式新增/更新、取消/超时零写入、确认期间状态变化，以及真实 UserSession 下选择性/全量解绑的双 waiter 和提交后反馈。
+- `tests/test_qq_account.py` 使用真实 QQ 消息模型与内存数据库，覆盖可选 SDK、事件订阅开关、回调权限和单次处理、ACK/发送失败、超时/取消、账号分页、选择性/全量解绑及最终回复事件；QQ SDK 仅作为开发测试依赖。
 - `tests/test_sign.py` 覆盖多账号同名/同 UID 角色、角色所属凭证、签到缓存 list 结构、缓存截断或结构损坏时的状态反馈、序号选角和默认不变，以及签到/状态的 `--role`/`--all` 冲突、状态 owner/角色联合过滤、空结果和全体状态的 ORM 过期边界。
 - `tests/test_role_selection.py` 覆盖全部 13 个选角入口的长短选项、`-r` / `-ra` 冲突隔离、旧 UID 语法拒绝、更新开关保留，以及存在默认角色时无效序号的真实 matcher 分发，确保没有回退默认和外部数据访问。
 - `tests/test_war_echoes.py` 覆盖评级投影、荣勋累计、用户信息、当前/指定/相对赛季轮换选择、最高已通关难度和命令提交后渲染发送。

@@ -322,6 +322,37 @@ async def test_private_resources_preserve_custom_template_authorization(htmlrend
 
 
 @pytest.mark.asyncio
+async def test_downloaded_images_are_private_without_authorizing_other_plugin_data(
+    htmlrender_08, tmp_path, monkeypatch, tiny_png
+):
+    from nonebot_plugin_htmlrender.resources import ResourceAccessDenied
+    from nonebot_plugin_htmlrender.preparation.materialize import AssetMaterializationError, materialize_local_assets
+
+    from nonebot_plugin_skland import compact
+
+    root = tmp_path / "plugin-data"
+    images = root / "resources"
+    images.mkdir(parents=True)
+    image = images / "boss.png"
+    image.write_bytes(tiny_png)
+    private = root / "account.json"
+    private.write_text("private-data", encoding="utf-8")
+    monkeypatch.setattr(compact, "IMAGE_DIR", images)
+    setattr(nonebot.get_driver().config, "render", {})
+    application = compact._get_application()
+    assert compact._provider is not None and compact._provider.dependencies is not None
+    resources = compact._provider.dependencies.resources
+
+    prepared = await application.preparation.prepare_html(f'<img src="{image.as_uri()}">', base_url=images.as_uri())
+    materialized = await materialize_local_assets(prepared, resources=resources)
+    assert [(asset.source, asset.data) for asset in materialized.assets] == [(image.as_uri(), tiny_png)]
+    forbidden = await application.preparation.prepare_html(f'<img src="{private.as_uri()}">', base_url=root.as_uri())
+    with pytest.raises(AssetMaterializationError) as error:
+        await materialize_local_assets(forbidden, resources=resources)
+    assert isinstance(error.value.__cause__, ResourceAccessDenied)
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("initialized", [False, True])
 async def test_shutdown_rejects_late_render_requests(htmlrender_08, tmp_path, initialized):
     from nonebot_plugin_htmlrender.rendering.errors import ProviderLifecycleError

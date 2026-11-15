@@ -124,6 +124,15 @@ skland_command = Alconna(
         help_text="查询单局肉鸽战绩详情",
     ),
     Subcommand(
+        "garrison",
+        Args["target?#目标", At | int],
+        _role_option(),
+        Option("-i|--index", Args["record_index", int], help_text="查看所选列表中指定编号的单局详情"),
+        Option("-f|--favored", help_text="查询收藏战绩，编号在收藏列表内计算"),
+        Option("-a|--activity", Args["activity_id", str], help_text="指定卫戍活动 ID，默认使用当前赛季"),
+        help_text="查询卫戍协议生涯、战绩和单局详情",
+    ),
+    Subcommand(
         "gacha",
         Args["target?#目标", At | int],
         _role_option(),

@@ -13,6 +13,7 @@ RES_DIR: Path = Path(__file__).parent / "resources"
 TEMPLATES_DIR: Path = RES_DIR / "templates"
 CACHE_DIR = store.get_plugin_cache_dir()
 DATA_DIR = store.get_plugin_data_dir()
+IMAGE_DIR = DATA_DIR / "resources"
 RESOURCE_ROUTES = ["portrait", "skill", "avatar"]
 DATA_ROUTES = [
     "gamedata/excel/gacha_table.json",

@@ -26,6 +26,7 @@ def test_role_selectors_preserve_target_and_game_scope(app, flag):
         (f"/skland import https://example.com/export {flag} 2", "import.role.role_index"),
         (f"/skland rogue {flag} 2 --topic 萨米", "rogue.role.role_index"),
         (f"/skland rginfo 1 -f {flag} 2", "rginfo.role.role_index"),
+        (f"/skland garrison {flag} 2 -i 1 -f", "garrison.role.role_index"),
         (f"/skland box {flag} 2 -ra 6", "box.role.role_index"),
     ):
         result = skland_command.parse(command)
@@ -94,6 +95,7 @@ def test_update_flags_keep_their_existing_meaning(app):
         "/skland box -r 0 -ra 6",
         "/skland rogue -r 0",
         "/skland rginfo 1 -r 0",
+        "/skland garrison -r 0",
         "/skland arksign sign -r 0",
         "/skland efsign sign -r 0",
         "/skland arksign status -r 0",
@@ -154,7 +156,7 @@ async def test_role_commands_reject_invalid_index_without_data_access(app, mocke
         ef_war_api = mocker.patch.object(ef_war.SklandAPI, "endfield_war_echoes", new=mocker.AsyncMock())
         remote_calls = [
             mocker.patch.object(SklandAPI, name, new=mocker.AsyncMock())
-            for name in ("get_rogue", "ark_sign", "endfield_sign")
+            for name in ("get_rogue", "ark_sign", "endfield_sign", "ark_garrison", "ark_garrison_resources")
         ]
         remote_calls.append(mocker.patch.object(SklandLoginAPI, "get_grant_code", new=mocker.AsyncMock()))
         remote_calls.append(mocker.patch.object(gacha_command, "import_heybox_gacha_data", new=mocker.AsyncMock()))

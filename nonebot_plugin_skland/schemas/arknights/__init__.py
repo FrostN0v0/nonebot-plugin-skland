@@ -16,6 +16,8 @@ from .game_data import CharTable as CharTable
 from .rogue import RogueCareer as RogueCareer
 from .rogue import RogueHistory as RogueHistory
 from .gacha import GachaResponse as GachaResponse
+from .garrison import GarrisonData as GarrisonData
+from .garrison import GarrisonView as GarrisonView
 from .gacha import GachaTitleInfo as GachaTitleInfo
 from .game_data import GachaDetails as GachaDetails
 from .operators import OperatorCard as OperatorCard
@@ -26,6 +28,7 @@ from .operator_query import OperatorSort as OperatorSort
 from .game_data import OperatorCatalog as OperatorCatalog
 from .gacha import GroupedGachaRecord as GroupedGachaRecord
 from .game_data import OperatorMetadata as OperatorMetadata
+from .garrison import GarrisonResources as GarrisonResources
 from .operator_query import OperatorOwnership as OperatorOwnership
 from .game_data import OperatorCatalogEntry as OperatorCatalogEntry
 from .operator_query import OperatorRosterQuery as OperatorRosterQuery

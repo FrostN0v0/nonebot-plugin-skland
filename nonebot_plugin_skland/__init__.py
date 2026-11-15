@@ -27,8 +27,8 @@ from nonebot_plugin_alconna.builtins.extensions import ReplyRecordExtension
 from . import hook as hook
 from .config import Config
 from .matcher import skland
-from .extras import extra_data
 from . import tasks as tasks  # noqa: F401
+from .extras import extra_data
 
 __plugin_meta__ = PluginMetadata(
     name="森空岛",
@@ -182,6 +182,29 @@ async def _(
 
     await rginfo_handler(
         id, msg_id, ext, result, user_session, session, role_index=result.query("rginfo.role.role_index")
+    )
+
+
+@skland.assign("garrison")
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+    target: Match[At | int],
+    result: Arparma,
+    bot: Bot,
+):
+    """查询明日方舟卫戍协议战绩。"""
+    from .commands.garrison import garrison_handler
+
+    await garrison_handler(
+        user_session,
+        session,
+        target,
+        bot,
+        role_index=result.query("garrison.role.role_index"),
+        record_index=result.query("garrison.index.record_index"),
+        favored=result.find("garrison.favored"),
+        activity_id=result.query("garrison.activity.activity_id"),
     )
 
 

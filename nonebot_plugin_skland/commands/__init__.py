@@ -13,6 +13,7 @@ from .gacha import import_handler as import_handler
 from .rogue import rginfo_handler as rginfo_handler
 from .endfield import efcard_handler as efcard_handler
 from .endfield import ef_sign_handler as ef_sign_handler
+from .garrison import garrison_handler as garrison_handler
 from .arksign import arksign_all_handler as arksign_all_handler
 from .endfield import ef_sign_all_handler as ef_sign_all_handler
 from .arksign import arksign_sign_handler as arksign_sign_handler

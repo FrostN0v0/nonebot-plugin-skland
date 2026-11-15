@@ -290,6 +290,23 @@ class TestRealAPI:
         assert card is not None, "返回的卡片数据不应为空"
         logger.success(f"获取到明日方舟角色卡片，uid={uid}")
 
+    async def test_garrison(self, cred, binding):
+        """验证当前卫戍赛季与真实战绩可投影，不输出玩家或凭证。"""
+        from nonebot_plugin_skland.api import SklandAPI
+        from nonebot_plugin_skland.schemas import GarrisonView
+
+        ark_apps = [app for app in binding if app.appCode == "arknights" and app.bindingList]
+        if not ark_apps:
+            pytest.skip("未绑定明日方舟角色")
+        uid = ark_apps[0].bindingList[0].uid
+        resources = await SklandAPI.ark_garrison_resources(cred)
+        activity_id = resources.current_activity_id
+        data = await SklandAPI.ark_garrison(cred, uid=uid, activity_id=activity_id)
+        view = GarrisonView.from_data(data, resources, uid=uid, activity_id=activity_id)
+        assert view.activity_id == activity_id
+        assert [record.record_id for record in view.records] == [record.id for record in data.history.records]
+        logger.success(f"获取到卫戍协议战绩，活动={activity_id}，记录数={len(view.records)}")
+
     async def test_endfield_card(self, cred, binding):
         """获取终末地角色卡片（需要已绑定终末地角色）"""
         from nonebot_plugin_skland.api import SklandAPI

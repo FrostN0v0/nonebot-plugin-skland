@@ -4,8 +4,8 @@ import re
 from html import unescape
 from bisect import bisect_right
 
-from pydantic import Field, BaseModel
 from nonebot.compat import model_dump
+from pydantic import Field, BaseModel
 
 from .models.status import Avatar
 from ...filters import charId_to_portraitUrl
@@ -668,7 +668,9 @@ class GarrisonView(BaseModel):
                 icon_url=image_resource_url("garrison/time_icon.png"),
             ),
             GarrisonMetric(
-                label="已获赞", value=_number(career.totalBeLikeCnt), icon_url=image_resource_url("garrison/like_icon.png")
+                label="已获赞",
+                value=_number(career.totalBeLikeCnt),
+                icon_url=image_resource_url("garrison/like_icon.png"),
             ),
             GarrisonMetric(
                 label="Boss 击杀",
@@ -702,7 +704,9 @@ class GarrisonView(BaseModel):
         ]
         bonds = [
             GarrisonBondStat(**model_dump(_bond_item(resource, bond_id)), recent_count=count, max_layer=max_layer)
-            for bond_id, (count, max_layer) in sorted(recent_bonds.items(), key=lambda item: item[1][0], reverse=True)[:5]
+            for bond_id, (count, max_layer) in sorted(recent_bonds.items(), key=lambda item: item[1][0], reverse=True)[
+                :5
+            ]
         ]
         normal_titles = []
         special_titles = []

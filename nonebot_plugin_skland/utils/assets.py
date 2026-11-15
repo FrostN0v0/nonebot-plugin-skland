@@ -14,9 +14,7 @@ class ImageSource(TypedDict):
 
 IMAGE_SOURCES: dict[str, ImageSource] = json.loads((RES_DIR / "image_assets.json").read_text(encoding="utf-8"))
 IMAGE_ASSETS: dict[str, tuple[str, str]] = {
-    name: (source, path)
-    for source, data in IMAGE_SOURCES.items()
-    for name, path in data["files"].items()
+    name: (source, path) for source, data in IMAGE_SOURCES.items() for name, path in data["files"].items()
 }
 
 

@@ -11,9 +11,9 @@ _SETTLEMENT_BASE = _OUTER_BASE + "settlegame/auto_chess_settle_game_state/"
 def garrison_factory(app, tmp_path, monkeypatch):
     from nonebot.compat import type_validate_python
 
-    from nonebot_plugin_skland.schemas.arknights.garrison import GarrisonData, GarrisonView, GarrisonResources
-    from nonebot_plugin_skland.config import config
     from nonebot_plugin_skland.utils import assets
+    from nonebot_plugin_skland.config import config
+    from nonebot_plugin_skland.schemas.arknights.garrison import GarrisonData, GarrisonView, GarrisonResources
 
     monkeypatch.setattr(config, "github_proxy_url", "")
     monkeypatch.setattr(assets, "IMAGE_DIR", tmp_path)
@@ -44,9 +44,7 @@ def garrison_factory(app, tmp_path, monkeypatch):
                 }
             },
             "garrisonInfo": {"ability_test": {"description": f"{label}能力", "eventTypeDesc": "测试能力"}},
-            "titleInfo": {
-                "comment_1": {"id": "comment_1", "name": f"{label}称号", "picId": "comment_icon_1_0"}
-            },
+            "titleInfo": {"comment_1": {"id": "comment_1", "name": f"{label}称号", "picId": "comment_icon_1_0"}},
         }
 
     def record(record_id="recent-one", *, version="v2", **overrides):
@@ -132,9 +130,7 @@ def test_old_records_use_their_own_strategy_equipment_ability_and_title_metadata
     build, record, resource = garrison_factory
     historical = resource("v1", label="旧版")
     historical["titleInfo"]["comment_1"]["picId"] = "comment_icon_6_2"
-    view = build(
-        records=[record(version="v1", title="comment_1")], resources=[resource(), historical], record_index=1
-    )
+    view = build(records=[record(version="v1", title="comment_1")], resources=[resource(), historical], record_index=1)
     item = view.records[0]
     assert view.season_name == "旧版"
     assert view.version_id == "v1"
@@ -317,9 +313,7 @@ def test_zero_counters_and_unknown_zero_denominator_are_distinct(garrison_factor
     ("pic_id", "expected_stem"),
     [("comment_icon_6_2", "comment_icon_6_2"), ("", "comment_icon_1_0"), ("comment_icon_7", "")],
 )
-def test_career_title_icons_prioritize_entries_and_only_fall_back_when_missing(
-    garrison_factory, pic_id, expected_stem
-):
+def test_career_title_icons_prioritize_entries_and_only_fall_back_when_missing(garrison_factory, pic_id, expected_stem):
     build, _, _ = garrison_factory
     view = build(
         career={
@@ -331,9 +325,7 @@ def test_career_title_icons_prioritize_entries_and_only_fall_back_when_missing(
     assert [(title.name, title.count) for title in view.normal_titles] == [("内联称号", 0)]
     assert [(title.name, title.count) for title in view.special_titles] == [("特殊称号", 2)]
     assert view.other_titles == []
-    assert view.normal_titles[0].icon_url == (
-        f"{_TITLE_BASE}{expected_stem}.png" if expected_stem else ""
-    )
+    assert view.normal_titles[0].icon_url == (f"{_TITLE_BASE}{expected_stem}.png" if expected_stem else "")
     assert view.special_titles[0].icon_url == _TITLE_BASE + "comment_icon_6.png"
 
 
@@ -355,13 +347,9 @@ def test_unknown_title_pic_ids_keep_names_and_counts_without_image_paths(garriso
     build, record, resource = garrison_factory
     metadata = resource()
     metadata["titleInfo"]["comment_1"]["picId"] = pic_id
-    view = build(
-        records=[record(title="comment_1")], career={"titleCntInfo": {"comment_1": 0}}, resources=[metadata]
-    )
+    view = build(records=[record(title="comment_1")], career={"titleCntInfo": {"comment_1": 0}}, resources=[metadata])
     assert view.normal_titles == view.special_titles == []
-    assert (view.other_titles[0].name, view.other_titles[0].count, view.other_titles[0].icon_url) == (
-        "新版称号", 0, ""
-    )
+    assert (view.other_titles[0].name, view.other_titles[0].count, view.other_titles[0].icon_url) == ("新版称号", 0, "")
     assert (view.records[0].title, view.records[0].title_icon_url) == ("新版称号", "")
 
 
@@ -394,9 +382,7 @@ def test_difficulty_backgrounds_use_api_category_without_inferring_from_level(
 @pytest.mark.parametrize("tier", [0, 1, 6, 7])
 def test_operator_tier_icons_do_not_replace_unknown_tiers(garrison_factory, tier):
     build, record, _ = garrison_factory
-    view = build(
-        records=[record(chessSquad=[{"chessId": "chess_test", "chessInfo": {"chessLevel": tier}}])]
-    )
+    view = build(records=[record(chessSquad=[{"chessId": "chess_test", "chessInfo": {"chessLevel": tier}}])])
     operator = view.records[0].operators[0]
     assert operator.tier == tier
     assert operator.tier_icon_url == (
@@ -419,9 +405,7 @@ def test_operator_half_portraits_use_character_assets_without_inventing_skin_ids
 
     monkeypatch.setattr(filters, "CACHE_DIR", tmp_path)
     build, record, _ = garrison_factory
-    view = build(
-        records=[record(version="missing", chessSquad=[{"chessId": "unknown-chess", "charId": char_id}])]
-    )
+    view = build(records=[record(version="missing", chessSquad=[{"chessId": "unknown-chess", "charId": char_id}])])
     assert view.records[0].operators[0].half_portrait_url == expected
 
 
@@ -563,9 +547,9 @@ def test_preferences_ignore_empty_ids_but_keep_unknown_nonempty_ids(garrison_fac
     assert [(item.id, item.name, item.icon_url, item.count, item.recent_count) for item in view.strategies] == [
         ("future-band", "future-band", "", None, 1)
     ]
-    assert [(item.id, item.name, item.icon_url, item.count, item.recent_count, item.max_layer) for item in view.bonds] == [
-        ("future-bond", "future-bond", "", None, 1, 0)
-    ]
+    assert [
+        (item.id, item.name, item.icon_url, item.count, item.recent_count, item.max_layer) for item in view.bonds
+    ] == [("future-bond", "future-bond", "", None, 1, 0)]
 
 
 def test_common_bonds_rank_recent_five_across_all_types_with_stable_ties(garrison_factory):
@@ -588,8 +572,7 @@ def test_common_bonds_rank_recent_five_across_all_types_with_stable_ties(garriso
             record(
                 "second",
                 bondInfo=[
-                    {"bondId": bond_id, "layer": 0, "activate": 1}
-                    for bond_id in ["first", "second", "third", "fourth"]
+                    {"bondId": bond_id, "layer": 0, "activate": 1} for bond_id in ["first", "second", "third", "fourth"]
                 ],
             ),
             record("third", bondInfo=[{"bondId": "second", "layer": 1, "activate": 1}]),
@@ -829,9 +812,7 @@ def test_four_unlayered_bonds_keep_zero_in_records_and_preferences(garrison_fact
 )
 def test_recent_duration_sums_seconds_before_truncating_to_minutes(garrison_factory, durations, expected):
     build, record, _ = garrison_factory
-    view = build(
-        records=[record(str(index), gameEndTs=100 + duration) for index, duration in enumerate(durations)]
-    )
+    view = build(records=[record(str(index), gameEndTs=100 + duration) for index, duration in enumerate(durations)])
     metric = next(metric for metric in view.metrics if metric.label == "游戏时长")
     assert metric.value == expected
     assert metric.detail == view.recent_scope
@@ -927,7 +908,9 @@ def test_title_api_categories_win_over_icon_category_and_duplicate_counts(garris
         ({"EQUIP": 6, "CHAR": 5, "BOND": 4, "DAMAGE": 3, "KILL": 2, "COIN": 1}, 6, True),
     ],
 )
-def test_title_dimensions_use_only_career_counts_with_fixed_order_and_unknowns(garrison_factory, counts, scale, complete):
+def test_title_dimensions_use_only_career_counts_with_fixed_order_and_unknowns(
+    garrison_factory, counts, scale, complete
+):
     build, record, _ = garrison_factory
     view = build(
         records=[record(title="comment_1")],
@@ -941,7 +924,12 @@ def test_title_dimensions_use_only_career_counts_with_fixed_order_and_unknowns(g
         f"{_TITLE_BASE}comment_icon_{index}.png" for index in [4, 2, 6, 1, 5, 3]
     ]
     assert [item.label for item in view.title_dimensions] == [
-        "资金管理", "补救能力", "领袖挑战", "盟约理解", "人力调度", "装备活用"
+        "资金管理",
+        "补救能力",
+        "领袖挑战",
+        "盟约理解",
+        "人力调度",
+        "装备活用",
     ]
     assert view.title_scale == scale
     assert view.title_radar_complete is complete

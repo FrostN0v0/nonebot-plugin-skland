@@ -7,8 +7,8 @@ import nonebot
 from pytest_mock import MockerFixture
 from pytest_asyncio import is_async_test
 from sqlalchemy import StaticPool, delete
-from nonebot.adapters.onebot.v11 import Adapter as OneBotV11Adapter
 from nonebug import NONEBOT_INIT_KWARGS, NONEBOT_START_LIFESPAN, App
+from nonebot.adapters.onebot.v11 import Adapter as OneBotV11Adapter
 
 
 def pytest_configure(config: pytest.Config):

@@ -16,8 +16,8 @@ def register_picmenu_templates() -> bool:
     require("nonebot_plugin_picmenu_next")
 
     from nonebot_plugin_alconna.uniseg import UniMessage
-    from nonebot_plugin_picmenu_next.templates.jj_utils import build_base_render_kwargs
     from nonebot_plugin_picmenu_next.data_source.models import PMDataItem, PMNPluginInfo
+    from nonebot_plugin_picmenu_next.templates.jj_utils import build_base_render_kwargs
     from nonebot_plugin_picmenu_next.templates import detail_templates, func_detail_templates
     from nonebot_plugin_picmenu_next.markdown import b64_prp_transformer, build_default_prp_processor
 

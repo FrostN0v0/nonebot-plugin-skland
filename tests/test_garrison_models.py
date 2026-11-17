@@ -1,22 +1,22 @@
+from pathlib import Path
+
 import pytest
 
-_UI_BASE = "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/ui/autochess/"
-_OUTER_BASE = _UI_BASE + "%5Buc%5Dautochessouter/"
-_TITLE_BASE = _OUTER_BASE + "arts/titleicon/"
-_MODE_BASE = _UI_BASE + "%5Buc%5Dautochessbattle/arts/modeinfotitle/"
-_SETTLEMENT_BASE = _OUTER_BASE + "settlegame/auto_chess_settle_game_state/"
+_GARRISON_DIR = Path(__file__).resolve().parents[1] / "nonebot_plugin_skland" / "resources" / "images" / "garrison"
+_GARRISON_BASE = _GARRISON_DIR.as_uri() + "/"
+_TITLE_BASE = _GARRISON_BASE + "titles/"
+_MODE_BASE = _GARRISON_BASE + "modes/"
+_ENEMY_BASE = "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/enemy/"
 
 
 @pytest.fixture
-def garrison_factory(app, tmp_path, monkeypatch):
+def garrison_factory(app, monkeypatch):
     from nonebot.compat import type_validate_python
 
-    from nonebot_plugin_skland.utils import assets
     from nonebot_plugin_skland.config import config
     from nonebot_plugin_skland.schemas.arknights.garrison import GarrisonData, GarrisonView, GarrisonResources
 
     monkeypatch.setattr(config, "github_proxy_url", "")
-    monkeypatch.setattr(assets, "IMAGE_DIR", tmp_path)
 
     def resource(version="v2", *, activity="synthetic-season", label="新版"):
         return {
@@ -75,6 +75,35 @@ def garrison_factory(app, tmp_path, monkeypatch):
         return GarrisonView.from_data(data, metadata, uid="synthetic-uid", **view_kwargs)
 
     return build, record, resource
+
+
+@pytest.mark.parametrize(
+    ("channel_id", "server_name", "expected"),
+    [
+        ("1", "1", "官服"),
+        ("2", "2", "bilibili服"),
+        ("1", "bilibili服", "官服"),
+        ("2", "官服", "bilibili服"),
+        ("other", "其他渠道", "其他渠道"),
+        ("", "原有区服名", "原有区服名"),
+    ],
+)
+def test_server_display_uses_role_channel_identity(garrison_factory, channel_id, server_name, expected):
+    build, _, _ = garrison_factory
+    view = build(channel_master_id=channel_id, server_name=server_name)
+    assert view.server_name == expected
+
+
+def test_fixed_ui_icons_use_packaged_paths_with_github_proxy(garrison_factory, monkeypatch):
+    from nonebot_plugin_skland.config import config
+
+    monkeypatch.setattr(config, "github_proxy_url", "https://proxy.example.test/")
+    build, _, _ = garrison_factory
+    view = build()
+    icons = {metric.label: metric.icon_url for metric in view.metrics}
+    assert icons["奖杯数量"] == _GARRISON_BASE + "id_info_cup_icon.png"
+    assert icons["游戏时长"] == _GARRISON_BASE + "time_icon.png"
+    assert icons["已获赞"] == _GARRISON_BASE + "like_icon.png"
 
 
 def test_empty_history_has_no_fabricated_records_or_lifetime_counts(garrison_factory):
@@ -194,6 +223,7 @@ def test_bosses_keep_historical_identity_and_completion(garrison_factory, hidden
     old["bossInfo"] = {
         "boss_test": {"enemyId": "enemy_9013_acstmk", "handbookEnemyId": "enemy_9037_aceel"},
         "boss_unknown": {"enemyId": "enemy_future"},
+        "boss_empty": {"enemyId": "", "handbookEnemyId": ""},
     }
     current = resource()
     current["bossInfo"] = {"boss_test": {"enemyId": "enemy_9035_acspider"}}
@@ -201,20 +231,21 @@ def test_bosses_keep_historical_identity_and_completion(garrison_factory, hidden
         {"bossId": "boss_test", "isHidden": hidden, "isKilled": killed},
         {"bossId": "boss_unknown", "isHidden": False, "isKilled": False},
         {"bossId": "boss_missing", "isHidden": True, "isKilled": True},
+        {"bossId": "boss_empty", "isHidden": False, "isKilled": False},
     ]
     view = build(records=[record(version="v1", acBossInfo=boss_records)], resources=[current, old], record_index=1)
-    known, unknown, missing = view.records[0].bosses
+    known, unknown, missing, empty = view.records[0].bosses
     assert (known.is_hidden, known.is_killed) == (hidden, killed)
     assert (known.id, known.name, known.icon_url, known.status_label) == (
         "boss_test",
         "假想敌：鳍",
-        "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/enemy/enemy_9037_aceel.png",
+        _ENEMY_BASE + "enemy_9037_aceel.png",
         label,
     )
     assert (unknown.id, unknown.name, unknown.icon_url, unknown.status_label) == (
         "boss_unknown",
         "enemy_future",
-        "",
+        _ENEMY_BASE + "enemy_future.png",
         "领袖 · 未击败",
     )
     assert (missing.id, missing.name, missing.icon_url, missing.status_label) == (
@@ -223,11 +254,51 @@ def test_bosses_keep_historical_identity_and_completion(garrison_factory, hidden
         "",
         "隐秘核心 · 已击败",
     )
+    assert (empty.id, empty.name, empty.icon_url, empty.status_label) == (
+        "boss_empty",
+        "boss_empty",
+        "",
+        "领袖 · 未击败",
+    )
 
     missing_version = build(records=[record(version="missing", acBossInfo=[boss_records[0]])], record_index=1)
     assert (missing_version.records[0].bosses[0].name, missing_version.records[0].bosses[0].icon_url) == (
         "boss_test",
         "",
+    )
+
+
+@pytest.mark.parametrize(
+    ("enemy_id", "encoded_id"),
+    [
+        ("enemy_future", "enemy_future"),
+        ("enemy_future/@#? 雪", "enemy_future%2F%40%23%3F%20%E9%9B%AA"),
+    ],
+)
+@pytest.mark.parametrize(
+    ("proxy", "prefix"),
+    [
+        ("", ""),
+        ("https://proxy.example.test", "https://proxy.example.test/"),
+        ("https://proxy.example.test///", "https://proxy.example.test/"),
+    ],
+)
+def test_boss_icons_encode_enemy_ids_and_preserve_github_proxy(
+    garrison_factory, monkeypatch, enemy_id, encoded_id, proxy, prefix
+):
+    from nonebot_plugin_skland.config import config
+
+    monkeypatch.setattr(config, "github_proxy_url", proxy)
+    build, record, resource = garrison_factory
+    metadata = resource()
+    metadata["bossInfo"] = {"boss_future": {"enemyId": enemy_id}}
+    view = build(records=[record(acBossInfo=[{"bossId": "boss_future", "isKilled": True}])], resources=[metadata])
+    boss = view.records[0].bosses[0]
+    assert (boss.id, boss.name, boss.icon_url, boss.status_label) == (
+        "boss_future",
+        enemy_id,
+        f"{prefix}{_ENEMY_BASE}{encoded_id}.png",
+        "领袖 · 已击败",
     )
 
 
@@ -260,14 +331,17 @@ def test_missing_historical_metadata_keeps_every_operator_and_raw_item_id(garris
 
 def test_same_version_id_from_another_activity_is_not_used(garrison_factory):
     build, record, resource = garrison_factory
+    foreign = resource("v1", activity="another-season")
+    foreign["bossInfo"] = {"boss_test": {"enemyId": "enemy_9037_aceel"}}
     view = build(
-        records=[record(version="v1", title="comment_1")],
-        resources=[resource(), resource("v1", activity="another-season")],
+        records=[record(version="v1", title="comment_1", acBossInfo=[{"bossId": "boss_test"}])],
+        resources=[resource(), foreign],
     )
     assert view.records[0].strategy.name == "band_shared"
     assert view.records[0].operators[0].equipment[0].name == "equip_shared"
     assert view.records[0].title == "comment_1"
     assert view.records[0].title_icon_url == ""
+    assert (view.records[0].bosses[0].name, view.records[0].bosses[0].icon_url) == ("boss_test", "")
 
 
 @pytest.mark.parametrize(("complete", "team", "success"), [(1, 0, True), (0, 1, False)])
@@ -385,9 +459,7 @@ def test_operator_tier_icons_do_not_replace_unknown_tiers(garrison_factory, tier
     view = build(records=[record(chessSquad=[{"chessId": "chess_test", "chessInfo": {"chessLevel": tier}}])])
     operator = view.records[0].operators[0]
     assert operator.tier == tier
-    assert operator.tier_icon_url == (
-        f"{_OUTER_BASE}arts/chesslevelsprite/chess_level_icon_{tier}.png" if 1 <= tier <= 6 else ""
-    )
+    assert operator.tier_icon_url == (f"{_GARRISON_BASE}tiers/chess_level_icon_{tier}.png" if 1 <= tier <= 6 else "")
 
 
 @pytest.mark.parametrize(
@@ -490,8 +562,8 @@ def test_common_strategies_rank_recent_five_with_stable_ties_and_actual_badges(g
     assert [item.id for item in view.strategies] == ["second", "first", "third", "fourth", "fifth"]
     assert all(item.count is None for item in view.strategies)
     assert [item.badge_icon_url for item in view.strategies] == [
-        _SETTLEMENT_BASE + "title_team_logo_victor.png",
-        _SETTLEMENT_BASE + "title_team_logo_master.png",
+        _GARRISON_BASE + "title_team_logo_victor.png",
+        _GARRISON_BASE + "title_team_logo_master.png",
         "",
         "",
         "",
@@ -596,7 +668,7 @@ def test_record_strategy_badges_use_career_state_not_record_outcome(garrison_fac
     build, record, _ = garrison_factory
     career = {"bandBadges": [] if master is None else [{"id": "band_shared", "masterVictor": master}]}
     view = build(records=[record(completeState=complete)], career=career)
-    expected = "" if master is None else f"{_SETTLEMENT_BASE}title_team_logo_{'master' if master else 'victor'}.png"
+    expected = "" if master is None else f"{_GARRISON_BASE}title_team_logo_{'master' if master else 'victor'}.png"
     assert view.records[0].strategy.badge_icon_url == expected
     other = build(records=[record(activityId="other-season", completeState=complete)], career=career)
     assert other.records[0].strategy.badge_icon_url == ""
@@ -611,7 +683,7 @@ def test_trophy_badge_uses_post_record_total_and_official_thresholds(garrison_fa
     view = build(records=[record(trophyBefore=300, trophyAfter=count)], career={"totalTrophyCnt": 900})
     item = view.records[0]
     assert (item.trophy_after, item.trophy_change) == (count, count - 300)
-    assert item.trophy_icon_url == f"{_OUTER_BASE}arts/medalicon/trophy_level{level}_icon.png"
+    assert item.trophy_icon_url == f"{_GARRISON_BASE}trophies/trophy_level{level}_icon.png"
 
 
 def test_lifetime_statistics_do_not_depend_on_selected_list_or_detail(garrison_factory):

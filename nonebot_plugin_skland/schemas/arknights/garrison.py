@@ -8,8 +8,7 @@ from nonebot.compat import model_dump
 from pydantic import Field, BaseModel
 
 from .models.status import Avatar
-from ...filters import charId_to_portraitUrl
-from ...utils.assets import image_resource_url
+from ...filters import ark_enemy_icon_url, garrison_asset_url, charId_to_portraitUrl
 
 _OFFICIAL_TAG = re.compile(r"<@[^>]*>|</>|</?(?:color|size|font|sprite)(?:=[^>]*)?>", re.IGNORECASE)
 _TAG = re.compile(r"<([^<>]*)>")
@@ -45,13 +44,13 @@ def _number(value: int | None) -> str:
 
 
 def _title_icon_url(pic_id: str) -> str:
-    return image_resource_url(f"garrison/titles/{pic_id}.png") if _TITLE_PIC_ID.fullmatch(pic_id) else ""
+    return garrison_asset_url(f"titles/{pic_id}.png") if _TITLE_PIC_ID.fullmatch(pic_id) else ""
 
 
 def _difficulty_background_url(difficulty: str) -> str:
     if difficulty not in {"FUNNY", "NORMAL", "HARD", "ABYSS", "FAST", "TRAINING"}:
         return ""
-    return image_resource_url(f"garrison/modes/img_title_mode_{difficulty.lower()}.png")
+    return garrison_asset_url(f"modes/img_title_mode_{difficulty.lower()}.png")
 
 
 class GarrisonProgress(BaseModel):
@@ -372,7 +371,7 @@ class GarrisonOperator(BaseModel):
 
     @property
     def tier_icon_url(self) -> str:
-        return image_resource_url(f"garrison/tiers/chess_level_icon_{self.tier}.png") if 1 <= self.tier <= 6 else ""
+        return garrison_asset_url(f"tiers/chess_level_icon_{self.tier}.png") if 1 <= self.tier <= 6 else ""
 
 
 class GarrisonRecordView(BaseModel):
@@ -406,7 +405,7 @@ class GarrisonRecordView(BaseModel):
     @property
     def trophy_icon_url(self) -> str:
         level = bisect_right((10, 30, 60, 100, 150, 200, 300), self.trophy_after) + 1
-        return image_resource_url(f"garrison/trophies/trophy_level{level}_icon.png")
+        return garrison_asset_url(f"trophies/trophy_level{level}_icon.png")
 
 
 def _band_item(
@@ -423,9 +422,7 @@ def _band_item(
         description=_text(meta.desc) if meta else "",
         badge=("大师标识" if badge.masterVictor else "胜利标识") if badge else "",
         badge_icon_url=(
-            image_resource_url(f"garrison/title_team_logo_{'master' if badge.masterVictor else 'victor'}.png")
-            if badge
-            else ""
+            garrison_asset_url(f"title_team_logo_{'master' if badge.masterVictor else 'victor'}.png") if badge else ""
         ),
     )
 
@@ -508,7 +505,7 @@ def _record_view(
             GarrisonBoss(
                 id=_text(boss.bossId),
                 name=_BOSS_NAMES.get(enemy_id, enemy_id or _text(boss.bossId)),
-                icon_url=image_resource_url(f"garrison/bosses/{enemy_id}.png") if enemy_id in _BOSS_NAMES else "",
+                icon_url=ark_enemy_icon_url(enemy_id) if enemy_id else "",
                 is_hidden=boss.isHidden,
                 is_killed=boss.isKilled,
             )
@@ -570,7 +567,7 @@ class GarrisonView(BaseModel):
     metrics: list[GarrisonMetric] = Field(default_factory=list)
     modes: list[GarrisonMode] = Field(default_factory=list)
     recent_count: int = 0
-    recent_scope: str = "暂无近期记录"
+    recent_scope: str = "暂无战绩记录"
     strategies: list[GarrisonStrategyStat] = Field(default_factory=list)
     bonds: list[GarrisonBondStat] = Field(default_factory=list)
     normal_titles: list[GarrisonItem] = Field(default_factory=list)
@@ -588,27 +585,28 @@ class GarrisonView(BaseModel):
         *,
         uid: str,
         server_name: str = "",
+        channel_master_id: str = "",
         activity_id: str | None = None,
         record_index: int | None = None,
         favored: bool = False,
     ) -> GarrisonView:
         resource = resources.current_resource(activity_id)
         selected = data.history.favourRecords if favored else data.history.records
-        # Preserve API ordering, including ties; recent and favorite indices are independent.
+        # Preserve API ordering, including ties; history and favorite indices are independent.
         if record_index is not None and not 1 <= record_index <= len(selected):
-            label = "收藏战绩" if favored else "近期战绩"
+            label = "收藏战绩" if favored else "战绩记录"
             raise ValueError(f"{label}编号超出范围：共 {len(selected)} 条，请选择 1..{len(selected)} 中的编号")
         favorites = {record.id for record in data.history.favourRecords}
         indexed = enumerate(selected, 1) if record_index is None else [(record_index, selected[record_index - 1])]
         career = data.career
         badges = {badge.id: badge for badge in career.bandBadges}
-        # Preferences use only this activity's unique recent records, never the selected list.
+        # Preferences use this activity's unique records, never the selected list.
         recent_records: dict[str, GarrisonRecord] = {}
         for record in data.history.records:
             if record.activityId == resource.versionInfo.activityId and record.id not in recent_records:
                 recent_records[record.id] = record
         recent_count = len(recent_records)
-        recent_scope = f"近{recent_count}场记录" if recent_count else "暂无近期记录"
+        recent_scope = f"共{recent_count}场记录" if recent_count else "暂无战绩记录"
         recent_bands: dict[str, tuple[int, int]] = {}
         recent_bonds: dict[str, tuple[int, int]] = {}
         boss_kills = 0
@@ -654,7 +652,7 @@ class GarrisonView(BaseModel):
             GarrisonMetric(
                 label="奖杯数量",
                 value=_number(career.totalTrophyCnt),
-                icon_url=image_resource_url("garrison/id_info_cup_icon.png"),
+                icon_url=garrison_asset_url("id_info_cup_icon.png"),
             ),
             GarrisonMetric(
                 label="最佳记录",
@@ -665,12 +663,12 @@ class GarrisonView(BaseModel):
                 label="游戏时长",
                 value=duration_label,
                 detail=recent_scope,
-                icon_url=image_resource_url("garrison/time_icon.png"),
+                icon_url=garrison_asset_url("time_icon.png"),
             ),
             GarrisonMetric(
                 label="已获赞",
                 value=_number(career.totalBeLikeCnt),
-                icon_url=image_resource_url("garrison/like_icon.png"),
+                icon_url=garrison_asset_url("like_icon.png"),
             ),
             GarrisonMetric(
                 label="Boss 击杀",
@@ -753,7 +751,7 @@ class GarrisonView(BaseModel):
                 key=key,
                 label=label,
                 count=career.titleTypeCnt.get(key),
-                icon_url=image_resource_url(f"garrison/titles/comment_icon_{icon}.png"),
+                icon_url=garrison_asset_url(f"titles/comment_icon_{icon}.png"),
             )
             for key, label, icon in [
                 ("COIN", "资金管理", 4),
@@ -777,7 +775,7 @@ class GarrisonView(BaseModel):
         return cls(
             nickname=_text(player.name) or _text(uid),
             uid=_text(uid),
-            server_name=_text(server_name),
+            server_name=_text({"1": "官服", "2": "bilibili服"}.get(channel_master_id, server_name)),
             level=player.level,
             avatar_url=player.avatar.url if player.avatar else "",
             season_name=_text(version.seasonName) or _text(version.activityId) or "未知赛季",

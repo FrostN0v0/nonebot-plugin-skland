@@ -510,27 +510,6 @@ class GameResourceDownloader:
             raise RequestException(f"下载文件{file.name}失败: {type(e).__name__}: {e}")
 
 
-async def _download_image_assets(*, update: bool) -> DownloadResult:
-    from .config import IMAGE_DIR
-    from .utils.assets import IMAGE_SOURCES
-
-    success_count = 0
-    failed_count = 0
-    for source, data in IMAGE_SOURCES.items():
-        save_path = IMAGE_DIR / source
-        files = [
-            File(name=path, download_url=data["base_url"] + path)
-            for path in dict.fromkeys(data["files"].values())
-            if update or not (save_path / path).is_file()
-        ]
-        if not files:
-            continue
-        result = await GameResourceDownloader._download_files(files, save_path, label=source, update=update)
-        success_count += result.success_count
-        failed_count += result.failed_count
-    return DownloadResult(version=None, success_count=success_count, failed_count=failed_count)
-
-
 async def download_img_resource(force: bool, update: bool) -> DownloadResult:
     """Download image resources, optionally bypassing version checks or replacing files."""
     from .config import CACHE_DIR, RESOURCE_ROUTES
@@ -538,30 +517,25 @@ async def download_img_resource(force: bool, update: bool) -> DownloadResult:
     origin_version = await GameResourceDownloader.get_version()
     version_file = CACHE_DIR.joinpath("version")
     local_version = version_file.read_text(encoding="utf-8") if version_file.exists() else None
-    update_base = local_version != origin_version or force
+    if local_version == origin_version and not force:
+        logger.info("游戏图片资源已是最新")
+        return DownloadResult(version=None, success_count=0, failed_count=0)
 
     total_success = 0
     total_failed = 0
-    if update_base:
-        logger.info(f"检测到新版本 {origin_version}，开始下载游戏资源")
-        for route in RESOURCE_ROUTES:
-            logger.info(f"正在下载: {route}")
-            result = await GameResourceDownloader.download_all(
-                owner="yuanyan3060",
-                repo="ArknightsGameResource",
-                route=route,
-                save_dir=CACHE_DIR,
-                branch="main",
-                update=update,
-            )
-            total_success += result.success_count
-            total_failed += result.failed_count
-    assets = await _download_image_assets(update=bool(update and update_base))
-    total_success += assets.success_count
-    total_failed += assets.failed_count
-    if not update_base and total_success == 0 and total_failed == 0:
-        logger.info("游戏图片资源已是最新")
-        return DownloadResult(version=None, success_count=0, failed_count=0)
+    logger.info(f"检测到新版本 {origin_version}，开始下载游戏资源")
+    for route in RESOURCE_ROUTES:
+        logger.info(f"正在下载: {route}")
+        result = await GameResourceDownloader.download_all(
+            owner="yuanyan3060",
+            repo="ArknightsGameResource",
+            route=route,
+            save_dir=CACHE_DIR,
+            branch="main",
+            update=update,
+        )
+        total_success += result.success_count
+        total_failed += result.failed_count
     if total_failed:
         logger.warning(f"游戏图片资源仍有 {total_failed} 个文件下载失败，版本未更新，下次运行将重试")
     else:

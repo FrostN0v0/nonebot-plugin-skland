@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 from nonebot import logger
 
-from .config import RES_DIR, CACHE_DIR
+from .config import RES_DIR, CACHE_DIR, config
 from .image_cache import register_missing_image
 
 
@@ -100,6 +100,10 @@ def war_echoes_potential_asset(level: int) -> str:
     return f"../images/endfield/potential/potential_{normalized}.png"
 
 
+def garrison_asset_url(filename: str) -> str:
+    return (RES_DIR / "images" / "garrison" / filename).as_uri()
+
+
 def charId_to_avatarUrl(charId: str) -> str:
     avatar_id = next(
         (charId.replace(symbol, "_", 1) for symbol in ["@", "#"] if symbol in charId),
@@ -178,6 +182,12 @@ def ark_skill_icon_url(skill_id: str) -> str:
         return image_path.as_uri()
     encoded_id = quote(skill_id, safe="")
     return f"https://web.hycdn.cn/arknights/game/assets/char_skill/{encoded_id}.png"
+
+
+def ark_enemy_icon_url(enemy_id: str) -> str:
+    encoded_id = quote(enemy_id, safe="")
+    image_url = f"https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/enemy/{encoded_id}.png"
+    return f"{config.github_proxy_url.rstrip('/')}/{image_url}" if config.github_proxy_url else image_url
 
 
 def ark_potential_icon_url(rank: int) -> str:

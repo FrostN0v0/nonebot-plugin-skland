@@ -42,10 +42,11 @@ async def startup():
     skland.shortcut("萨米肉鸽", {"command": "skland rogue --topic 萨米", "fuzzy": True, "prefix": True})
     skland.shortcut("水月肉鸽", {"command": "skland rogue --topic 水月", "fuzzy": True, "prefix": True})
     skland.shortcut("傀影肉鸽", {"command": "skland rogue --topic 傀影", "fuzzy": True, "prefix": True})
-    skland.shortcut(
-        "卫戍战绩",
-        {"command": "skland garrison", "fuzzy": True, "prefix": True, "compact": False},
-    )
+    for shortcut in ("卫戍战绩", "卫"):
+        skland.shortcut(
+            shortcut,
+            {"command": "skland garrison", "fuzzy": True, "prefix": True, "compact": False},
+        )
     skland.shortcut("森空岛角色", {"command": "skland char", "fuzzy": False, "prefix": True})
     skland.shortcut(
         "切换方舟角色",

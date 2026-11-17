@@ -64,7 +64,6 @@ nonebot_plugin_skland/
 │   └── picmenu.py       # 已加载 PicMenu Next 时注册专属帮助模板
 ├── utils/
 │   ├── __init__.py      # Package boundary without implicit exports
-│   ├── assets.py        # 卫戍素材清单与数据目录优先 URL
 │   ├── background.py    # Configured background selection
 │   ├── files.py         # Same-directory atomic publication of single files
 │   ├── message.py       # Command reactions and API error feedback
@@ -85,7 +84,7 @@ nonebot_plugin_skland/
 │   ├── selection.py     # Shared game-aware role selection and overview feedback
 │   ├── gacha.py         # 明日方舟抽卡记录查询、分页、导入小黑盒记录
 │   ├── rogue.py         # 肉鸽战绩查询与单局详情
-│   ├── garrison.py      # 卫戍生涯、最近/收藏战绩和单局详情
+│   ├── garrison.py      # 卫戍生涯、战绩列表、收藏和单局详情
 │   ├── sync.py          # 资源与数据同步命令
 │   └── endfield/
 │       ├── __init__.py  # 终末地 handler 导出
@@ -185,7 +184,7 @@ skland char set <ark|arknights|ef|endfield> <index>
 skland char update [--all]
 skland sync [--img] [--data] [--force] [--update]
 skland rogue [target] [-r|--role <index>] [--topic <topic>]
-skland garrison [target] [-r|--role <index>] [-i|--index <record_index>] [-f|--favored] [-a|--activity <activity_id>]
+skland garrison [target] [-r|--role <index>] [-i|--index <record_index>] [-f|--favored] [-a|--all]
 skland rginfo <id> [-r|--role <index>] [-f]
 skland gacha [target] [-r|--role <index>] [-b <begin>] [-l <limit>]
 skland import <url> [-r|--role <index>]
@@ -248,7 +247,6 @@ class Config(BaseModel):
 - `TEMPLATES_DIR`: 包内模板目录。
 - `CACHE_DIR`: `nonebot-plugin-localstore` 插件缓存目录。
 - `DATA_DIR`: `nonebot-plugin-localstore` 插件数据目录。
-- `IMAGE_DIR`: `DATA_DIR/resources`，保存新增卫戍素材，按来源和上游原始路径分层。
 - `GACHA_DATA_PATH`: 明日方舟游戏数据缓存目录。
 - `OPERATOR_METADATA_PATH`: PRTS 干员筛选元数据快照路径。
 
@@ -388,7 +386,9 @@ class Config(BaseModel):
 
 若 `check_res_update=True`，启动调用 `download.download_img_resource()` 检查图片；手动 `skland sync` 同时更新图片与数据，`skland sync --img` 仅更新图片。图片版本检查、成功/失败计数、已有文件的跳过/覆盖和并发控制由 `download.py` 的图片下载流程负责，与数据更新流程分开。每个图片先写入同目录临时文件，完整下载后原子替换；任一文件失败时不推进图片版本，`sync` 回复失败，下次运行重新下载缺失文件。单文件原子写入统一使用 `utils/files.atomic_write()`，签到缓存与半身图缓存共用同一实现；多文件批次仍由 `data_source._publish_files()` 负责。
 
-卫戍新增的 76 张静态素材仅在 `resources/image_assets.json` 登记来源，不再保留包内图片副本。13 张 Boss 头像优先复用 `yuanyan3060/ArknightsGameResource/main/enemy/`；现有仓库未收录的 63 张界面素材使用 `ArknightsAssets/ArknightsAssets2/cn` 的真实解包路径。`utils/assets.py` 优先返回 `IMAGE_DIR/<source>/<原始路径>` 的文件 URI，尚未下载时使用同一上游地址。此清单不迁移旧卡片、肉鸽或终末地素材，既有头像、技能及立绘缓存目录不变。`download_img_resource()` 复用图片下载、计数、覆盖和原子发布流程；即使游戏图片版本相同，也必须补齐清单内缺失文件，任一文件失败仍不推进版本。临时文件名限制原文件名前缀长度，避免新增深层解包路径触碰 Windows 路径上限。
+卫戍的 45 张固定 UI 和 18 张称号原图随包放在 `resources/images/garrison/`，由 `filters.garrison_asset_url()` 返回文件 URI。新装插件不执行 `sync --img` 也能显示这些素材，运行时不依赖 ArknightsAssets2、本机解包目录或额外数据目录授权。不再维护逐图清单、清单加载器和卫戍专用批量下载分支；`download_img_resource()` 与 `sync --img` 只保留原来的图片下载流程，不清理用户已有资源缓存。
+
+Boss 头像由 `filters.ark_enemy_icon_url()` 按有效敌人 ID 拼接 `yuanyan3060/ArknightsGameResource/main/enemy/` 路径，保留 GitHub 代理配置，不受名称映射名单限制。策略、盟约中央图案和装备继续使用接口直接返回的 `icon`，能力保留 `icon` / `eventTypeIcon`，不新增能力列表或下载任务。既有角色头像、技能、半身图及其缓存目录不变，不增加渲染时自动落盘、Boss 预下载、PRTS 取图或全局图片失败策略。
 
 ### 抽卡记录
 
@@ -438,33 +438,33 @@ class Config(BaseModel):
 
 ### 卫戍协议战绩
 
-- `skland garrison` 和快捷指令 `卫戍战绩` 共用入口；`-i` / `--index` 查看单局，`-f` / `--favored` 在收藏列表内查询和编号，`-a` / `--activity` 指定活动，`-r` / `--role` 沿用方舟选角权限。列表为空或编号越界时明确提示，不跨最近和收藏列表回退。
-- `SklandAPI.ark_garrison()` 与 `ark_garrison_resources()` 分别读取官方 `/api/ms/game/arknights/garrison/info`、`/resource`，携带 `x-transformed: base64`。业务错误先按统一认证分类处理，`data.content` 按 Base64、UTF-8、JSON 和对应 Pydantic 模型逐层解析；格式失败统一为不含原始响应或 URL 的 `RequestException`。
-- `services/garrison.py` 顺序读取资源和角色战绩，省略活动时从资源首个版本获取当前 `activityId`，不硬编码赛季。两次读取共用有界凭证刷新；命令在任何视图构造、图片渲染和消息发送前提交刷新结果，并仅使用已保存的普通 UID、区服和脱离 ORM 的模型。
-- `schemas/arknights/garrison.py` 负责生涯统计、模式/胜负、品质、策略、盟约、装备、能力和称号投影。生涯统计不从保留记录反推，零分母胜率未知；记录按实际活动和版本匹配资源，缺元数据保留名称或 ID，不套用最新版本。详情由同一次 `info` 的 `history.records` / `favourRecords` 选择，不额外猜测详情或分页接口，也不执行收藏写操作。
-- `GarrisonStrategyStat` 的 `recent_count`、`recent_wins` 和 `win_percent` 统一使用近期同一策略的场次，继承的 `count` 保持为空，不混入 API 生涯前三次数。`GarrisonBondStat.recent_count` 为近期激活场次，同局同盟约最多计一次，`max_layer` 取全部已激活条目的最大层数并保留 `0`。偏好、Boss 击杀及游戏时长仅统计所查询活动的 `history.records`，按记录 ID 去重，不合并收藏、不随选中详情或分页改变，并通过 `recent_count` / `recent_scope` 标注范围，不能冒充完整生涯统计。
-- “游戏时长”取同一近期样本的 `gameEndTs - gameStartTs` 总和，先合计秒再显示时分；无样本或任一记录时间缺失、逆序时显示未知，不显示部分合计。统计面板不展示蚀刻章获取及独立／联合高难完成数，改为展示 Boss 击杀总数与其中的隐秘子项；只累计 `acBossInfo.isKilled=True`，隐秘子项另要求 `isHidden=True`，不根据整局胜负推断。无近期样本为未知，有样本但无击杀为零，原始 wire 字段仍保留。
-- `render_garrison_history(props)` 的总览固定使用 706px 竖版，每图最多 4 条记录；不再保留横版 `layout` 参数或样式分支。生涯概览的六项指标固定两行三列，完整生涯区位于战绩之前且仅首图显示，续图使用紧凑页头。单局详情使用 1080px 视口，8 人及以下按四列展示，9 人及以上按五列换行。模板与浏览器视口共用 `page_width`，沿用 1.5 倍 PNG、资源显式就绪等待及全局截图超时。QQClient 多图合并转发，其它平台顺序发送，全部发送成功后才标记完成。页面保持同一深色圆角外框，模板显式开启 autoescape，新样式只使用 `garrison-*` 命名空间，不新增数据库表、玩家历史文件或配置项。
+- `skland garrison` 和快捷指令 `卫戍战绩`、`卫` 共用入口，默认只返回首页；`-a` / `--all` 显示所选列表的全部可用战绩，`-i` / `--index` 查看单局，`-f` / `--favored` 在收藏列表内查询和编号，`-r` / `--role` 沿用方舟选角权限。两种快捷指令均沿用 Bot 命令前缀，使用 `compact=False` 要求参数以空格分隔，短入口不匹配其他以“卫”开头的词。不再提供 `--activity` 或手动活动选择，`-a` 不接收活动 ID。列表为空或编号越界时明确提示，不跨战绩和收藏列表回退；单局编号不受默认首页范围限制。
+- `SklandAPI.ark_garrison()` 与 `ark_garrison_resources()` 分别读取官方 `/api/ms/game/arknights/garrison/info`、`/resource`，不设置 `x-transformed`，直接解析 `data` JSON 对象，不保留 Base64 解码分支。业务错误先按统一认证分类处理，再检查 HTTP 状态和对应 Pydantic 模型；格式失败统一为不含原始响应或 URL 的 `RequestException`。
+- `services/garrison.py` 顺序读取资源和角色战绩，命令自动从资源首个版本获取当前 `activityId`，不硬编码赛季。两次读取共用有界凭证刷新；命令在任何视图构造、图片渲染和消息发送前提交刷新结果，并仅使用已保存的普通 UID、区服、渠道 ID 和脱离 ORM 的模型。`GarrisonView.from_data()` 按角色渠道 ID 将 `1` / `2` 显示为“官服” / “bilibili服”，兼容区服名仍保存编号的旧数据，未知渠道保留原名称；不修改数据库或请求身份，模板继续显式开启 autoescape。
+- `schemas/arknights/garrison.py` 负责生涯统计、模式/胜负、品质、策略、盟约、装备、能力和称号投影。生涯场次、胜负和奖杯读取 `career` 字段，零分母胜率未知；记录按实际活动和版本匹配资源，缺元数据保留名称或 ID，不套用最新版本。详情由同一次 `info` 的 `history.records` / `favourRecords` 选择，不额外猜测详情或分页接口，也不执行收藏写操作。
+- `GarrisonStrategyStat` 的 `recent_count`、`recent_wins` 和 `win_percent` 统一使用所查询活动中同一策略的场次，继承的 `count` 保持为空，不混入 API 生涯前三次数。`GarrisonBondStat.recent_count` 为激活场次，同局同盟约最多计一次，`max_layer` 取全部已激活条目的最大层数并保留 `0`。偏好、Boss 击杀及游戏时长统计所查询活动的 `history.records`，按记录 ID 去重，不合并收藏、不随选中详情或分页改变。界面使用“战绩记录”“共 N 场记录”等表述；`recent_*` 是现有内部字段名，不是接口时间范围或数据完整性的依据。
+- “游戏时长”取同一活动记录的 `gameEndTs - gameStartTs` 总和，先合计秒再显示时分；无记录或任一记录时间缺失、逆序时显示未知，不显示部分合计。统计面板不展示蚀刻章获取及独立／联合高难完成数，改为展示 Boss 击杀总数与其中的隐秘子项；只累计 `acBossInfo.isKilled=True`，隐秘子项另要求 `isHidden=True`，不根据整局胜负推断。无记录为未知，有记录但无击杀为零，原始 wire 字段仍保留。
+- `render_garrison_history(props, *, show_all=False)` 的总览固定使用 706px 竖版，每图最多 4 条记录；默认仅渲染首页，`show_all=True` 才渲染全部分页，页码分母始终保留所选列表的总页数。不在统计或单局选择之前截断原始记录，默认首页不会改变生涯及战绩统计；不再保留横版 `layout` 参数或样式分支。生涯概览的六项指标固定两行三列，完整生涯区位于战绩之前且仅首图显示，续图使用紧凑页头。单局详情使用 1080px 视口，8 人及以下按四列展示，9 人及以上按五列换行。模板与浏览器视口共用 `page_width`，沿用 1.5 倍 PNG、资源显式就绪等待及全局截图超时。QQClient 多图按每条合并转发最多 16 张图片顺序分批发送，节点页码在全部图片内连续，仅首批引用原消息；单图及其它平台保留普通图片发送。任一批次失败时停止后续发送，全部批次成功后才标记完成，不自动重发已成功批次。页面保持同一深色圆角外框，模板显式开启 autoescape，新样式只使用 `garrison-*` 命名空间，不新增数据库表、玩家历史文件或配置项。
 - 卫戍模板沿用方舟卡片的深色面板、Bender / Akrobat 字体与现有阴影，青绿表示模拟完成，红色表示中断。列表的干员卡宽度上限为 72px；列表和详情均在 8 人及以下按四列展示，9 人及以上按五列完整换行，两者共用半身图与紧凑标识，不截断阵容。`GarrisonOperator.half_portrait_url` 复用 `charId_to_portraitUrl` 的官方角色 ID 资源，不再拼接猜测的 `#1` 皮肤编号；阿米娅职业形态同样使用其自身角色资源。精英化使用 `ark_card/elite/` 素材，技能复用 `ark_skill_icon_url()`。装备位于立绘下方，区域固定宽高比 2:1：不超过两件时保留双槽，更多装备改为两行、按数量增加列数并缩小图标，六件为三列两行，不撑高卡片、不覆盖立绘、不截断装备。列表策略位于回合数右侧，规程与 Boss 位于其下，不再为策略单独预留一行；本局盟约单独分区、全宽排列并保留现有图标及层数大小。
 - 干员精英化图标按 `rank_label` 区分普通白色与精锐金色微光，等级数字继续保留；未知品质不染金。精锐身份沿用 `chessInfo.id == goldenChessId` 的非空匹配，不凭 `evolvePhase == 2`、等级或 `mergeLevel` 判断；真实记录存在 `mergeLevel=0` 的精锐干员。`mergeLevel` 只保留 wire 字段，不再投影或显示 `×N` 合成数字角标；列表和详情共用同一干员组件。
-- 卫戍清单中的基础素材包括 `common_logo.png`、`settlemen_personal_success.png`、`settlemen_personal_fail.png`、`operator_lv_bg.png`，来源于游戏 `autochess/[uc]autochessouter/settlegame/auto_chess_settle_game_state/`。盟约圆盘 `img_bond_bkg.png` 来自 `[uc]autochessouter/stageinfo/stageinfogroup/`，计数底纹 `matte_num.png` 来自 `[uc]autochessbattle/hud/autochess_hud_bond_item/`。圆盘保持 0.8 亮度、图案保持近黑色，在原生纹理外补单一较亮绿色细环，不整体提亮或增加大范围辉光；未激活时连同外环置灰。素材通过清单下载到 `IMAGE_DIR`，运行时不依赖开发机解包目录，图标和底纹均参与资源就绪等待。
-- 称号 `comment_icon_*.png` 原样来自 `[uc]autochessouter/arts/titleicon/`，按清单中的上游路径下载。schema 只接受清单收录的 `comment_icon_[1-6]` 和 `comment_icon_[1-6]_[0-2]`：生涯先用条目 `picId`，缺省才回退当前资源；只有计数字典时从资源取 `picId`。单局使用该记录活动/版本的元数据，列表和详情均可显示称号图标；未知或非法 `picId` 保留名称和计数，不从称号编号猜图，不跨活动取图。
+- 卫戍随包基础素材包括 `common_logo.png`、`settlemen_personal_success.png`、`settlemen_personal_fail.png`、`operator_lv_bg.png`，原图来自游戏 `autochess/[uc]autochessouter/settlegame/auto_chess_settle_game_state/`。盟约圆盘 `img_bond_bkg.png` 来自 `[uc]autochessouter/stageinfo/stageinfogroup/`，计数底纹 `matte_num.png` 来自 `[uc]autochessbattle/hud/autochess_hud_bond_item/`。圆盘保持 0.8 亮度、图案保持近黑色，在原生纹理外补单一较亮绿色细环，不整体提亮或增加大范围辉光；未激活时连同外环置灰。素材直接读取 `resources/images/garrison/`，图标和底纹均参与资源就绪等待。
+- 称号 `comment_icon_*.png` 原样取自 `[uc]autochessouter/arts/titleicon/`，随包放入 `garrison/titles/`，不再拼接森空岛称号 CDN。schema 只接受已随包的 `comment_icon_[1-6]` 和 `comment_icon_[1-6]_[0-2]`：生涯先用条目 `picId`，缺省才回退当前资源；只有计数字典时从资源取 `picId`。单局使用该记录活动/版本的元数据，列表和详情均可显示称号图标；未知或非法 `picId` 保留名称和计数，不从称号编号猜图，不跨活动取图。
 - 生涯称号拆为 `normal_titles`、`special_titles`、`other_titles`，不再使用扁平的 `titles`。优先保留 API 普通／特殊列表的分类与零计数；仅有 `titleCntInfo` 时，按经过白名单验证的 `picId` 后缀 `_0`、`_1/_2` 分入特殊、普通，无法确定的条目归入其他称号，不丢弃或按名称猜测。六维评价固定为资金管理、补救能力、领袖挑战、盟约理解、人力调度、装备活用，只使用 `career.titleTypeCnt`，缺失值显示未知；六维全部已知才绘制雷达面积，几何布局留在模板。
-- 模式与规程等级使用 `[uc]autochessbattle/arts/modeinfotitle/img_title_mode_*.png` 整条原生底图，按上游路径下载至 `IMAGE_DIR`；左侧图形与右侧文字区按原图叠合，不再使用独立的小难度图标。按接口 `modeDifficulty` 的 `FUNNY`、`NORMAL`、`HARD`、`ABYSS`、`FAST`、`TRAINING` 选择，保留 `mode` 的实际文字和规程数字；最佳记录也使用此映射。运行时不根据中文编号推断难度，极速模式不按模式 ID 的 `funny` 后缀误判；未知难度只显示原文，不使用奖杯等级图冒充规程徽章。
-- 常用策略和常用盟约各展示最多五项，分别按近期使用场次、激活场次降序排列，同次数保留近期记录内首次出现的顺序；空 ID 不参与，未知非空 ID 保留名称回退，不按盟约类型排除，也不从生涯前三、徽章或特殊策略补位。偏好区域以五列紧凑横排展示场次、名称及胜率／最高层数，不重复显示场次。`bandBadges` 只提供已有条目的标识：`masterVictor=False` 使用 `title_team_logo_victor.png`，为真使用 `title_team_logo_master.png`，缺记录不显示。单局沿用所查询活动的生涯策略标识，不根据本局胜负推断或跨活动套用，原图保留完整叠层位置。
+- 模式与规程等级使用随包 `garrison/modes/img_title_mode_*.png` 整条原生底图，原图来自 `[uc]autochessbattle/arts/modeinfotitle/`；左侧图形与右侧文字区按原图叠合，不再使用独立的小难度图标。按接口 `modeDifficulty` 的 `FUNNY`、`NORMAL`、`HARD`、`ABYSS`、`FAST`、`TRAINING` 选择，保留 `mode` 的实际文字和规程数字；最佳记录也使用此映射。运行时不根据中文编号推断难度，极速模式不按模式 ID 的 `funny` 后缀误判；未知难度只显示原文，不使用奖杯等级图冒充规程徽章。
+- 常用策略和常用盟约各展示最多五项，分别按使用场次、激活场次降序排列，同次数保留接口记录内首次出现的顺序；空 ID 不参与，未知非空 ID 保留名称回退，不按盟约类型排除，也不从生涯前三、徽章或特殊策略补位。偏好区域以五列紧凑横排展示场次、名称及胜率／最高层数，不重复显示场次。`bandBadges` 只提供已有条目的标识：`masterVictor=False` 使用 `title_team_logo_victor.png`，为真使用 `title_team_logo_master.png`，缺记录不显示。单局沿用所查询活动的生涯策略标识，不根据本局胜负推断或跨活动套用，原图保留完整叠层位置。
 - 单局头像旁显示原生奖杯段位、结算后的 `trophyAfter` 和本局 `trophyAfter - trophyBefore`，保留零或负变化，不以生涯总数替代历史总数。段位图来自 `[uc]autochessouter/arts/medalicon/trophy_level[1-8]_icon.png`，门槛为 `10、30、60、100、150、200、300`，与官方 `5337.df086ed0.js` 模块 `17524` 的奖杯函数一致。头像名字底纹使用结算页 `id_info_bg.png`，底部统计不再重复展示奖杯变化。
-- 干员阶级采用 `[uc]autochessouter/arts/chesslevelsprite/chess_level_icon_[1-6].png`，按上游路径下载至 `IMAGE_DIR`，按 `chessLevel` 选择；超出已知范围保留数值。奖杯与日期分别使用结算页的 `id_info_cup_icon.png`、`date_icon.png`，点赞使用结算玩家项的 `like_icon.png`。击杀数直接使用 `killCnt`，放在通过回合和领袖旁的紧凑信息区，不再单独占据底部大统计框；没有已确认的击杀图标时保留文字。`syncCnt` 仅保留原始 wire 字段，不投影或显示为“调度”等未经确认的统计名称。
-- 单局布局按游戏结算页组织：策略头像与模式、胜负横向组合，回合、领袖、击杀和花费金币紧邻，玩家头像与奖杯区置于左下；右侧八人按四列两排展示，九人按五列两排展示，盟约位于阵容下方。花费金币直接使用 `coinCost` 投影的 `record.coin_cost`，零值保留，不恢复独立的大统计块。本局盟约按 `layer` 稳定降序，同层数保留接口顺序，不另按激活状态排序或修改原始记录，列表和详情共用排序视图；偏好榜另按近期激活场次排名。协防、调和、独行、绝技等继续按接口显示零层，不维护隐藏零层的例外名单。
+- 干员阶级使用随包 `garrison/tiers/chess_level_icon_[1-6].png`，原图来自 `[uc]autochessouter/arts/chesslevelsprite/`，按 `chessLevel` 选择；超出已知范围保留数值。奖杯与日期分别使用结算页的 `id_info_cup_icon.png`、`date_icon.png`，点赞使用结算玩家项的 `like_icon.png`。击杀数直接使用 `killCnt`，放在通过回合和领袖旁的紧凑信息区，不再单独占据底部大统计框；没有已确认的击杀图标时保留文字。`syncCnt` 仅保留原始 wire 字段，不投影或显示为“调度”等未经确认的统计名称。
+- 单局布局按游戏结算页组织：策略头像与模式、胜负横向组合，回合、领袖、击杀和花费金币紧邻，玩家头像与奖杯区置于左下；右侧八人按四列两排展示，九人按五列两排展示，盟约位于阵容下方。花费金币直接使用 `coinCost` 投影的 `record.coin_cost`，零值保留，不恢复独立的大统计块。本局盟约按 `layer` 稳定降序，同层数保留接口顺序，不另按激活状态排序或修改原始记录，列表和详情共用排序视图；偏好榜另按激活场次排名。协防、调和、独行、绝技等继续按接口显示零层，不维护隐藏零层的例外名单。
 - 列表显示本局用时，单局底部信息行显示本局用时、开始与结束时间，保留原有时间戳格式；时钟使用结算页 `time_icon.png`。用时由 `gameEndTs - gameStartTs` 计算，跨小时完整显示；缺少有效开始时间或结束早于开始时标注“未提供”，不猜测时长。
-- 领袖使用该局活动和版本的 `bossInfo` 解析 `bossId`，优先采用 `handbookEnemyId`，缺少时才用 `enemyId`；不会用当前赛季覆盖历史领袖。`schemas/arknights/garrison.py` 的 `_BOSS_NAMES` 与资源清单的 Boss 条目一起更新，未知身份保留原始 ID，不套用其他领袖。当前名称来自 [固定版本敌人图鉴](https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/6f63c14e27b847ef74b53b00fe51fc322b3cd7ff/zh_CN/gamedata/excel/enemy_handbook_table.json) 的 `enemyData[id].name`，头像优先复用 `ArknightsGameResource` 的 `enemy/` 原路径，不随包复制。
-- 列表与单局均展示领袖头像和名称，通过 `round_info_boss_icon.png` / `round_info_boss_icon_sp.png` 标识普通领袖 / 隐秘核心领袖，继续使用 `round_info_boss_bg*.png` 与 `round_info_boss_complete*.png` 原生框和击败标记。`GarrisonBoss.is_hidden`、`is_killed` 分别沿用 `isHidden`、`isKilled`，不解析显示文案选择素材，也不根据整局胜负推断击败状态。`tests/test_garrison_models.py` 覆盖历史身份、领袖状态、近期前五及稳定并列、策略徽标与胜负隔离、奖杯门槛、称号 `picId` 优先级及非法值、难度与未知阶级、盟约层数稳定排序和时间边界。
-- 生涯回归覆盖近期样本的活动隔离与去重、策略胜率分母、盟约同局激活去重及零层、Boss 总数与隐秘子集、累计用时缺失／逆序、称号分类和六维缺失值。半身图回归固定验证官方角色身份资源，包含阿米娅职业形态，不用皮肤 helper 的返回值互相比较来掩盖错误路径。真实预览提供完整总览及完整单局图，检查六项统计的 3×2 布局、列表和详情的八人四列两排／九人五列两排、列表策略与回合并排且 Boss 位于下方、六件装备在原面积内三列两行、角色及装备不丢失、列表干员和盟约尺寸不变、绿色外环与层数，以及全部图片／字体、金币零值和续页顺序；近期样本数不能替代 API 生涯场次。
+- 领袖使用该局活动和版本的 `bossInfo` 解析 `bossId`，优先采用 `handbookEnemyId`，缺少时才用 `enemyId`；不会用当前赛季覆盖历史领袖。`schemas/arknights/garrison.py` 的 `_BOSS_NAMES` 只提供已知名称，不限制头像取图；未知身份保留原始 ID，有效敌人 ID 仍按上游路径拼图，空身份不拼图，不套用其他领袖或维护永久缺图黑名单。当前名称来自 [固定版本敌人图鉴](https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData/6f63c14e27b847ef74b53b00fe51fc322b3cd7ff/zh_CN/gamedata/excel/enemy_handbook_table.json) 的 `enemyData[id].name`，头像使用 `ArknightsGameResource` 的 `enemy/` 原路径，不随包复制。
+- 列表与单局均展示领袖头像和名称，通过 `round_info_boss_icon.png` / `round_info_boss_icon_sp.png` 标识普通领袖 / 隐秘核心领袖，继续使用 `round_info_boss_bg*.png` 与 `round_info_boss_complete*.png` 原生框和击败标记。`GarrisonBoss.is_hidden`、`is_killed` 分别沿用 `isHidden`、`isKilled`，不解析显示文案选择素材，也不根据整局胜负推断击败状态。`tests/test_garrison_models.py` 覆盖历史身份、领袖状态、常用前五及稳定并列、策略徽标与胜负隔离、奖杯门槛、称号 `picId` 优先级及非法值、难度与未知阶级、盟约层数稳定排序和时间边界。
+- 生涯回归覆盖战绩的活动隔离与去重、策略胜率分母、盟约同局激活去重及零层、Boss 总数与隐秘子集、累计用时缺失／逆序、称号分类和六维缺失值。半身图回归固定验证官方角色身份资源，包含阿米娅职业形态，不用皮肤 helper 的返回值互相比较来掩盖错误路径。真实预览提供完整总览及完整单局图，检查六项统计的 3×2 布局、列表和详情的八人四列两排／九人五列两排、列表策略与回合并排且 Boss 位于下方、六件装备在原面积内三列两行、角色及装备不丢失、列表干员和盟约尺寸不变、绿色外环与层数，以及全部图片／字体、金币零值和续页顺序；总模拟数继续取 `career` 的场次字段。
 
 ### 渲染系统
 
 渲染入口在 `render.py`。一般模板沿用 `cached_template_to_pic()`；终末地抽卡通过 `compact.open_html_page()` 建立自定义页面，业务模块负责资源就绪等待与 DOM 分页。普通截图和自定义页面均沿用全局 `render_timeout`。
 
-`compact.py` 是唯一 htmlrender 兼容边界，支持最低 0.6.5 至 0.8.x，统一提供模板生成、普通截图和自定义页面接口。0.8.x 使用插件私有 Application 授权 `RES_DIR`、`CACHE_DIR`、`IMAGE_DIR`，不授权整个 `DATA_DIR`，按上游资源策略处理本地资源；可复用共享 Playwright，但不得由插件关闭。响应缓存、资源就绪等待和 DOM 分页保留在各自业务模块。
+`compact.py` 是唯一 htmlrender 兼容边界，支持最低 0.6.5 至 0.8.x，统一提供模板生成、普通截图和自定义页面接口。0.8.x 使用插件私有 Application 授权 `RES_DIR`、`CACHE_DIR`，不授权整个 `DATA_DIR` 或旧卫戍资源数据目录，按上游资源策略处理本地资源；可复用共享 Playwright，但不得由插件关闭。响应缓存、资源就绪等待和 DOM 分页保留在各自业务模块。
 
 兼容层不得修改全局 Application、全局授权或浏览器安装流程，也不在运行错误后切换 API 分支。插件关闭后拒绝新渲染请求；文件 URI 统一使用 `Path.as_uri()`。
 
@@ -477,7 +477,7 @@ class Config(BaseModel):
 - `render_gacha_history()`：明日方舟抽卡记录。
 - `render_ef_gacha_history()`：终末地抽卡记录，返回分类分区、期次明细与内容高度约束的多页 PNG。
 - `render_ef_war_echoes()`：战争回响赛季、荣勋、轮换与编队记录长图。
-- `render_garrison_history()`：卫戍生涯与最近/收藏战绩分页，或单局完整阵容详情。
+- `render_garrison_history()`：卫戍生涯、战绩与收藏列表分页，或单局完整阵容详情。
 - `render_rogue_card()` / `render_rogue_info()`：肉鸽战绩总览 / 单局详情。
 - `render_clue_board()`：线索看板。
 
@@ -576,7 +576,7 @@ uv run pytest -s tests/test_skland_api.py
 - `tests/test_operator_roster.py` 覆盖官方目录与 PRTS 元数据合并、自然筛选词、高级参数合并、快捷指令空格约束、持有状态/潜能组合、实装/获取/练度排序、技能/模组组合、实际模板中的已拥有/未拥有干员及三个模组完整展示，以及分页发送。
 - `tests/test_ark_ap.py` 覆盖理智溢出保留、未满时的估算区间及回满时间已过的边界。
 - `tests/test_image_cache.py` 覆盖配置开关、浏览器半身图响应落盘、本地复用、资源就绪与等待超时，以及失败响应不进入缓存。
-- `tests/test_compact.py` 覆盖支持版本的模板渲染、资源授权和生命周期。真实 Chromium 回归验证 `memory`、`filehost` 策略下普通截图与自定义页面均不依赖浏览器读取本地文件，并保留文档内 fragment 引用；测试仅使用已安装的 Chromium，缺失时跳过且不自动安装。
+- `tests/test_compact.py` 覆盖支持版本的模板渲染、资源授权和生命周期；包内素材与插件缓存可访问，旧数据资源目录和账号文件仍不可访问。真实 Chromium 回归验证 `memory`、`filehost` 策略下普通截图与自定义页面均不依赖浏览器读取本地文件，并保留文档内 fragment 引用；测试仅使用已安装的 Chromium，缺失时跳过且不自动安装。
 - `tests/test_qrcode.py` 覆盖头像 URL 限制、图片下载校验、无头像降级、二维码原始像素保持、群聊发起者标记及扫码绑定流程。
 - `tests/test_account_management.py` 覆盖多账号所有权、分游戏默认角色、角色同步、账号操作互斥、临时选角与角色卡序号一致、默认映射不变、按选定角色导入记录，以及缺少默认角色和跨用户临时选角时的隐私/事务边界。
 - `tests/test_bound_roles.py` 覆盖 binding API 规范化、角色卡投影、序号、默认徽标、两游戏玩家 UID 选择、内部 ID 隐藏、昵称转义、四种展示模式及空态/不可用角色。
@@ -585,7 +585,7 @@ uv run pytest -s tests/test_skland_api.py
 - `tests/test_sign.py` 覆盖多账号同名/同 UID 角色、角色所属凭证、签到缓存 list 结构、缓存截断或结构损坏时的状态反馈、序号选角和默认不变，以及签到/状态的 `--role`/`--all` 冲突、状态 owner/角色联合过滤、空结果和全体状态的 ORM 过期边界。
 - `tests/test_role_selection.py` 覆盖全部 14 个选角入口的长短选项、`-r` / `-ra` 冲突隔离、旧 UID 语法拒绝、更新开关保留，以及存在默认角色时无效序号的真实 matcher 分发，确保没有回退默认和外部数据访问。
 - `tests/test_war_echoes.py` 覆盖评级投影、荣勋累计、用户信息、当前/指定/相对赛季轮换选择、最高已通关难度和命令提交后渲染发送。
-- `tests/test_garrison_api.py`、`tests/test_garrison_models.py` 覆盖卫戍 Base64/JSON/模型边界、鉴权错误保留、空记录、最近/收藏编号、跨版本投影、缺元数据保留阵容及生涯统计；`tests/test_garrison_command.py` 覆盖跨账号临时选角、刷新持久化、默认角色不变、提交后渲染发送、失败不标完成及空收藏不回退。`tests/test_skland_api.py::TestRealAPI::test_garrison` 可单独读取当前真实赛季与战绩，不输出玩家或凭证。
+- `tests/test_garrison_api.py`、`tests/test_garrison_models.py` 覆盖卫戍无转换头的 JSON/模型边界、鉴权错误优先级与错误脱敏、空记录、战绩/收藏编号、跨版本投影、缺元数据保留阵容及生涯统计；素材回归验证包内固定图和称号路径、未知敌人 ID 仍可取图、空身份、代理与 ID 编码，以及跨活动头像隔离。区服回归验证渠道 ID 优先于旧区服名称及未知渠道回退。`tests/test_garrison_command.py` 覆盖跨账号临时选角、刷新持久化、默认角色不变、提交后渲染发送、失败不标完成、空收藏不回退，以及实际模板的默认首页、`-a` / `--all` 全部分页、收藏范围、跨首页单局编号、统计不截断、昵称转义及旧活动选项拒绝；发送回归覆盖 16/17/32/33 张图片的分批边界、完整顺序、全局页码，以及后续批次失败时不再继续发送且不标记完成。`tests/test_skland_api.py::TestRealAPI::test_garrison` 可单独读取当前真实赛季与战绩，不输出玩家或凭证。
 - `tests/test_rogue_info.py` 覆盖战绩详情编号 0、负数、越界、列表为空及收藏不回退最近战绩，引用图片与 `-r` 两条路径一致。
 - `tests/test_skland_api.py` 会调用真实接口；单独运行时使用 `uv run pytest -s tests/test_skland_api.py`，其中 `-s` 用于显示终端二维码输出；凭证优先级为：
   1. `tests/cred_cache.json`
@@ -688,7 +688,7 @@ nb orm upgrade
     > 涉及到渲染部分时，前置数据处理特化的可以在接收到数据时，在 `schemas` 部分处理好，通用的数据格式化等处理，可以在 `filters` 内处理，尽量避免在 `render` 中处理非渲染部分的业务。
 12. **pydantic兼容**: 在涉及`pydantic v2` 和 `v1` 的版本差异的内容上，优先采用 `nonebot.compat` 中的对应兼容。
 13. **用户体验** 注意项目用意，服务于用户交互体验，不要设计繁琐难记的交互指令，同时，不要有反人类的交互逻辑和代码执行设计。
-14. **用户文档只讲怎么用**：`extras.py`（图片帮助）和 `README.md` 面向用户，只写功能用法和必要提醒。用法没变的内部重构，不要加说明；需要记录的实现细节和开发约定放在本文件。
+14. **用户文档只讲功能与用法**：`README.md` 只介绍已实现的功能、命令与配置用法、使用示例，以及影响使用的必要提醒；不要描述发送分批阈值、批次顺序、内部数据流等细枝末节的实现行为。`extras.py`（图片帮助）同样遵循这一边界。用法没变的内部重构，不要添加用户说明；实现细节、技术约束和开发约定只记录在本文件。接口数据的时间范围、留存上限和完整性必须有已确认的依据，不得由字段名、本地命名或自行添加的界面标签推断。
 
 ## 语言与编码风格
 

@@ -44,7 +44,7 @@
     </section>
 
     <section class="garrison-preferences garrison-panel card-shadow">
-      <div class="garrison-section-heading"><h2>偏好统计</h2><span>近期记录</span></div>
+      <div class="garrison-section-heading"><h2>偏好统计</h2></div>
       <p class="garrison-recent-scope">{{ view.recent_scope }}</p>
       <div class="garrison-preference-grid">
         <section class="garrison-preference">
@@ -76,7 +76,7 @@
     {% endif %}
 
     <section class="garrison-history">
-      {% if not view.is_detail %}<div class="garrison-section-heading"><h2>{{ '收藏战绩' if view.favored else '近期战绩' }}</h2><span>{{ page_number }} / {{ page_total }}</span></div>{% endif %}
+      {% if not view.is_detail %}<div class="garrison-section-heading"><h2>{{ '收藏战绩' if view.favored else '战绩记录' }}</h2><span>{{ page_number }} / {{ page_total }}</span></div>{% endif %}
       <div class="garrison-record-list">
         {% for record in records %}
         {{ garrison_record_row(record) }}

@@ -82,7 +82,7 @@ else:
         ProviderDependencies,
     )
 
-    from .config import RES_DIR, CACHE_DIR, IMAGE_DIR
+    from .config import RES_DIR, CACHE_DIR
 
     class _ScopedPlaywrightProvider:
         """从上游组合入口取得私有资源服务和发布器，不改写其实现或全局状态。"""
@@ -123,7 +123,7 @@ else:
             _provider = _ScopedPlaywrightProvider(shared if shared.extensions.get(PLAYWRIGHT) is not None else None)
             # 只为本插件的模板扩展权限，不污染其他插件共用的 Application。
             settings.resources.local_access.allowed_paths = list(
-                dict.fromkeys([*settings.resources.local_access.allowed_paths, RES_DIR, CACHE_DIR, IMAGE_DIR])
+                dict.fromkeys([*settings.resources.local_access.allowed_paths, RES_DIR, CACHE_DIR])
             )
             settings.graphics.backends = ()
             if settings.provider not in (None, "playwright"):

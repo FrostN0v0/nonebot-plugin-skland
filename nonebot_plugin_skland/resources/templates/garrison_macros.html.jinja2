@@ -5,11 +5,11 @@
     {% if view.avatar_url %}<img src="{{ view.avatar_url }}" alt="博士头像" />{% else %}<span>博士</span>{% endif %}
   </div>
   <div class="garrison-player-info">
-    <h2>{% if record %}<img class="garrison-player-name-bg" src="{{ 'garrison/id_info_bg.png' | image_resource_url }}" alt="" aria-hidden="true" />{% endif %}<span>Dr. {{ view.nickname }}</span></h2>
+    <h2>{% if record %}<img class="garrison-player-name-bg" src="{{ 'id_info_bg.png' | garrison_asset_url }}" alt="" aria-hidden="true" />{% endif %}<span>Dr. {{ view.nickname }}</span></h2>
     {% if record %}
     <div class="garrison-trophy-summary">
-      <div class="garrison-trophy-rank"><img src="{{ record.trophy_icon_url }}" alt="奖杯段位" /><span><img src="{{ 'garrison/id_info_cup_icon.png' | image_resource_url }}" alt="" aria-hidden="true" />{{ record.trophy_after }}</span></div>
-      <div class="garrison-trophy-award"><span><img src="{{ 'garrison/id_info_cup_icon.png' | image_resource_url }}" alt="" aria-hidden="true" />获得奖杯</span><strong{% if record.trophy_change < 0 %} class="garrison-trophy-loss"{% endif %}>{{ record.trophy_change }}</strong></div>
+      <div class="garrison-trophy-rank"><img src="{{ record.trophy_icon_url }}" alt="奖杯段位" /><span><img src="{{ 'id_info_cup_icon.png' | garrison_asset_url }}" alt="" aria-hidden="true" />{{ record.trophy_after }}</span></div>
+      <div class="garrison-trophy-award"><span><img src="{{ 'id_info_cup_icon.png' | garrison_asset_url }}" alt="" aria-hidden="true" />获得奖杯</span><strong{% if record.trophy_change < 0 %} class="garrison-trophy-loss"{% endif %}>{{ record.trophy_change }}</strong></div>
     </div>
     {% else %}
     <div class="garrison-player-meta">{% if view.server_name %}<span class="garrison-server reg-shadow-blue">{{ view.server_name }}</span>{% endif %}<span>Lv. {{ view.level }}</span><span>UID {{ view.uid }}</span></div>
@@ -24,7 +24,7 @@
 <header class="garrison-header{% if compact %} garrison-header-compact{% endif %}">
   {% if view.background_url %}<img class="garrison-season-background" src="{{ view.background_url }}" alt="" />{% endif %}
   {{ garrison_profile(view) }}
-  <div class="garrison-heading"><img class="garrison-wordmark" src="{{ 'garrison/common_logo.png' | image_resource_url }}" alt="卫戍协议" /><h1>卫戍协议</h1><p>{{ view.season_name }}</p></div>
+  <div class="garrison-heading"><img class="garrison-wordmark" src="{{ 'common_logo.png' | garrison_asset_url }}" alt="卫戍协议" /><h1>卫戍协议</h1><p>{{ view.season_name }}</p></div>
 </header>
 {% endautoescape %}
 {% endmacro %}
@@ -54,10 +54,10 @@
   {% for boss in items %}
   <div class="garrison-boss" data-boss-id="{{ boss.id }}" title="{{ boss.name }} · {{ boss.status_label }}">
     <div class="garrison-boss-emblem">
-      <img class="garrison-boss-frame" src="{{ ('garrison/round_info_boss_bg' ~ ('_sp' if boss.is_hidden else '') ~ '.png') | image_resource_url }}" alt="" aria-hidden="true" />
+      <img class="garrison-boss-frame" src="{{ ('round_info_boss_bg' ~ ('_sp' if boss.is_hidden else '') ~ '.png') | garrison_asset_url }}" alt="" aria-hidden="true" />
       {% if boss.icon_url %}<img class="garrison-boss-portrait" src="{{ boss.icon_url }}" alt="{{ boss.name }}" />{% else %}<span class="garrison-boss-fallback">{{ boss.name }}</span>{% endif %}
-      <img class="garrison-boss-kind" src="{{ ('garrison/round_info_boss_icon' ~ ('_sp' if boss.is_hidden else '') ~ '.png') | image_resource_url }}" alt="{{ '隐秘核心领袖' if boss.is_hidden else '普通领袖' }}" />
-      {% if boss.is_killed %}<img class="garrison-boss-cleared" src="{{ ('garrison/round_info_boss_complete' ~ ('_sp' if boss.is_hidden else '') ~ '.png') | image_resource_url }}" alt="已击败" />{% else %}<span class="garrison-boss-undefeated" aria-label="未击败">×</span>{% endif %}
+      <img class="garrison-boss-kind" src="{{ ('round_info_boss_icon' ~ ('_sp' if boss.is_hidden else '') ~ '.png') | garrison_asset_url }}" alt="{{ '隐秘核心领袖' if boss.is_hidden else '普通领袖' }}" />
+      {% if boss.is_killed %}<img class="garrison-boss-cleared" src="{{ ('round_info_boss_complete' ~ ('_sp' if boss.is_hidden else '') ~ '.png') | garrison_asset_url }}" alt="已击败" />{% else %}<span class="garrison-boss-undefeated" aria-label="未击败">×</span>{% endif %}
     </div>
     {% if boss.icon_url %}<span class="garrison-boss-name">{{ boss.name }}</span>{% endif %}
   </div>
@@ -72,10 +72,10 @@
   {% for item in items %}
   <div class="garrison-bond{% if item.badge == '未激活' %} garrison-bond-inactive{% endif %}" title="{{ item.name or item.id }}{% if item.count is not none %} · {{ item.count }}{% endif %}{% if item.badge %} · {{ item.badge }}{% endif %}">
     <div class="garrison-bond-emblem">
-      <img class="garrison-bond-disc" src="{{ 'garrison/img_bond_bkg.png' | image_resource_url }}" alt="" aria-hidden="true" />
+      <img class="garrison-bond-disc" src="{{ 'img_bond_bkg.png' | garrison_asset_url }}" alt="" aria-hidden="true" />
       {% if item.icon_url %}<img class="garrison-bond-icon" src="{{ item.icon_url }}" alt="{{ item.name or item.id }}" />{% else %}<span class="garrison-bond-fallback">{{ item.name or item.id }}</span>{% endif %}
     </div>
-    {% if item.count is not none %}<span class="garrison-bond-count"><img src="{{ 'garrison/matte_num.png' | image_resource_url }}" alt="" aria-hidden="true" /><b>{{ item.count }}</b></span>{% endif %}
+    {% if item.count is not none %}<span class="garrison-bond-count"><img src="{{ 'matte_num.png' | garrison_asset_url }}" alt="" aria-hidden="true" /><b>{{ item.count }}</b></span>{% endif %}
   </div>
   {% else %}<span class="garrison-muted">—</span>{% endfor %}
 </div>
@@ -155,7 +155,7 @@
     <strong class="garrison-operator-name">{{ operator.name or operator.char_id or '未知干员' }}</strong>
   </div>
   <div class="garrison-operator-training" title="{{ operator.rank_label }} · 精英 {{ operator.elite_phase }} · Lv. {{ operator.level }}">
-    <img class="garrison-training-frame" src="{{ 'garrison/operator_lv_bg.png' | image_resource_url }}" alt="" aria-hidden="true" />
+    <img class="garrison-training-frame" src="{{ 'operator_lv_bg.png' | garrison_asset_url }}" alt="" aria-hidden="true" />
     <img class="garrison-training-elite" src="../images/ark_card/elite/elite_{{ operator.elite_phase }}.png" alt="{{ operator.rank_label }} · 精英 {{ operator.elite_phase }}" />
     <strong>{{ operator.level }}</strong>
   </div>
@@ -180,7 +180,7 @@
 {% autoescape true %}
 <header class="garrison-record-head">
   <div class="garrison-record-result"><h3>{{ record.result_label }}</h3>{{ garrison_record_title(record) }}{% if record.is_favored %}<span class="garrison-favored">已收藏</span>{% endif %}</div>
-  <div class="garrison-record-caption"><span class="garrison-record-number">#{{ '%02d' | format(record.index) }}</span><span class="garrison-record-duration"><img src="{{ 'garrison/time_icon.png' | image_resource_url }}" alt="" aria-hidden="true" />用时 {{ record.duration_label }}</span>{% if record.ended_at > 0 %}<time><img src="{{ 'garrison/date_icon.png' | image_resource_url }}" alt="" aria-hidden="true" />{{ record.ended_at | format_timestamp_str }}</time>{% endif %}</div>
+  <div class="garrison-record-caption"><span class="garrison-record-number">#{{ '%02d' | format(record.index) }}</span><span class="garrison-record-duration"><img src="{{ 'time_icon.png' | garrison_asset_url }}" alt="" aria-hidden="true" />用时 {{ record.duration_label }}</span>{% if record.ended_at > 0 %}<time><img src="{{ 'date_icon.png' | garrison_asset_url }}" alt="" aria-hidden="true" />{{ record.ended_at | format_timestamp_str }}</time>{% endif %}</div>
 </header>
 {% endautoescape %}
 {% endmacro %}
@@ -188,7 +188,7 @@
 {% macro garrison_record_row(record) %}
 {% autoescape true %}
 <article class="garrison-record gacha-info-shadow{% if record.success %} garrison-victory{% else %} garrison-interrupted{% endif %}" data-record-id="{{ record.record_id }}">
-  <img class="garrison-record-map" src="{{ ('garrison/settlemen_personal_' ~ ('success' if record.success else 'fail') ~ '.png') | image_resource_url }}" alt="" aria-hidden="true" />
+  <img class="garrison-record-map" src="{{ ('settlemen_personal_' ~ ('success' if record.success else 'fail') ~ '.png') | garrison_asset_url }}" alt="" aria-hidden="true" />
   {{ garrison_record_header(record) }}
   <div class="garrison-record-body">
     <div class="garrison-record-lineup">
@@ -211,10 +211,10 @@
 {% macro garrison_record_detail(record, view) %}
 {% autoescape true %}
 <article class="garrison-record garrison-record-detail gacha-info-shadow{% if record.success %} garrison-victory{% else %} garrison-interrupted{% endif %}" data-record-id="{{ record.record_id }}">
-  <img class="garrison-record-map" src="{{ ('garrison/settlemen_personal_' ~ ('success' if record.success else 'fail') ~ '.png') | image_resource_url }}" alt="" aria-hidden="true" />
+  <img class="garrison-record-map" src="{{ ('settlemen_personal_' ~ ('success' if record.success else 'fail') ~ '.png') | garrison_asset_url }}" alt="" aria-hidden="true" />
   <div class="garrison-settlement">
     <aside class="garrison-settlement-result">
-      <div class="garrison-settlement-brand"><img src="{{ 'garrison/common_logo.png' | image_resource_url }}" alt="卫戍协议" /><span>{{ view.season_name }}</span></div>
+      <div class="garrison-settlement-brand"><img src="{{ 'common_logo.png' | garrison_asset_url }}" alt="卫戍协议" /><span>{{ view.season_name }}</span></div>
       <div class="garrison-settlement-outcome">
         <div class="garrison-settlement-strategy">{{ garrison_item(record.strategy) }}</div>
         <div class="garrison-settlement-outcome-copy">
@@ -237,8 +237,8 @@
     </div>
     <div class="garrison-session-meta">
       <span>#{{ '%02d' | format(record.index) }}</span>
-      <span class="garrison-record-duration"><img src="{{ 'garrison/time_icon.png' | image_resource_url }}" alt="" aria-hidden="true" />本局用时 {{ record.duration_label }}</span>
-      {% if record.started_at > 0 %}<time data-event="start"><img src="{{ 'garrison/date_icon.png' | image_resource_url }}" alt="" aria-hidden="true" />开始 {{ record.started_at | format_timestamp_str }}</time>{% endif %}
+      <span class="garrison-record-duration"><img src="{{ 'time_icon.png' | garrison_asset_url }}" alt="" aria-hidden="true" />本局用时 {{ record.duration_label }}</span>
+      {% if record.started_at > 0 %}<time data-event="start"><img src="{{ 'date_icon.png' | garrison_asset_url }}" alt="" aria-hidden="true" />开始 {{ record.started_at | format_timestamp_str }}</time>{% endif %}
       {% if record.ended_at > 0 %}<time data-event="end">结束 {{ record.ended_at | format_timestamp_str }}</time>{% endif %}
     </div>
   </div>

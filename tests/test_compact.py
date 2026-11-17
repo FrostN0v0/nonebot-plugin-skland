@@ -322,7 +322,7 @@ async def test_private_resources_preserve_custom_template_authorization(htmlrend
 
 
 @pytest.mark.asyncio
-async def test_downloaded_images_are_private_without_authorizing_other_plugin_data(
+async def test_packaged_and_cached_images_are_private_without_authorizing_plugin_data(
     htmlrender_08, tmp_path, monkeypatch, tiny_png
 ):
     from nonebot_plugin_htmlrender.resources import ResourceAccessDenied
@@ -331,25 +331,34 @@ async def test_downloaded_images_are_private_without_authorizing_other_plugin_da
     from nonebot_plugin_skland import compact
 
     root = tmp_path / "plugin-data"
-    images = root / "resources"
-    images.mkdir(parents=True)
-    image = images / "boss.png"
-    image.write_bytes(tiny_png)
+    packaged = tmp_path / "packaged-resources"
+    cache = tmp_path / "plugin-cache"
+    images = [packaged / "images" / "packaged.png", cache / "portrait" / "downloaded.png"]
+    legacy_image = root / "resources" / "legacy.png"
+    for image in [*images, legacy_image]:
+        image.parent.mkdir(parents=True, exist_ok=True)
+        image.write_bytes(tiny_png)
     private = root / "account.json"
     private.write_text("private-data", encoding="utf-8")
-    monkeypatch.setattr(compact, "IMAGE_DIR", images)
+    monkeypatch.setattr(compact, "RES_DIR", packaged)
+    monkeypatch.setattr(compact, "CACHE_DIR", cache)
     setattr(nonebot.get_driver().config, "render", {})
     application = compact._get_application()
-    assert compact._provider is not None and compact._provider.dependencies is not None
+    assert compact._provider is not None
+    assert compact._provider.dependencies is not None
     resources = compact._provider.dependencies.resources
 
-    prepared = await application.preparation.prepare_html(f'<img src="{image.as_uri()}">', base_url=images.as_uri())
-    materialized = await materialize_local_assets(prepared, resources=resources)
-    assert [(asset.source, asset.data) for asset in materialized.assets] == [(image.as_uri(), tiny_png)]
-    forbidden = await application.preparation.prepare_html(f'<img src="{private.as_uri()}">', base_url=root.as_uri())
-    with pytest.raises(AssetMaterializationError) as error:
-        await materialize_local_assets(forbidden, resources=resources)
-    assert isinstance(error.value.__cause__, ResourceAccessDenied)
+    for image in images:
+        prepared = await application.preparation.prepare_html(
+            f'<img src="{image.as_uri()}">', base_url=image.parent.as_uri()
+        )
+        materialized = await materialize_local_assets(prepared, resources=resources)
+        assert [(asset.source, asset.data) for asset in materialized.assets] == [(image.as_uri(), tiny_png)]
+    for path in (legacy_image, private):
+        forbidden = await application.preparation.prepare_html(f'<img src="{path.as_uri()}">', base_url=root.as_uri())
+        with pytest.raises(AssetMaterializationError) as error:
+            await materialize_local_assets(forbidden, resources=resources)
+        assert isinstance(error.value.__cause__, ResourceAccessDenied)
 
 
 @pytest.mark.asyncio

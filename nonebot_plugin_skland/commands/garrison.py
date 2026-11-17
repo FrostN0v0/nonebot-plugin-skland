@@ -12,6 +12,8 @@ from ..services.garrison import fetch_garrison
 from ..schemas.arknights.garrison import GarrisonView
 from ..utils.message import send_reaction, send_request_error
 
+_FORWARD_IMAGE_LIMIT = 16
+
 
 async def garrison_handler(
     user_session: UserSession,
@@ -22,7 +24,7 @@ async def garrison_handler(
     role_index: int | None = None,
     record_index: int | None = None,
     favored: bool = False,
-    activity_id: str | None = None,
+    show_all: bool = False,
 ) -> None:
     if target.available:
         platform_id = target.result.target if isinstance(target.result, At) else target.result
@@ -35,10 +37,11 @@ async def garrison_handler(
     user, character = selected
     uid = str(character.uid)
     server_name = character.server_name
+    channel_master_id = character.channel_master_id
     send_reaction(user_session, "processing")
 
     try:
-        data, resources, resolved_activity = await fetch_garrison(user, uid, activity_id=activity_id)
+        data, resources, resolved_activity = await fetch_garrison(user, uid)
     except SklandException as error:
         await session.commit()
         await send_request_error(error)
@@ -55,6 +58,7 @@ async def garrison_handler(
             resources,
             uid=uid,
             server_name=server_name,
+            channel_master_id=channel_master_id,
             activity_id=resolved_activity,
             record_index=record_index,
             favored=favored,
@@ -63,17 +67,18 @@ async def garrison_handler(
         await UniMessage(str(error)).send(at_sender=True)
         return
 
-    images = await render_garrison_history(view)
+    images = await render_garrison_history(view, show_all=show_all)
     if len(images) > 1 and user_session.platform == "QQClient":
-        nodes = [
-            CustomNode(
-                bot.self_id,
-                f"{view.nickname} | 卫戍战绩 {index + 1}/{len(images)}",
-                UniMessage.image(raw=image),
-            )
-            for index, image in enumerate(images)
-        ]
-        await UniMessage.reference(*nodes).send(reply_to=True)
+        for start in range(0, len(images), _FORWARD_IMAGE_LIMIT):
+            nodes = [
+                CustomNode(
+                    bot.self_id,
+                    f"{view.nickname} | 卫戍战绩 {index + 1}/{len(images)}",
+                    UniMessage.image(raw=image),
+                )
+                for index, image in enumerate(images[start : start + _FORWARD_IMAGE_LIMIT], start=start)
+            ]
+            await UniMessage.reference(*nodes).send(reply_to=start == 0)
     else:
         for index, image in enumerate(images):
             await UniMessage.image(raw=image).send(reply_to=index == 0)

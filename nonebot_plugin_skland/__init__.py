@@ -204,7 +204,7 @@ async def _(
         role_index=result.query("garrison.role.role_index"),
         record_index=result.query("garrison.index.record_index"),
         favored=result.find("garrison.favored"),
-        activity_id=result.query("garrison.activity.activity_id"),
+        show_all=result.find("garrison.all"),
     )
 
 

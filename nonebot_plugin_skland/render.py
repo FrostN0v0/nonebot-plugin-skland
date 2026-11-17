@@ -2,7 +2,6 @@ from datetime import datetime
 from collections.abc import Callable
 
 from .schemas.arknights.rogue import Record
-from .utils.assets import image_resource_url
 from .image_cache import wait_for_page_resources
 from .config import RES_DIR, TEMPLATES_DIR, config
 from .schemas.arknights.garrison import GarrisonView
@@ -32,6 +31,7 @@ from .filters import (
     get_rarity_color,
     time_to_next_4am,
     war_echoes_asset,
+    garrison_asset_url,
     get_property_icon,
     ark_skill_icon_url,
     charId_to_avatarUrl,
@@ -281,12 +281,13 @@ async def render_ef_gacha_history(props: EfGachaView) -> list[bytes]:
         ]
 
 
-async def render_garrison_history(props: GarrisonView) -> list[bytes]:
+async def render_garrison_history(props: GarrisonView, *, show_all: bool = False) -> list[bytes]:
     page_width = 1080 if props.is_detail else 706
     page_size = 4
-    pages = [props.records[index : index + page_size] for index in range(0, len(props.records), page_size)] or [[]]
+    page_total = max(1, (len(props.records) + page_size - 1) // page_size)
     images = []
-    for index, records in enumerate(pages):
+    for index in range(page_total if show_all else 1):
+        records = props.records[index * page_size : (index + 1) * page_size]
         images.append(
             await template_to_pic(
                 template_path=str(TEMPLATES_DIR),
@@ -296,11 +297,11 @@ async def render_garrison_history(props: GarrisonView) -> list[bytes]:
                     "records": records,
                     "show_summary": index == 0 and not props.is_detail,
                     "page_number": index + 1,
-                    "page_total": len(pages),
+                    "page_total": page_total,
                     "page_width": page_width,
                 },
                 filters={
-                    "image_resource_url": image_resource_url,
+                    "garrison_asset_url": garrison_asset_url,
                     "ark_skill_icon_url": ark_skill_icon_url,
                     "format_timestamp_str": format_timestamp_str,
                 },

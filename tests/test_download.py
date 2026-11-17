@@ -7,14 +7,6 @@ import pytest
 from rich.console import Console
 
 
-@pytest.fixture
-def image_assets(app, monkeypatch):
-    from nonebot_plugin_skland.utils import assets
-
-    monkeypatch.setattr(assets, "IMAGE_SOURCES", {})
-    return assets
-
-
 @pytest.mark.asyncio
 async def test_overlapping_downloads_keep_independent_counts_and_elapsed_time(app, tmp_path, mocker):
     from nonebot_plugin_skland import download
@@ -72,7 +64,7 @@ async def test_overlapping_downloads_keep_independent_counts_and_elapsed_time(ap
 
 
 @pytest.mark.asyncio
-async def test_resource_download_aggregates_skips_failures_and_version_updates(app, tmp_path, mocker, image_assets):
+async def test_resource_download_aggregates_skips_failures_and_version_updates(app, tmp_path, mocker):
     from nonebot_plugin_skland import download
     from nonebot_plugin_skland.exception import RequestException
 
@@ -143,7 +135,7 @@ async def test_resource_download_aggregates_skips_failures_and_version_updates(a
 @pytest.mark.parametrize("ending", ["complete", "interrupted", "cancelled"])
 @pytest.mark.parametrize("existing", [False, True])
 async def test_image_download_publishes_only_complete_files_and_cleans_temporary_files(
-    app, tmp_path, mocker, monkeypatch, image_assets, ending, existing
+    app, tmp_path, mocker, monkeypatch, ending, existing
 ):
     from nonebot_plugin_skland import download
 
@@ -239,137 +231,6 @@ async def test_image_sync_reports_partial_download_as_failure(app, mocker):
     assert "成功: 2个，失败: 1个" in messages[0]
     assert "版本未更新" in messages[0]
     assert reactions.call_args.args[1] == "fail"
-
-
-@pytest.mark.asyncio
-async def test_missing_ui_assets_are_downloaded_even_when_the_game_version_is_current(
-    app, tmp_path, monkeypatch, mocker, tiny_png, image_assets
-):
-    from nonebot_plugin_skland import download
-    from nonebot_plugin_skland.config import config
-
-    cache = tmp_path / "cache"
-    cache.mkdir()
-    (cache / "version").write_text("current", encoding="utf-8")
-    root = tmp_path / "data" / "resources"
-    boss = root / "arknights" / "enemy" / "enemy_9037_aceel.png"
-    boss.parent.mkdir(parents=True)
-    boss.write_bytes(tiny_png)
-    path = "assets/dyn/ui/autochess/[uc]autochessouter/settlegame/auto_chess_settle_game_state/time_icon.png"
-    icon = root / "arknights_ui" / path
-    mocker.patch("nonebot_plugin_skland.config.CACHE_DIR", cache)
-    mocker.patch("nonebot_plugin_skland.config.IMAGE_DIR", root)
-    monkeypatch.setattr(image_assets, "IMAGE_DIR", root)
-    monkeypatch.setattr(config, "github_proxy_url", "")
-    monkeypatch.setattr(
-        image_assets,
-        "IMAGE_SOURCES",
-        {
-            "arknights": {
-                "base_url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/",
-                "files": {"garrison/bosses/enemy_9037_aceel.png": "enemy/enemy_9037_aceel.png"},
-            },
-            "arknights_ui": {
-                "base_url": "https://raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/",
-                "files": {"garrison/time_icon.png": path},
-            },
-        },
-    )
-    mocker.patch.object(download.GameResourceDownloader, "get_version", return_value="current")
-    requests = []
-
-    def respond(request):
-        assert request.url.path == "/ArknightsAssets/ArknightsAssets2/cn/" + path
-        requests.append(request)
-        return httpx.Response(200, content=tiny_png)
-
-    monkeypatch.setattr(
-        download, "AsyncClient", lambda **kwargs: httpx.AsyncClient(transport=httpx.MockTransport(respond), **kwargs)
-    )
-    assert image_assets.image_resource_url("garrison/bosses/enemy_9037_aceel.png") == boss.as_uri()
-    assert image_assets.image_resource_url("garrison/time_icon.png").startswith("https://raw.githubusercontent.com/")
-
-    first = await download.download_img_resource(force=False, update=False)
-
-    assert (first.version, first.success_count, first.failed_count) == ("current", 1, 0)
-    assert icon.read_bytes() == tiny_png
-    assert boss.read_bytes() == tiny_png
-    assert image_assets.image_resource_url("garrison/time_icon.png") == icon.as_uri()
-    assert not (cache / path).exists()
-    assert "%5Buc%5D" in str(requests[0].url)
-    current = await download.download_img_resource(force=False, update=True)
-    assert (current.version, current.success_count, current.failed_count) == (None, 0, 0)
-    icon.unlink()
-    restored = await download.download_img_resource(force=False, update=False)
-    assert (restored.success_count, restored.failed_count) == (1, 0)
-    assert icon.read_bytes() == tiny_png
-    assert (cache / "version").read_text(encoding="utf-8") == "current"
-
-
-@pytest.mark.asyncio
-async def test_failed_ui_assets_keep_the_previous_image_version_and_retry_only_missing_files(
-    app, tmp_path, monkeypatch, mocker, tiny_png, image_assets
-):
-    from nonebot_plugin_skland import download
-    from nonebot_plugin_skland.config import config
-
-    cache = tmp_path / "cache"
-    cache.mkdir()
-    (cache / "version").write_text("previous", encoding="utf-8")
-    root = tmp_path / "data" / "resources"
-    mocker.patch("nonebot_plugin_skland.config.CACHE_DIR", cache)
-    mocker.patch("nonebot_plugin_skland.config.IMAGE_DIR", root)
-    mocker.patch("nonebot_plugin_skland.config.RESOURCE_ROUTES", [])
-    monkeypatch.setattr(config, "github_proxy_url", "")
-    monkeypatch.setattr(
-        image_assets,
-        "IMAGE_SOURCES",
-        {
-            "arknights": {
-                "base_url": "https://raw.githubusercontent.com/yuanyan3060/ArknightsGameResource/main/",
-                "files": {
-                    "garrison/bosses/enemy_9037_aceel.png": "enemy/enemy_9037_aceel.png",
-                    "garrison/bosses/enemy_9035_acspider.png": "enemy/enemy_9035_acspider.png",
-                },
-            }
-        },
-    )
-    mocker.patch.object(download.GameResourceDownloader, "get_version", return_value="next")
-    failing = True
-
-    def respond(request):
-        if request.url.path.endswith("/enemy/enemy_9035_acspider.png") and failing:
-            return httpx.Response(503)
-        return httpx.Response(200, content=tiny_png)
-
-    monkeypatch.setattr(
-        download, "AsyncClient", lambda **kwargs: httpx.AsyncClient(transport=httpx.MockTransport(respond), **kwargs)
-    )
-    failed = await download.download_img_resource(force=False, update=False)
-    assert (failed.version, failed.success_count, failed.failed_count) == (None, 1, 1)
-    assert (cache / "version").read_text(encoding="utf-8") == "previous"
-    assert (root / "arknights/enemy/enemy_9037_aceel.png").read_bytes() == tiny_png
-    assert not (root / "arknights/enemy/enemy_9035_acspider.png").exists()
-    assert not list(root.rglob("*.tmp"))
-    failing = False
-    recovered = await download.download_img_resource(force=False, update=False)
-    assert (recovered.version, recovered.success_count, recovered.failed_count) == ("next", 1, 0)
-    assert (root / "arknights/enemy/enemy_9035_acspider.png").read_bytes() == tiny_png
-    assert (cache / "version").read_text(encoding="utf-8") == "next"
-
-
-def test_atomic_image_write_keeps_deep_upstream_paths_usable(app, tmp_path, tiny_png):
-    from nonebot_plugin_skland.utils.files import atomic_write
-
-    filename = "round_info_boss_complete_sp.png"
-    padding = 246 - len(str(tmp_path)) - len(filename) - 2
-    if padding < 1:
-        pytest.skip("测试临时目录已超出 Windows 路径长度测试窗口")
-    target = tmp_path / ("a" * padding) / filename
-    with atomic_write(target) as stream:
-        stream.write(tiny_png)
-    assert target.read_bytes() == tiny_png
-    assert list(target.parent.iterdir()) == [target]
 
 
 @pytest.mark.asyncio

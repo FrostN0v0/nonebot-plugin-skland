@@ -384,18 +384,16 @@ Bot 同时安装并加载 [nonebot-plugin-picmenu-next](https://github.com/lgc-N
 
 | 指令 | 权限 | 说明 |
 | --- | --- | --- |
-| `skland garrison` | 所有 | 查询当前卫戍赛季的生涯、常用策略、盟约及战绩阵容 |
+| `skland garrison` | 所有 | 查询当前卫戍赛季的生涯、常用策略、盟约及战绩首页 |
 | `skland garrison -r <序号>` | 所有 | 临时查询自己的指定方舟角色 |
 | `skland garrison @某人` | 所有 | 查询指定用户的默认方舟角色 |
 | `skland garrison -i <编号>` | 所有 | 查看对应编号的单局阵容、装备与对局详情 |
 | `skland garrison -f [-i <编号>]` | 所有 | 查询收藏列表，或该列表中的单局详情 |
-| `skland garrison -a <活动ID>` | 所有 | 查询指定卫戍活动，不填时自动获取当前赛季 |
+| `skland garrison -a` / `skland garrison --all` | 所有 | 显示所选列表的全部可用战绩 |
 
-**快捷指令：** `卫戍战绩`，例如 `卫戍战绩 -r 2 -i 1`、`卫戍战绩 -f -i 1`
+**快捷指令：** `卫戍战绩`、`卫`，例如 `卫 -a`、`卫 -r 2 -i 1`、`卫 -f -a`
 
-记录较多时自动分图，编号在当前最近或收藏列表内连续计算。收藏为空或编号越界时会提示，不会回退到其他列表。查询与选角不会改变默认角色，也不会执行收藏或取消收藏操作。
-
-常用策略和盟约最多展示近期前五，分别按使用场次、激活场次排序。榜单、胜率、最高层数、Boss 击杀和游戏时长均按图片中标注的近期记录范围统计，不代表完整生涯。
+默认查询当前赛季并显示首页。使用 `-a` 查看全部战绩，`-f -a` 查看全部收藏战绩；单局编号以对应列表图片中的编号为准。
 
 </details>
 
@@ -464,7 +462,7 @@ Bot 同时安装并加载 [nonebot-plugin-picmenu-next](https://github.com/lgc-N
 > 资源更新选项说明：
 >
 > - 可以组合使用选项，如 `skland sync --img --force --update`
-> - 图片资源包括干员立绘、技能及卫戍协议图标等；首次使用卫戍前可执行 `skland sync --img` 下载素材
+> - 图片资源包括干员立绘、技能图标等，数据资源包括卡池数据、角色数据等
 > - 图片更新默认跳过已存在的文件，使用 `--update` 可覆盖图片；日常数据更新无需加这个选项。
 > - 每天 09:00 自动更新数据，可通过 `skland__auto_update_resources=False` 关闭。
 > - 更新失败时保留旧数据；已有更新正在进行时，请稍后重试。
@@ -516,7 +514,7 @@ Bot 同时安装并加载 [nonebot-plugin-picmenu-next](https://github.com/lgc-N
 | `傀影肉鸽`           | `skland rogue --topic 傀影`   | 傀影主题战绩       |
 | `战绩详情`           | `skland rginfo`               | 查询战绩详情       |
 | `收藏战绩详情`       | `skland rginfo -f`            | 查询收藏战绩       |
-| `卫戍战绩`           | `skland garrison`             | 查询卫戍协议生涯、战绩和单局详情 |
+| `卫戍战绩`、`卫`     | `skland garrison`             | 查询卫戍协议生涯、战绩和单局详情 |
 | `方舟抽卡记录`       | `skland gacha -l 3`           | 查询抽卡记录       |
 | `导入抽卡记录`       | `skland import`               | 导入抽卡数据       |
 | `终末地抽卡记录`     | `skland efgacha`              | 获取、保存并展示最新记录 |

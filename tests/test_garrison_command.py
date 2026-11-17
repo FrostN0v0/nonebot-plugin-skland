@@ -234,8 +234,8 @@ async def test_selected_list_pagination_preserves_full_statistics(
     from nonebot_plugin_alconna import Image, Match
 
     from nonebot_plugin_skland import render
-    from nonebot_plugin_skland.compact import template_to_html
     from nonebot_plugin_skland.matcher import skland_command
+    from nonebot_plugin_skland.compact import template_to_html
     from nonebot_plugin_skland.schemas.arknights.garrison import GarrisonRecord
 
     case = garrison_case

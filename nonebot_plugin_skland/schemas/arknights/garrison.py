@@ -4,8 +4,8 @@ import re
 from html import unescape
 from bisect import bisect_right
 
-from nonebot.compat import model_dump
 from pydantic import Field, BaseModel
+from nonebot.compat import model_dump
 
 from .models.status import Avatar
 from ...filters import ark_enemy_icon_url, garrison_asset_url, charId_to_portraitUrl

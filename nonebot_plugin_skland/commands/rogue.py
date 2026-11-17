@@ -14,8 +14,8 @@ from ..model import SkUser
 from ..api import SklandAPI
 from ..config import config
 from ..exception import SklandException
-from .selection import check_user_character
 from ..schemas import CRED, Topics, RogueData
+from .selection import check_user_character
 from ..services.auth import refresh_credentials
 from ..render import render_rogue_card, render_rogue_info
 from ..utils.background import get_rogue_background_image

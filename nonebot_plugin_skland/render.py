@@ -2,10 +2,10 @@ from datetime import datetime
 from collections.abc import Callable
 
 from .schemas.arknights.rogue import Record
-from .image_cache import wait_for_page_resources
 from .config import RES_DIR, TEMPLATES_DIR, config
-from .schemas.arknights.garrison import GarrisonView
+from .image_cache import wait_for_page_resources
 from .compact import open_html_page, template_to_html
+from .schemas.arknights.garrison import GarrisonView
 from .utils.background import BackgroundImage, background_to_uri
 from .image_cache import cached_template_to_pic as template_to_pic
 from .schemas import (
@@ -31,9 +31,9 @@ from .filters import (
     get_rarity_color,
     time_to_next_4am,
     war_echoes_asset,
-    garrison_asset_url,
     get_property_icon,
     ark_skill_icon_url,
+    garrison_asset_url,
     charId_to_avatarUrl,
     format_stamina_time,
     format_timestamp_md,

@@ -2716,6 +2716,10 @@
   .ring-\[\#625d62\]\/60 {
     --tw-ring-color: color-mix(in oklab, #625d62 60%, transparent);
   }
+  .outline {
+    outline-style: var(--tw-outline-style);
+    outline-width: 1px;
+  }
   .outline-1 {
     outline-style: var(--tw-outline-style);
     outline-width: 1px;
@@ -4934,13 +4938,16 @@
     min-width: 0;
     aspect-ratio: 2 / 1;
     padding: 3px 2px 2px;
-    background: rgb(8 8 8 / 60%);
   }
   .garrison-equipment-slot {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
+    justify-self: center;
+    width: auto;
+    height: 100%;
+    aspect-ratio: 1;
     min-width: 0;
     min-height: 0;
     padding: 1px;
@@ -4952,8 +4959,21 @@
     height: 100%;
     object-fit: contain;
   }
+  .garrison-equipment-dense {
+    grid-template-columns: repeat(var(--equipment-columns), calc(50% / var(--equipment-rows)));
+    justify-content: space-between;
+    gap: 0;
+    padding: 0;
+  }
   .garrison-equipment-dense .garrison-equipment-slot {
     padding: 0;
+    border: 0;
+    background: none;
+    outline: 1px solid rgb(255 255 255 / 40%);
+    outline-offset: -1px;
+  }
+  .garrison-equipment-dense .garrison-equipment-chip-upgraded {
+    outline-color: #eec867;
   }
   .garrison-equipment-empty {
     border-color: rgb(255 255 255 / 15%);

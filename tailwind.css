@@ -562,10 +562,12 @@
   .garrison-operator-mini[data-rank="精锐"] .garrison-training-elite { filter: sepia(.8) saturate(2) drop-shadow(0 0 2px rgb(238 200 103 / 60%)); }
   .garrison-operator-mini[data-rank="精锐"] .garrison-operator-training > strong { color: #eec867; }
   .garrison-operator-name { position: absolute; right: 0; bottom: 0; left: 0; display: block; padding: 10px 3px 4px; background: linear-gradient(transparent, rgb(8 8 8 / 95%)); color: #fff; font-size: 10px; font-weight: 700; line-height: 1.4; text-shadow: 0 1px 4px #000; }
-  .garrison-equipment-list { --equipment-columns: 2; --equipment-rows: 1; display: grid; grid-template-columns: repeat(var(--equipment-columns), minmax(0, 1fr)); grid-template-rows: repeat(var(--equipment-rows), minmax(0, 1fr)); gap: 2px; min-width: 0; aspect-ratio: 2 / 1; padding: 3px 2px 2px; background: rgb(8 8 8 / 60%); }
-  .garrison-equipment-slot { position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; padding: 1px; border: 1px solid rgb(255 255 255 / 40%); background: rgb(255 255 255 / 6%); }
+  .garrison-equipment-list { --equipment-columns: 2; --equipment-rows: 1; display: grid; grid-template-columns: repeat(var(--equipment-columns), minmax(0, 1fr)); grid-template-rows: repeat(var(--equipment-rows), minmax(0, 1fr)); gap: 2px; min-width: 0; aspect-ratio: 2 / 1; padding: 3px 2px 2px; }
+  .garrison-equipment-slot { position: relative; display: flex; align-items: center; justify-content: center; justify-self: center; width: auto; height: 100%; aspect-ratio: 1; min-width: 0; min-height: 0; padding: 1px; border: 1px solid rgb(255 255 255 / 40%); background: rgb(255 255 255 / 6%); }
   .garrison-equipment-chip > img { width: 100%; height: 100%; object-fit: contain; }
-  .garrison-equipment-dense .garrison-equipment-slot { padding: 0; }
+  .garrison-equipment-dense { grid-template-columns: repeat(var(--equipment-columns), calc(50% / var(--equipment-rows))); justify-content: space-between; gap: 0; padding: 0; }
+  .garrison-equipment-dense .garrison-equipment-slot { padding: 0; border: 0; background: none; outline: 1px solid rgb(255 255 255 / 40%); outline-offset: -1px; }
+  .garrison-equipment-dense .garrison-equipment-chip-upgraded { outline-color: #eec867; }
   .garrison-equipment-empty { border-color: rgb(255 255 255 / 15%); background: rgb(255 255 255 / 2%); }
   .garrison-equipment-empty::before, .garrison-equipment-empty::after { content: ""; position: absolute; background: rgb(255 255 255 / 18%); }
   .garrison-equipment-empty::before { width: 45%; height: 1px; }

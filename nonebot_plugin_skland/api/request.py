@@ -20,9 +20,11 @@ from ..schemas import (
     WarEchoes,
     BindingApp,
     EndfieldCard,
+    GarrisonData,
     GachaResponse,
     ArkSignResponse,
     EndfieldPoolType,
+    GarrisonResources,
     EfCharGachaResponse,
     EndfieldSignResponse,
     EfWeaponGachaResponse,
@@ -182,6 +184,53 @@ class SklandAPI:
                 return RogueData(**payload["data"])
             except httpx.HTTPError as e:
                 raise RequestException(f"获取肉鸽数据失败: {e}") from e
+
+    @classmethod
+    async def ark_garrison(cls, cred: CRED, *, uid: str, activity_id: str) -> GarrisonData:
+        """获取所选角色、活动的卫戍协议战绩。"""
+        query = urlencode({"uid": uid, "activityId": activity_id})
+        url = f"https://zonai.skland.com/api/ms/game/arknights/garrison/info?{query}"
+        async with httpx.AsyncClient() as client:
+            try:
+                headers = await cls.get_sign_header(cred, url, method="get")
+                response = await client.get(url, headers=headers)
+                payload = response.json()
+                if not isinstance(payload, dict):
+                    raise RequestException("获取卫戍协议战绩失败：接口响应格式异常")
+                _raise_for_skland_code(payload, error_prefix="获取卫戍协议战绩失败")
+                response.raise_for_status()
+                data = payload.get("data")
+                if not isinstance(data, dict):
+                    raise RequestException("获取卫戍协议战绩失败：接口响应格式异常")
+                return type_validate_python(GarrisonData, data)
+            except httpx.HTTPError:
+                raise RequestException("获取卫戍协议战绩失败：网络请求失败") from None
+            except (json.JSONDecodeError, UnicodeError, ValidationError):
+                raise RequestException("获取卫戍协议战绩失败：接口响应格式异常") from None
+
+    @classmethod
+    async def ark_garrison_resources(cls, cred: CRED, *, activity_id: str | None = None) -> GarrisonResources:
+        """获取活动的全部版本资源；不指定活动时由官方选择当前活动。"""
+        url = "https://zonai.skland.com/api/ms/game/arknights/garrison/resource"
+        if activity_id is not None:
+            url = f"{url}?{urlencode({'activityId': activity_id})}"
+        async with httpx.AsyncClient() as client:
+            try:
+                headers = await cls.get_sign_header(cred, url, method="get")
+                response = await client.get(url, headers=headers)
+                payload = response.json()
+                if not isinstance(payload, dict):
+                    raise RequestException("获取卫戍协议资源失败：接口响应格式异常")
+                _raise_for_skland_code(payload, error_prefix="获取卫戍协议资源失败")
+                response.raise_for_status()
+                data = payload.get("data")
+                if not isinstance(data, dict):
+                    raise RequestException("获取卫戍协议资源失败：接口响应格式异常")
+                return type_validate_python(GarrisonResources, data)
+            except httpx.HTTPError:
+                raise RequestException("获取卫戍协议资源失败：网络请求失败") from None
+            except (json.JSONDecodeError, UnicodeError, ValidationError):
+                raise RequestException("获取卫戍协议资源失败：接口响应格式异常") from None
 
     @classmethod
     async def get_gacha_categories(cls, uid: str, role_token: str, token: str, ak_cookie: str) -> list[GachaCate]:

@@ -185,6 +185,29 @@ async def _(
     )
 
 
+@skland.assign("garrison")
+async def _(
+    user_session: UserSession,
+    session: async_scoped_session,
+    target: Match[At | int],
+    result: Arparma,
+    bot: Bot,
+):
+    """查询明日方舟卫戍协议战绩。"""
+    from .commands.garrison import garrison_handler
+
+    await garrison_handler(
+        user_session,
+        session,
+        target,
+        bot,
+        role_index=result.query("garrison.role.role_index"),
+        record_index=result.query("garrison.index.record_index"),
+        favored=result.find("garrison.favored"),
+        show_all=result.find("garrison.all"),
+    )
+
+
 @skland.assign("gacha")
 async def _(
     user_session: UserSession,

@@ -399,22 +399,22 @@ class GameResourceDownloader:
     async def download_all(
         cls, owner: str, repo: str, route: str, save_dir: Path, branch: str = "main", update: bool = False
     ) -> DownloadResult:
-        """并行下载 GitHub 目录下的所有文件
-
-        Returns:
-            DownloadResult: 下载结果，包含版本号、成功数量和失败数量
-        """
-        success_count = 0
-        started_at = datetime.now()
+        """并行下载 GitHub 目录下的文件。"""
         url = cls.BASE_URL.format(owner=owner, repo=repo, branch=branch)
         dl_url = cls.RAW_BASE_URL.format(owner=owner, repo=repo, branch=branch)
         files = await cls.fetch_file_list(url=url, dl_url=dl_url, route=route)
-        is_file_path = "." in route.split("/")[-1]
         save_path = save_dir / route
-        if is_file_path:
+        if "." in route.split("/")[-1]:
             save_path = save_path.parent
-        save_path.mkdir(parents=True, exist_ok=True)
+        return await cls._download_files(files, save_path, label=route, update=update)
 
+    @classmethod
+    async def _download_files(
+        cls, files: list[File], save_path: Path, *, label: str, update: bool = False
+    ) -> DownloadResult:
+        success_count = 0
+        started_at = datetime.now()
+        save_path.mkdir(parents=True, exist_ok=True)
         failed_files = []
         timeout = Timeout(timeout=300.0, connect=30.0, read=60.0, write=30.0, pool=10.0)
         async with AsyncClient(timeout=timeout) as client:
@@ -458,7 +458,7 @@ class GameResourceDownloader:
                 await asyncio.gather(*(worker(file) for file in files))
 
         if failed_files:
-            logger.error(f"❌ 资源 {route} 有 {len(failed_files)} 个文件下载失败:")
+            logger.error(f"❌ 资源 {label} 有 {len(failed_files)} 个文件下载失败:")
             for error_msg in failed_files:
                 logger.error(f"  - {error_msg}")
 
@@ -466,11 +466,11 @@ class GameResourceDownloader:
         failed_count = len(failed_files)
 
         if success_count == 0 and failed_count == 0:
-            logger.info(f"✅ 资源 {route} 无新增文件")
+            logger.info(f"✅ 资源 {label} 无新增文件")
         elif success_count == 0 and failed_count > 0:
-            logger.warning(f"⚠️ 资源 {route} 无新增文件，但有 {failed_count} 个文件下载失败")
+            logger.warning(f"⚠️ 资源 {label} 无新增文件，但有 {failed_count} 个文件下载失败")
         else:
-            success_msg = f"🎉 资源 {route} 下载完成，成功 {success_count} 个"
+            success_msg = f"🎉 资源 {label} 下载完成，成功 {success_count} 个"
             if failed_count > 0:
                 success_msg += f"，失败 {failed_count} 个"
             success_msg += f"，耗时 {time_consumed}"
@@ -521,9 +521,9 @@ async def download_img_resource(force: bool, update: bool) -> DownloadResult:
         logger.info("游戏图片资源已是最新")
         return DownloadResult(version=None, success_count=0, failed_count=0)
 
-    logger.info(f"检测到新版本 {origin_version}，开始下载游戏资源")
     total_success = 0
     total_failed = 0
+    logger.info(f"检测到新版本 {origin_version}，开始下载游戏资源")
     for route in RESOURCE_ROUTES:
         logger.info(f"正在下载: {route}")
         result = await GameResourceDownloader.download_all(

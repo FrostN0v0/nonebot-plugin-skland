@@ -5,6 +5,7 @@ from .schemas.arknights.rogue import Record
 from .config import RES_DIR, TEMPLATES_DIR, config
 from .image_cache import wait_for_page_resources
 from .compact import open_html_page, template_to_html
+from .schemas.arknights.garrison import GarrisonView
 from .utils.background import BackgroundImage, background_to_uri
 from .image_cache import cached_template_to_pic as template_to_pic
 from .schemas import (
@@ -31,6 +32,8 @@ from .filters import (
     time_to_next_4am,
     war_echoes_asset,
     get_property_icon,
+    ark_skill_icon_url,
+    garrison_asset_url,
     charId_to_avatarUrl,
     format_stamina_time,
     format_timestamp_md,
@@ -276,6 +279,43 @@ async def render_ef_gacha_history(props: EfGachaView) -> list[bytes]:
         return [
             await pages.nth(index).screenshot(type="png", timeout=config.render_timeout) for index in range(page_count)
         ]
+
+
+async def render_garrison_history(props: GarrisonView, *, show_all: bool = False) -> list[bytes]:
+    page_width = 1080 if props.is_detail else 706
+    page_size = 4
+    page_total = max(1, (len(props.records) + page_size - 1) // page_size)
+    images = []
+    for index in range(page_total if show_all else 1):
+        records = props.records[index * page_size : (index + 1) * page_size]
+        images.append(
+            await template_to_pic(
+                template_path=str(TEMPLATES_DIR),
+                template_name="garrison.html.jinja2",
+                templates={
+                    "view": props,
+                    "records": records,
+                    "show_summary": index == 0 and not props.is_detail,
+                    "page_number": index + 1,
+                    "page_total": page_total,
+                    "page_width": page_width,
+                },
+                filters={
+                    "garrison_asset_url": garrison_asset_url,
+                    "ark_skill_icon_url": ark_skill_icon_url,
+                    "format_timestamp_str": format_timestamp_str,
+                },
+                pages={
+                    "viewport": {"width": page_width, "height": 1},
+                    "base_url": TEMPLATES_DIR.as_uri(),
+                },
+                device_scale_factor=1.5,
+                screenshot_timeout=config.render_timeout,
+                type="png",
+                readiness="resources",
+            )
+        )
+    return images
 
 
 async def render_ef_war_echoes(props: WarEchoesView) -> bytes:

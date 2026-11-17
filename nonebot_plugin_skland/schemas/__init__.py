@@ -30,6 +30,8 @@ from .endfield import EfGachaGroup as EfGachaGroup
 from .endfield import EndfieldCard as EndfieldCard
 from .sign import SignCacheEntry as SignCacheEntry
 from .arknights import GachaDetails as GachaDetails
+from .arknights import GarrisonData as GarrisonData
+from .arknights import GarrisonView as GarrisonView
 from .arknights import OperatorCard as OperatorCard
 from .arknights import OperatorSort as OperatorSort
 from .arknights import RogueHistory as RogueHistory
@@ -51,6 +53,7 @@ from .endfield import EndfieldPoolType as EndfieldPoolType
 from .arknights import OperatorMetadata as OperatorMetadata
 from .binding import BoundRoleCardItem as BoundRoleCardItem
 from .endfield import EfWeaponGachaInfo as EfWeaponGachaInfo
+from .arknights import GarrisonResources as GarrisonResources
 from .arknights import OperatorOwnership as OperatorOwnership
 from .arknights import GroupedGachaRecord as GroupedGachaRecord
 from .binding import BindingAccountState as BindingAccountState

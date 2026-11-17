@@ -1,0 +1,95 @@
+{% autoescape true %}
+{% from 'garrison_macros.html.jinja2' import garrison_item, garrison_bond_stat, garrison_title_radar, garrison_title_group, garrison_difficulty, garrison_header, garrison_footer, garrison_record_row, garrison_record_detail %}
+<!DOCTYPE html>
+<html lang="zh-CN" style="--garrison-page-width: {{ page_width }}px">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width={{ page_width }}, initial-scale=1" />
+  <title>{{ view.nickname }} · 卫戍协议{{ '战绩详情' if view.is_detail else '战绩' }}</title>
+  <style>{% include 'index.css' %}</style>
+</head>
+<body class="garrison-body">
+<main id="garrison-card" class="garrison-page{% if view.is_detail %} garrison-page-detail{% endif %}">
+  {% if view.is_detail and records %}
+  {{ garrison_record_detail(records[0], view) }}
+  {% else %}
+  {{ garrison_header(view, compact=not show_summary) }}
+
+  <div class="garrison-content">
+    {% if show_summary and not view.is_detail %}
+    <section class="garrison-summary garrison-panel card-shadow">
+      <div class="garrison-section-heading"><h2>生涯概览</h2></div>
+      <div class="garrison-metrics">
+        {% for metric in view.metrics %}
+        <article class="garrison-metric">
+          {% if metric.background_url %}{{ garrison_difficulty(metric.value, metric.background_url) }}{% else %}<strong{% if metric.value | length > 5 %} class="garrison-metric-text"{% endif %}>{% if metric.icon_url %}<img src="{{ metric.icon_url }}" alt="" aria-hidden="true" />{% endif %}{{ metric.value }}{% if metric.secondary_value %}<span class="garrison-metric-secondary">{{ metric.secondary_label }} <b>{{ metric.secondary_value }}</b></span>{% endif %}</strong>{% endif %}
+          <h3>{{ metric.label }}</h3>
+          {% if metric.detail %}<p>{{ metric.detail }}</p>{% endif %}
+        </article>
+        {% else %}<p class="garrison-muted">暂无生涯统计</p>{% endfor %}
+      </div>
+      <div class="garrison-modes">
+        {% for mode in view.modes %}
+        <article class="garrison-mode">
+          <div class="garrison-mode-heading"><h3>{{ mode.label }}模拟</h3></div>
+          <div class="garrison-mode-score">
+            <span class="garrison-win-text"><b>{{ mode.wins }}</b> 胜</span>
+            <span class="garrison-loss-text"><b>{{ mode.losses }}</b> 负</span>
+            <strong>{% if mode.win_percent is not none %}{{ '%.1f' | format(mode.win_percent) }}<small>%</small>{% else %}<small>—</small>{% endif %}</strong>
+          </div>
+          <div class="garrison-mode-track" aria-hidden="true">{% if mode.win_percent is not none %}{% set win_percent = [0, [100, mode.win_percent] | min] | max %}<span class="green-blur-bar" style="width: {{ win_percent }}%"></span>{% endif %}</div>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="garrison-preferences garrison-panel card-shadow">
+      <div class="garrison-section-heading"><h2>偏好统计</h2></div>
+      <p class="garrison-recent-scope">{{ view.recent_scope }}</p>
+      <div class="garrison-preference-grid">
+        <section class="garrison-preference">
+          <h3 class="garrison-section-label">常用策略</h3>
+          <div class="garrison-preference-items">
+            {% for strategy in view.strategies %}{{ garrison_item(strategy, recent=true) }}{% else %}<p class="garrison-muted">暂无常用策略</p>{% endfor %}
+          </div>
+        </section>
+        <section class="garrison-preference">
+          <h3 class="garrison-section-label">常用盟约</h3>
+          <div class="garrison-preference-items">
+            {% for bond in view.bonds %}{{ garrison_bond_stat(bond) }}{% else %}<p class="garrison-muted">暂无常用盟约</p>{% endfor %}
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="garrison-titles garrison-panel card-shadow">
+      <div class="garrison-section-heading"><h2>称号记录</h2><span>生涯次数</span></div>
+      <div class="garrison-title-overview">
+        {{ garrison_title_radar(view) }}
+        <div class="garrison-title-groups">
+          {{ garrison_title_group('普通称号', view.normal_titles) }}
+          {{ garrison_title_group('特殊称号', view.special_titles) }}
+          {% if view.other_titles %}{{ garrison_title_group('其他称号', view.other_titles, other=true) }}{% endif %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="garrison-history">
+      {% if not view.is_detail %}<div class="garrison-section-heading"><h2>{{ '收藏战绩' if view.favored else '战绩记录' }}</h2><span>{{ page_number }} / {{ page_total }}</span></div>{% endif %}
+      <div class="garrison-record-list">
+        {% for record in records %}
+        {{ garrison_record_row(record) }}
+        {% else %}
+        <div class="garrison-empty garrison-panel card-shadow"><h3>{{ '暂无收藏战绩' if view.favored else '暂无卫戍协议战绩' }}</h3></div>
+        {% endfor %}
+      </div>
+    </section>
+
+  </div>
+  {{ garrison_footer() }}
+  {% endif %}
+</main>
+</body>
+</html>
+{% endautoescape %}

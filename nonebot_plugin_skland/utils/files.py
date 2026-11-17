@@ -13,7 +13,7 @@ def atomic_write(path: Path) -> Iterator[BinaryIO]:
     """Publish a same-directory temporary file only after a successful write."""
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary_file = NamedTemporaryFile(
-        mode="wb", dir=path.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False
+        mode="wb", dir=path.parent, prefix=f".{path.name[:16]}.", suffix=".tmp", delete=False
     )
     temporary_path = Path(temporary_file.name)
     try:

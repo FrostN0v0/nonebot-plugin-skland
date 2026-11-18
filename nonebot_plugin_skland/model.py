@@ -1,6 +1,6 @@
 from nonebot_plugin_orm import Model
 from sqlalchemy.orm import Mapped, relationship, mapped_column
-from sqlalchemy import VARCHAR, Text, BigInteger, ForeignKey, UniqueConstraint
+from sqlalchemy import JSON, VARCHAR, Text, Index, BigInteger, ForeignKey, UniqueConstraint
 
 
 class SkUser(Model):
@@ -47,6 +47,8 @@ class Character(Model):
     """Game server display name."""
     nickname: Mapped[str] = mapped_column(Text)
     """Character nickname."""
+    garrison_avatar_url: Mapped[str | None] = mapped_column(Text)
+    """Game avatar last provided by a successful garrison query."""
     level: Mapped[int | None] = mapped_column(nullable=True)
     """Character level when exposed by the binding API."""
     is_skland_default: Mapped[bool] = mapped_column(default=False, server_default="0")
@@ -54,6 +56,11 @@ class Character(Model):
 
     account: Mapped[SkUser] = relationship(back_populates="characters")
     gacha_records: Mapped[list["GachaRecord"]] = relationship(
+        back_populates="character",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    garrison_matches: Mapped[list["GarrisonMatch"]] = relationship(
         back_populates="character",
         cascade="all, delete-orphan",
         passive_deletes=True,
@@ -123,3 +130,29 @@ class GachaRecord(Model):
     """Gacha sequence position."""
 
     __table_args__ = (UniqueConstraint("character_id", "gacha_ts", "pos", name="uq_skland_gacha_character_ts_pos"),)
+
+
+class GarrisonMatch(Model):
+    __tablename__ = "skland_garrison_match"
+
+    character_id: Mapped[int] = mapped_column(ForeignKey("skland_characters.id", ondelete="CASCADE"), primary_key=True)
+    activity_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    record_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    scene_id: Mapped[str | None] = mapped_column(Text)
+    version_id: Mapped[str] = mapped_column(Text)
+    ended_at: Mapped[int] = mapped_column(BigInteger)
+    in_history: Mapped[bool]
+    band_id: Mapped[str] = mapped_column(Text)
+    complete_state: Mapped[int]
+    strategy_master_victor: Mapped[bool | None]
+    bond_layers: Mapped[dict[str, int]] = mapped_column(JSON)
+    duration_seconds: Mapped[int | None] = mapped_column(BigInteger)
+    boss_kills: Mapped[int]
+    hidden_boss_kills: Mapped[int]
+
+    character: Mapped[Character] = relationship(back_populates="garrison_matches")
+
+    __table_args__ = (
+        Index("ix_skland_garrison_match_scene", "activity_id", "scene_id"),
+        Index("ix_skland_garrison_match_history", "character_id", "activity_id", "in_history", "ended_at"),
+    )

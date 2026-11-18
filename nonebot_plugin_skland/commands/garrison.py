@@ -8,9 +8,14 @@ from nonebot_plugin_alconna import At, Match, CustomNode, UniMessage
 from ..exception import SklandException
 from .selection import check_user_character
 from ..render import render_garrison_history
-from ..services.garrison import fetch_garrison
 from ..schemas.arknights.garrison import GarrisonView
 from ..utils.message import send_reaction, send_request_error
+from ..services.garrison import (
+    fetch_garrison,
+    get_garrison_teammates,
+    archive_garrison_matches,
+    get_archived_garrison_stats,
+)
 
 _FORWARD_IMAGE_LIMIT = 16
 
@@ -35,6 +40,7 @@ async def garrison_handler(
     if selected is None:
         return
     user, character = selected
+    character_id = character.id
     uid = str(character.uid)
     server_name = character.server_name
     channel_master_id = character.channel_master_id
@@ -50,7 +56,23 @@ async def garrison_handler(
         await session.commit()
         await UniMessage(str(error)).send(at_sender=True)
         return
-    await session.commit()
+    await archive_garrison_matches(session, character_id, resolved_activity, data)
+
+    archived_stats = None
+    teammates = []
+    try:
+        if record_index is None:
+            archived_stats = await get_archived_garrison_stats(
+                session, character_id, resolved_activity, data.history.records
+            )
+        else:
+            records = data.history.favourRecords if favored else data.history.records
+            if 1 <= record_index <= len(records):
+                teammates = await get_garrison_teammates(
+                    session, records[record_index - 1], resources, channel_master_id=channel_master_id, uid=uid
+                )
+    finally:
+        await session.rollback()
 
     try:
         view = GarrisonView.from_data(
@@ -62,6 +84,8 @@ async def garrison_handler(
             activity_id=resolved_activity,
             record_index=record_index,
             favored=favored,
+            archived_stats=archived_stats,
+            teammates=teammates,
         )
     except ValueError as error:
         await UniMessage(str(error)).send(at_sender=True)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from html import unescape
 from bisect import bisect_right
+from dataclasses import dataclass
 
 from pydantic import Field, BaseModel
 from nonebot.compat import model_dump
@@ -207,6 +208,7 @@ class GarrisonRecordBoss(BaseModel):
 
 class GarrisonRecord(BaseModel):
     id: str
+    sceneId: str | None = None
     completeState: int = 0
     teamComplete: int = 0
     trophyBefore: int = 0
@@ -228,6 +230,38 @@ class GarrisonRecord(BaseModel):
     events: list[str] = Field(default_factory=list)
     versionId: str = ""
     activityId: str = ""
+
+    @property
+    def joint_scene_id(self) -> str | None:
+        return self.sceneId if self.modeType == "MULTI" and self.sceneId and self.sceneId.strip() else None
+
+
+@dataclass(frozen=True)
+class GarrisonMatchStats:
+    band_id: str
+    complete_state: int
+    duration_seconds: int | None
+    bond_layers: dict[str, int]
+    boss_kills: int
+    hidden_boss_kills: int
+
+    @classmethod
+    def from_record(cls, record: GarrisonRecord) -> GarrisonMatchStats:
+        layers: dict[str, int] = {}
+        for bond in record.bondInfo:
+            if bond.activate and bond.bondId.strip():
+                layers[bond.bondId] = max(layers.get(bond.bondId, bond.layer), bond.layer)
+        defeated = [boss for boss in record.acBossInfo if boss.isKilled]
+        return cls(
+            band_id=record.bandId,
+            complete_state=record.completeState,
+            duration_seconds=(
+                record.gameEndTs - record.gameStartTs if 0 < record.gameStartTs <= record.gameEndTs else None
+            ),
+            bond_layers=layers,
+            boss_kills=len(defeated),
+            hidden_boss_kills=sum(boss.isHidden for boss in defeated),
+        )
 
 
 class GarrisonHistory(BaseModel):
@@ -438,6 +472,37 @@ def _bond_item(resource: GarrisonResource | None, bond_id: str, *, count: int | 
     )
 
 
+class GarrisonTeammate(BaseModel):
+    nickname: str
+    strategy: GarrisonItem
+    avatar_url: str = ""
+    top_bond: GarrisonItem | None = None
+
+    @classmethod
+    def from_match(
+        cls,
+        nickname: str,
+        resource: GarrisonResource | None,
+        band_id: str,
+        strategy_master_victor: bool | None,
+        bond_layers: dict[str, int],
+        *,
+        avatar_url: str = "",
+    ) -> GarrisonTeammate:
+        badge = (
+            GarrisonBandBadge(id=band_id, masterVictor=strategy_master_victor)
+            if strategy_master_victor is not None
+            else None
+        )
+        top_bond = max(bond_layers.items(), key=lambda item: item[1], default=None)
+        return cls(
+            nickname=nickname.strip() or "队友",
+            strategy=_band_item(resource, band_id, badge=badge),
+            avatar_url=avatar_url,
+            top_bond=_bond_item(resource, top_bond[0], count=top_bond[1]) if top_bond is not None else None,
+        )
+
+
 def _operator(chess: GarrisonChess, resource: GarrisonResource | None) -> GarrisonOperator:
     meta = resource.chessInfo.get(chess.chessId) if resource else None
     info = chess.chessInfo or meta
@@ -564,6 +629,7 @@ class GarrisonView(BaseModel):
     is_detail: bool
     favored: bool
     records: list[GarrisonRecordView] = Field(default_factory=list)
+    teammates: list[GarrisonTeammate] = Field(default_factory=list)
     metrics: list[GarrisonMetric] = Field(default_factory=list)
     modes: list[GarrisonMode] = Field(default_factory=list)
     recent_count: int = 0
@@ -589,6 +655,8 @@ class GarrisonView(BaseModel):
         activity_id: str | None = None,
         record_index: int | None = None,
         favored: bool = False,
+        archived_stats: list[GarrisonMatchStats] | None = None,
+        teammates: list[GarrisonTeammate] | None = None,
     ) -> GarrisonView:
         resource = resources.current_resource(activity_id)
         selected = data.history.favourRecords if favored else data.history.records
@@ -600,37 +668,37 @@ class GarrisonView(BaseModel):
         indexed = enumerate(selected, 1) if record_index is None else [(record_index, selected[record_index - 1])]
         career = data.career
         badges = {badge.id: badge for badge in career.bandBadges}
-        # Preferences use this activity's unique records, never the selected list.
-        recent_records: dict[str, GarrisonRecord] = {}
-        for record in data.history.records:
-            if record.activityId == resource.versionInfo.activityId and record.id not in recent_records:
-                recent_records[record.id] = record
-        recent_count = len(recent_records)
-        recent_scope = f"共{recent_count}场记录" if recent_count else "暂无战绩记录"
+        if archived_stats is None:
+            by_id: dict[str, GarrisonMatchStats] = {}
+            for record in data.history.records:
+                if record.activityId == resource.versionInfo.activityId and record.id not in by_id:
+                    by_id[record.id] = GarrisonMatchStats.from_record(record)
+            statistics = list(by_id.values())
+        else:
+            statistics = archived_stats
+        recent_count = len(statistics)
+        if archived_stats is not None:
+            recent_scope = f"已归档 {recent_count} 场"
+        else:
+            recent_scope = f"共{recent_count}场记录" if recent_count else "暂无战绩记录"
         recent_bands: dict[str, tuple[int, int]] = {}
         recent_bonds: dict[str, tuple[int, int]] = {}
         boss_kills = 0
         hidden_boss_kills = 0
         recent_duration: int | None = 0 if recent_count else None
-        for record in recent_records.values():
-            if record.bandId.strip():
-                count, wins = recent_bands.get(record.bandId, (0, 0))
-                recent_bands[record.bandId] = (count + 1, wins + (record.completeState == 1))
-            activated_bonds: dict[str, int] = {}
-            for bond in record.bondInfo:
-                if bond.activate and bond.bondId.strip():
-                    activated_bonds[bond.bondId] = max(activated_bonds.get(bond.bondId, bond.layer), bond.layer)
-            for bond_id, layer in activated_bonds.items():
+        for record in statistics:
+            if record.band_id.strip():
+                count, wins = recent_bands.get(record.band_id, (0, 0))
+                recent_bands[record.band_id] = (count + 1, wins + (record.complete_state == 1))
+            for bond_id, layer in record.bond_layers.items():
                 count, max_layer = recent_bonds.get(bond_id, (0, layer))
                 recent_bonds[bond_id] = (count + 1, max(max_layer, layer))
-            for boss in record.acBossInfo:
-                if boss.isKilled:
-                    boss_kills += 1
-                    hidden_boss_kills += boss.isHidden
-            if record.gameStartTs <= 0 or record.gameEndTs < record.gameStartTs:
+            boss_kills += record.boss_kills
+            hidden_boss_kills += record.hidden_boss_kills
+            if record.duration_seconds is None:
                 recent_duration = None
             elif recent_duration is not None:
-                recent_duration += record.gameEndTs - record.gameStartTs
+                recent_duration += record.duration_seconds
         duration_label = "未知"
         if recent_duration is not None:
             hours, minutes = divmod(recent_duration // 60, 60)
@@ -785,9 +853,12 @@ class GarrisonView(BaseModel):
             favored=favored,
             records=records,
             metrics=metrics,
+            teammates=(teammates or []) if record_index is not None else [],
             modes=modes,
             recent_count=recent_count,
-            recent_scope=recent_scope,
+            recent_scope=f"{recent_scope} · 官方 {total} 场"
+            if archived_stats is not None and total is not None
+            else recent_scope,
             strategies=strategies,
             bonds=bonds,
             normal_titles=normal_titles,

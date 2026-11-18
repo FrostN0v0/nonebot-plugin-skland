@@ -80,11 +80,12 @@ async def app(app: App, tmp_path: Path, mocker: MockerFixture):
     await init_orm()
     yield app
 
-    from nonebot_plugin_skland.model import SkUser, Character, GachaRecord, CharacterDefault
+    from nonebot_plugin_skland.model import SkUser, Character, GachaRecord, GarrisonMatch, CharacterDefault
 
     async with get_session() as session, session.begin():
         await session.execute(delete(CharacterDefault))
         await session.execute(delete(GachaRecord))
+        await session.execute(delete(GarrisonMatch))
         await session.execute(delete(Character))
         await session.execute(delete(SkUser))
 

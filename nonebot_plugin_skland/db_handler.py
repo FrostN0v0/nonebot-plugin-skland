@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from nonebot_plugin_orm import async_scoped_session
 
-from .model import SkUser, Character, GachaRecord, CharacterDefault
+from .model import SkUser, Character, GachaRecord, GarrisonMatch, CharacterDefault
 
 
 async def get_accounts(owner_id: int, session: async_scoped_session) -> list[SkUser]:
@@ -127,3 +127,40 @@ async def get_character_gacha_records(
         select(GachaRecord).where(GachaRecord.character_id == character_id).order_by(GachaRecord.id)
     )
     return list(records)
+
+
+async def get_garrison_matches(
+    character_id: int,
+    activity_id: str,
+    session: async_scoped_session,
+    *,
+    record_ids: list[str] | None = None,
+) -> list[GarrisonMatch]:
+    statement = select(GarrisonMatch).where(
+        GarrisonMatch.character_id == character_id, GarrisonMatch.activity_id == activity_id
+    )
+    if record_ids is None:
+        statement = statement.where(GarrisonMatch.in_history.is_(True)).order_by(
+            GarrisonMatch.ended_at.desc(), GarrisonMatch.record_id
+        )
+    else:
+        statement = statement.where(GarrisonMatch.record_id.in_(record_ids))
+    return list(await session.scalars(statement))
+
+
+async def get_garrison_scene_matches(
+    activity_id: str, scene_id: str, session: async_scoped_session
+) -> list[tuple[GarrisonMatch, str, str, str, str | None]]:
+    rows = await session.execute(
+        select(
+            GarrisonMatch, Character.channel_master_id, Character.uid, Character.nickname, Character.garrison_avatar_url
+        )
+        .join(Character, Character.id == GarrisonMatch.character_id)
+        .where(
+            GarrisonMatch.activity_id == activity_id,
+            GarrisonMatch.scene_id == scene_id,
+            Character.app_code == "arknights",
+        )
+        .order_by(GarrisonMatch.in_history.desc(), Character.id, GarrisonMatch.ended_at.desc())
+    )
+    return list(rows.tuples())

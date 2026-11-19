@@ -486,8 +486,6 @@ class GarrisonTeammate(BaseModel):
         band_id: str,
         strategy_master_victor: bool | None,
         bond_layers: dict[str, int],
-        *,
-        avatar_url: str = "",
     ) -> GarrisonTeammate:
         badge = (
             GarrisonBandBadge(id=band_id, masterVictor=strategy_master_victor)
@@ -498,7 +496,6 @@ class GarrisonTeammate(BaseModel):
         return cls(
             nickname=nickname.strip() or "队友",
             strategy=_band_item(resource, band_id, badge=badge),
-            avatar_url=avatar_url,
             top_bond=_bond_item(resource, top_bond[0], count=top_bond[1]) if top_bond is not None else None,
         )
 

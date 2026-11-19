@@ -3,11 +3,13 @@
 import asyncio
 from dataclasses import asdict
 
+from nonebot import logger
 from nonebot_plugin_orm import async_scoped_session
 
 from ..schemas import CRED
 from ..api import SklandAPI
-from ..model import SkUser, Character, GarrisonMatch
+from ..exception import SklandException
+from ..model import SkUser, GarrisonMatch
 from .auth import CredentialState, refresh_credentials
 from ..db_handler import get_garrison_matches, get_garrison_scene_matches
 from ..schemas.arknights.garrison import (
@@ -47,10 +49,6 @@ async def archive_garrison_matches(
 
     # Serialize the local read/merge/commit, not the upstream requests.
     async with _archive_lock:
-        if (avatar := data.gameUserInfo.avatar) and (avatar_url := avatar.url.strip()):
-            character = await session.get(Character, character_id)
-            if character is not None and character.garrison_avatar_url != avatar_url:
-                character.garrison_avatar_url = avatar_url
         if matches:
             existing = {
                 row.record_id: row
@@ -111,8 +109,8 @@ async def get_garrison_teammates(
     if record.joint_scene_id is None or not record.activityId:
         return []
     seen = {(channel_master_id, uid)}
-    teammates = []
-    for row, channel, other_uid, nickname, avatar_url in await get_garrison_scene_matches(
+    peers: list[tuple[GarrisonTeammate, CRED, str]] = []
+    for row, channel, other_uid, nickname, cred, token in await get_garrison_scene_matches(
         record.activityId, record.joint_scene_id, session
     ):
         if (
@@ -122,14 +120,25 @@ async def get_garrison_teammates(
         ):
             continue
         seen.add((channel, other_uid))
-        teammates.append(
-            GarrisonTeammate.from_match(
-                nickname,
-                resources.for_version(row.version_id, row.activity_id),
-                row.band_id,
-                row.strategy_master_victor,
-                row.bond_layers,
-                avatar_url=avatar_url or "",
-            )
+        teammate = GarrisonTeammate.from_match(
+            nickname,
+            resources.for_version(row.version_id, row.activity_id),
+            row.band_id,
+            row.strategy_master_victor,
+            row.bond_layers,
         )
-    return teammates
+        peers.append((teammate, CRED(cred=cred, token=token), other_uid))
+        if len(peers) == 3:
+            break
+
+    # 闭合只读事务后才请求；查看战绩不为装饰性头像刷新其他账号的凭证。
+    await session.rollback()
+
+    async def with_avatar(teammate: GarrisonTeammate, cred: CRED, peer_uid: str) -> GarrisonTeammate:
+        try:
+            teammate.avatar_url = await SklandAPI.ark_avatar(cred, uid=peer_uid)
+        except SklandException as error:
+            logger.debug(f"卫戍队友头像不可用：{type(error).__name__}")
+        return teammate
+
+    return list(await asyncio.gather(*(with_avatar(*peer) for peer in peers)))

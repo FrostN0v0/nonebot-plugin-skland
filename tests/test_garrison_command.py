@@ -340,9 +340,10 @@ async def test_detail_lists_only_bound_teammates_from_the_same_joint_scene(
     from nonebot_plugin_alconna import Image, Match
 
     from nonebot_plugin_skland import render
+    from nonebot_plugin_skland.api import SklandAPI
     from nonebot_plugin_skland.model import SkUser, Character
     from nonebot_plugin_skland.compact import template_to_html
-    from nonebot_plugin_skland.schemas.arknights.models.status import Avatar
+    from nonebot_plugin_skland.exception import UnauthorizedException
     from nonebot_plugin_skland.services.garrison import archive_garrison_matches
     from nonebot_plugin_skland.schemas.arknights.garrison import (
         GarrisonChess,
@@ -353,8 +354,8 @@ async def test_detail_lists_only_bound_teammates_from_the_same_joint_scene(
 
     case = garrison_case
 
-    async def archive_peer(uid, nickname, *, avatar_url="", mode="MULTI", activity="act-current"):
-        account = SkUser(owner_id=762, cred="peer-test", cred_token="peer-token")
+    async def archive_peer(uid, nickname, *, mode="MULTI", activity="act-current"):
+        account = SkUser(owner_id=762, cred=f"cred-{nickname}", cred_token=f"token-{nickname}")
         case.session.add(account)
         await case.session.flush()
         peer = Character(
@@ -369,7 +370,6 @@ async def test_detail_lists_only_bound_teammates_from_the_same_joint_scene(
         case.session.add(peer)
         await case.session.flush()
         peer_data, _ = _garrison_payloads()
-        peer_data.gameUserInfo.avatar = Avatar(type="icon", id="avatar-test", url=avatar_url) if avatar_url else None
         peer_data.career.bandBadges = [GarrisonBandBadge(id="band-test", masterVictor=True)]
         bonds = [
             GarrisonRecordBond(bondId=f"peer-bond-{index}", layer=layer, activate=1)
@@ -393,9 +393,11 @@ async def test_detail_lists_only_bound_teammates_from_the_same_joint_scene(
     avatars = [f"https://web.hycdn.cn/test/avatar-{index}.png" for index in range(1, peer_count + 1)]
     if peer_count == 2:
         avatars[1] = ""
-    await archive_peer("peer-private-uid", "同局 <甲>", avatar_url=avatars[0])
-    for index, avatar_url in enumerate(avatars[1:], 2):
-        await archive_peer(f"peer-{index}", f"同局博士 {index}", avatar_url=avatar_url)
+    peer_names = ["同局 <甲>", *(f"同局博士 {i}" for i in range(2, peer_count + 1))]
+    peer_uids = ["peer-private-uid", *(f"peer-{i}" for i in range(2, peer_count + 1))]
+    by_uid = dict(zip(peer_uids, zip(peer_names, avatars)))
+    for peer_uid, nickname in zip(peer_uids, peer_names):
+        await archive_peer(peer_uid, nickname)
     await archive_peer("peer-private-uid", "重复绑定不展示")
     await archive_peer("solo-uid", "独立不展示", mode="SINGLE")
     await archive_peer("old-uid", "跨期不展示", activity="act-old")
@@ -405,6 +407,16 @@ async def test_detail_lists_only_bound_teammates_from_the_same_joint_scene(
     live.history.records[0].modeType = "MULTI"
     live.history.records[0].sceneId = "shared-scene"
     mocker.patch.object(case.command, "fetch_garrison", return_value=(live, resources, "act-current"))
+
+    async def lookup(cred, *, uid):
+        assert not case.session.in_transaction()
+        nickname, url = by_uid[uid]
+        assert (cred.cred, cred.token) == (f"cred-{nickname}", f"token-{nickname}")
+        if not url:
+            raise UnauthorizedException("expired")
+        return url
+
+    avatar_requests = mocker.patch.object(SklandAPI, "ark_avatar", side_effect=lookup)
 
     async def render_html(*, template_path, template_name, templates, filters, **kwargs):
         return (await template_to_html(template_path, template_name, filters=filters, **templates)).encode()
@@ -418,6 +430,7 @@ async def test_detail_lists_only_bound_teammates_from_the_same_joint_scene(
         role_index=2,
         record_index=1,
     )
+    assert sorted(c.kwargs["uid"] for c in avatar_requests.await_args_list) == sorted(peer_uids)
 
     html = case.messages[0][Image][0].raw.decode()
     panel = html.split('<section class="garrison-teammates"', 1)[1].split("</section>", 1)[0]

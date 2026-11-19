@@ -47,8 +47,6 @@ class Character(Model):
     """Game server display name."""
     nickname: Mapped[str] = mapped_column(Text)
     """Character nickname."""
-    garrison_avatar_url: Mapped[str | None] = mapped_column(Text)
-    """Game avatar last provided by a successful garrison query."""
     level: Mapped[int | None] = mapped_column(nullable=True)
     """Character level when exposed by the binding API."""
     is_skland_default: Mapped[bool] = mapped_column(default=False, server_default="0")

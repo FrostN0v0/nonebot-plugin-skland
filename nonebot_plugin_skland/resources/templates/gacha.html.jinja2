@@ -15,13 +15,19 @@
     <div class="relative w-180 h-auto flex flex-col p-6 gap-5 bg-[#303030]">
         <div class="left-6 top-4">
             <div class="flex items-center space-x-4">
+                {% if avatar_url or level is not none %}
                 <div class="relative">
-                    <img src="{{status.avatar.url}}" class="avater-shadow w-18.75 h-18.75" />
+                    {% if avatar_url %}
+                    <img src="{{ avatar_url | e }}" alt="博士头像" class="avater-shadow w-18.75 h-18.75" />
+                    {% endif %}
+                    {% if level is not none %}
                     <div
-                        class="absolute top-[-20px] right-[-20px] w-10 h-10 bg-[#080309]/80 rounded-full rank-shadow flex items-center justify-center">
-                        <span class="text-white font-[Akrobat] text-lg">{{status.level}}</span>
+                        class="{% if avatar_url %}absolute top-[-20px] right-[-20px] {% endif %}w-10 h-10 bg-[#080309]/80 rounded-full rank-shadow flex items-center justify-center">
+                        <span class="text-white font-[Akrobat] text-lg">{{ level }}</span>
                     </div>
+                    {% endif %}
                 </div>
+                {% endif %}
                 <div>
                     <h1 class="text-xl text-white font-bold font-[Akrobat] mb-2">{{nickname}}</h1>
                     <div

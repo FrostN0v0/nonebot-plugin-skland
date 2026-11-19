@@ -150,12 +150,18 @@ async def get_garrison_matches(
 
 async def get_garrison_scene_matches(
     activity_id: str, scene_id: str, session: async_scoped_session
-) -> list[tuple[GarrisonMatch, str, str, str, str | None]]:
+) -> list[tuple[GarrisonMatch, str, str, str, str, str]]:
     rows = await session.execute(
         select(
-            GarrisonMatch, Character.channel_master_id, Character.uid, Character.nickname, Character.garrison_avatar_url
+            GarrisonMatch,
+            Character.channel_master_id,
+            Character.uid,
+            Character.nickname,
+            SkUser.cred,
+            SkUser.cred_token,
         )
         .join(Character, Character.id == GarrisonMatch.character_id)
+        .join(SkUser, SkUser.id == Character.account_id)
         .where(
             GarrisonMatch.activity_id == activity_id,
             GarrisonMatch.scene_id == scene_id,

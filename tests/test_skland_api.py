@@ -290,6 +290,18 @@ class TestRealAPI:
         assert card is not None, "返回的卡片数据不应为空"
         logger.success(f"获取到明日方舟角色卡片，uid={uid}")
 
+    async def test_ark_avatar(self, cred, binding):
+        """用当前账号已绑定的方舟角色验证头像接口，不输出 UID 或头像 URL。"""
+        from nonebot_plugin_skland.api import SklandAPI
+
+        ark_apps = [app for app in binding if app.appCode == "arknights" and app.bindingList]
+        if not ark_apps:
+            pytest.skip("未绑定明日方舟角色")
+
+        avatar_url = await SklandAPI.ark_avatar(cred, uid=ark_apps[0].bindingList[0].uid)
+        if not isinstance(avatar_url, str) or (avatar_url and not avatar_url.startswith(("https://", "http://"))):
+            pytest.fail("角色头像应为 HTTP(S) URL 或空字符串", pytrace=False)
+
     async def test_garrison(self, cred, binding):
         """验证当前卫戍赛季与真实战绩可投影，不输出玩家或凭证。"""
         from nonebot_plugin_skland.api import SklandAPI

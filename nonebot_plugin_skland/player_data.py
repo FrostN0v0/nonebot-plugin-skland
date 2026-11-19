@@ -10,7 +10,7 @@ from .api import SklandAPI
 from .config import config
 from .schemas import CRED, ArkCard
 from .model import SkUser, Character
-from .services.auth import refresh_credentials
+from .services.auth import CredentialState, refresh_credentials
 
 ArkCardLoader = Callable[[SkUser, Character], Awaitable[ArkCard | None]]
 Clock = Callable[[], float]
@@ -100,15 +100,26 @@ class ArkCardDataSource:
                     del self._inflight[key]
                 self._prune_generation_if_unused(key.account_id)
 
+    def _get_cached(self, key: _ArkCardCacheKey) -> ArkCard | None:
+        entry = self._cache.get(key)
+        if entry is not None:
+            self._cache.move_to_end(key)
+            return entry.value
+        return None
+
+    async def get_cached(self, user: SkUser, character: Character) -> ArkCard | None:
+        """Reuse a valid card without starting or joining a load."""
+        async with self._lock:
+            self._purge_expired(self._clock())
+            return self._get_cached(self._key(user, character))
+
     async def get(self, user: SkUser, character: Character) -> ArkCard | None:
         async with self._lock:
             now = self._clock()
             self._purge_expired(now)
             key = self._key(user, character)
-            entry = self._cache.get(key)
-            if entry is not None:
-                self._cache.move_to_end(key)
-                return entry.value
+            if (value := self._get_cached(key)) is not None:
+                return value
 
             task = self._inflight.get(key)
             if task is None:
@@ -146,3 +157,8 @@ ark_card_data = ArkCardDataSource(
 @refresh_credentials
 async def get_ark_card(user: SkUser, character: Character) -> ArkCard | None:
     return await ark_card_data.get(user, character)
+
+
+@refresh_credentials
+async def get_ark_avatar(user: SkUser | CredentialState, uid: str) -> str:
+    return await SklandAPI.ark_avatar(CRED(cred=user.cred, token=user.cred_token), uid=uid)

@@ -25,6 +25,7 @@ async def ark_gacha_case(app, mocker, make_user_session, tiny_png):
 
     import nonebot_plugin_skland.commands.gacha as command
     import nonebot_plugin_skland.services.gacha as service
+    from nonebot_plugin_skland.player_data import ArkCardDataSource
     from nonebot_plugin_skland.schemas import GachaCate, GachaResponse
     from nonebot_plugin_skland.schemas.arknights.game_data import CharTable
     from nonebot_plugin_skland.model import SkUser, Character, CharacterDefault
@@ -62,11 +63,6 @@ async def ark_gacha_case(app, mocker, make_user_session, tiny_png):
         async def fetch(*args, **kwargs):
             return GachaResponse(list=pulls, hasMore=False)
 
-        async def profile(user, character):
-            user.cred = "refreshed-cred"
-            user.cred_token = "refreshed-token"
-            return SimpleNamespace(status=SimpleNamespace(level=120))
-
         async def send(message, **kwargs):
             messages.append(message)
 
@@ -92,11 +88,14 @@ async def ark_gacha_case(app, mocker, make_user_session, tiny_png):
             new=mocker.AsyncMock(return_value=[GachaCate(id="normal", name="标准寻访")]),
         )
         mocker.patch.object(service.SklandAPI, "get_gacha_history", new=mocker.AsyncMock(side_effect=fetch))
-        profile_mock = mocker.patch.object(command, "get_ark_card", new=mocker.AsyncMock(side_effect=profile))
+        full_card = mocker.AsyncMock(side_effect=AssertionError("gacha must not load an ArkCard"))
+        mocker.patch.object(command, "ark_card_data", ArkCardDataSource(ttl=60, max_entries=8, loader=full_card))
+        avatar_mock = mocker.patch.object(
+            command.SklandAPI, "ark_avatar", new=mocker.AsyncMock(return_value="https://example.com/avatar.png")
+        )
         render_mock = mocker.patch.object(command, "render_gacha_history", new=mocker.AsyncMock(return_value=tiny_png))
         mocker.patch.object(command.UniMessage, "send", new=send)
         reaction_mock = mocker.patch.object(command, "send_reaction")
-        error_mock = mocker.patch.object(command, "send_request_error", new=mocker.AsyncMock())
 
         async def run(*, begin=None, limit=None):
             await command.gacha_handler(
@@ -117,10 +116,10 @@ async def ark_gacha_case(app, mocker, make_user_session, tiny_png):
             character_id=character_id,
             pulls=pulls,
             messages=messages,
-            profile=profile_mock,
+            avatar=avatar_mock,
+            full_card=full_card,
             render=render_mock,
             reaction=reaction_mock,
-            error=error_mock,
             run=run,
         )
 
@@ -129,15 +128,19 @@ async def ark_gacha_case(app, mocker, make_user_session, tiny_png):
 @pytest.mark.parametrize(("begin", "limit"), [(2, 10), (2, None), (-9, -1), (-4, None), (2, 4), (9, 4)])
 @pytest.mark.asyncio
 async def test_pool_slice_renders_each_selected_pool_once(ark_gacha_case, mocker, tiny_png, platform, begin, limit):
+    from nonebot_plugin_skland.schemas import CRED
+
     case = ark_gacha_case
     case.pulls.extend(_pull(index) for index in range(11))
     mocker.patch.object(type(case.user_session), "platform", new_callable=mocker.PropertyMock, return_value=platform)
     node_mock = mocker.patch.object(case.command, "CustomNode", wraps=case.command.CustomNode)
     rendered_bounds, rendered_pools = [], []
 
-    async def render(record, status, *, nickname, channel_master_id, begin, limit):
+    async def render(record, *, nickname, channel_master_id, avatar_url, level, begin, limit):
         assert nickname == "博士"
         assert channel_master_id == "1"
+        assert avatar_url == "https://example.com/avatar.png"
+        assert level is None
         rendered_bounds.append((begin, limit))
         rendered_pools.extend(pool.gachaPoolId for pool in record.pools[begin:limit])
         return tiny_png
@@ -152,6 +155,8 @@ async def test_pool_slice_renders_each_selected_pool_once(ark_gacha_case, mocker
         expected_bounds = [(start, stop)]
     assert rendered_bounds == expected_bounds
     assert rendered_pools == [f"pool-{index}" for index in range(start, stop)]
+    case.avatar.assert_awaited_once_with(CRED("test-cred", "test-token"), uid="test-role")
+    case.full_card.assert_not_awaited()
     assert all(page_stop <= stop for _, page_stop in rendered_bounds)
     if platform == "QQClient" and stop - start > 3:
         assert [call.args[1] for call in node_mock.call_args_list] == [
@@ -160,35 +165,41 @@ async def test_pool_slice_renders_each_selected_pool_once(ark_gacha_case, mocker
     assert case.reaction.call_args.args[1] == "done"
 
 
-@pytest.mark.parametrize("failure", ["profile", "profile_unexpected", "render", "send"])
+@pytest.mark.parametrize("failure", ["avatar_unavailable", "avatar_expired", "avatar_unexpected", "render", "send"])
 @pytest.mark.asyncio
 async def test_fetched_records_and_refreshed_credentials_survive_presentation_failure(ark_gacha_case, mocker, failure):
     from nonebot_plugin_orm import get_session
 
     from nonebot_plugin_skland.model import SkUser
-    from nonebot_plugin_skland.exception import RequestException
+    from nonebot_plugin_skland.schemas import CRED
     from nonebot_plugin_skland.db_handler import get_character_gacha_records
+    from nonebot_plugin_skland.exception import LoginException, RequestException
 
     case = ark_gacha_case
     case.pulls.append(_pull())
-    if failure.startswith("profile"):
-        unexpected = failure == "profile_unexpected"
+    refreshed = CRED("refreshed-cred", "refreshed-token")
+    get_cred = mocker.patch.object(
+        case.command.SklandLoginAPI, "get_cred", new=mocker.AsyncMock(return_value=refreshed)
+    )
 
-        async def profile(user, character):
-            user.cred = "refreshed-cred"
-            user.cred_token = "refreshed-token"
-            if unexpected:
-                raise ValueError("profile response changed")
-            raise RequestException("profile unavailable")
+    async def avatar(cred, *, uid):
+        if cred.token == "test-token" or failure == "avatar_expired":
+            raise LoginException("expired credentials")
+        if failure == "avatar_unavailable":
+            raise RequestException("avatar unavailable")
+        if failure == "avatar_unexpected":
+            raise ValueError("avatar response changed")
+        return "https://example.com/avatar.png"
 
-        case.profile.side_effect = profile
-        if unexpected:
-            with pytest.raises(ValueError, match="profile response changed"):
-                await case.run()
-            case.error.assert_not_awaited()
-        else:
+    case.avatar.side_effect = avatar
+    if failure in {"avatar_unavailable", "avatar_expired"}:
+        await case.run()
+        case.render.assert_awaited_once()
+        assert case.render.await_args.kwargs["avatar_url"] is None
+        assert len(case.messages) == 1
+    elif failure == "avatar_unexpected":
+        with pytest.raises(ValueError, match="avatar response changed"):
             await case.run()
-            case.error.assert_awaited_once()
         case.render.assert_not_awaited()
     else:
         if failure == "render":
@@ -202,6 +213,13 @@ async def test_fetched_records_and_refreshed_credentials_survive_presentation_fa
         with pytest.raises(RuntimeError, match="presentation unavailable"):
             await case.run()
 
+    get_cred.assert_awaited_once_with("test-grant")
+    assert case.avatar.await_args_list == [
+        mocker.call(CRED("test-cred", "test-token"), uid="test-role"),
+        mocker.call(refreshed, uid="test-role"),
+    ]
+    case.full_card.assert_not_awaited()
+
     await case.session.rollback()
     async with get_session() as fresh:
         records = await get_character_gacha_records(case.character_id, fresh)
@@ -210,7 +228,10 @@ async def test_fetched_records_and_refreshed_credentials_survive_presentation_fa
         ]
         account = await fresh.get(SkUser, case.account_id)
         assert (account.cred, account.cred_token) == ("refreshed-cred", "refreshed-token")
-    assert "done" not in [call.args[1] for call in case.reaction.call_args_list]
+    expected_reactions = (
+        ["processing", "done"] if failure in {"avatar_unavailable", "avatar_expired"} else ["processing"]
+    )
+    assert [call.args[1] for call in case.reaction.call_args_list] == expected_reactions
 
 
 @pytest.mark.asyncio

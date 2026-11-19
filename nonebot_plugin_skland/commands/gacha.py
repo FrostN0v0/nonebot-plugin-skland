@@ -11,12 +11,12 @@ from nonebot_plugin_alconna import At, Match, CustomNode, UniMessage
 from ..config import config
 from ..model import GachaRecord
 from ..schemas import GachaInfo
-from ..player_data import get_ark_card
 from ..render import render_gacha_history
+from ..utils.message import send_reaction
 from ..api import SklandAPI, SklandLoginAPI
 from .selection import check_user_character
 from ..db_handler import get_character_gacha_records
-from ..utils.message import send_reaction, send_request_error
+from ..player_data import ark_card_data, get_ark_avatar
 from ..exception import SklandException, UnresolvedGachaCharacterError
 from ..services.gacha import (
     group_gacha_records,
@@ -95,24 +95,41 @@ async def gacha_handler(
     character_nickname = character.nickname
     character_channel_master_id = character.channel_master_id
     session.add_all(record_to_save)
+    avatar_url: str | None = None
     try:
-        user_info = await get_ark_card(user, character)
-    except SklandException as error:
-        await session.commit()
-        await send_request_error(error)
-        return
+        level = character.level
+        card = await ark_card_data.get_cached(user, character)
+        if card is not None:
+            avatar_url = card.status.avatar.url
+            if card.status.level is not None:
+                level = card.status.level
+        else:
+            try:
+                avatar_url = await get_ark_avatar(user, character.uid)
+            except SklandException as error:
+                logger.warning(f"Arknights gacha avatar unavailable: {type(error).__name__}")
     except Exception:
-        # Fetched pulls and any refreshed credentials are valid even if the profile response is not.
+        # Save pulled records and any refreshed credentials even if avatar lookup fails.
         await session.commit()
         raise
     await session.commit()
-    if not user_info:
-        return
     gacha_limit = limit.result if limit.available else None
     gacha_begin = begin.result if begin.available else None
     start, stop, _ = slice(gacha_begin, gacha_limit).indices(len(gacha_data_grouped.pools))
     selected_count = max(0, stop - start)
     page_size = config.gacha_render_max
+
+    async def render_page(page_start: int, page_stop: int) -> bytes:
+        return await render_gacha_history(
+            gacha_data_grouped,
+            nickname=character_nickname,
+            channel_master_id=character_channel_master_id,
+            avatar_url=avatar_url,
+            level=level,
+            begin=page_start,
+            limit=page_stop,
+        )
+
     if selected_count > page_size:
         await UniMessage.text("抽卡记录过多，将以多张图片形式发送").send(reply_to=True)
         if user_session.platform == "QQClient":
@@ -120,14 +137,7 @@ async def gacha_handler(
 
             async def render(page_start: int) -> bytes:
                 async with render_semaphore:
-                    return await render_gacha_history(
-                        gacha_data_grouped,
-                        user_info.status,
-                        nickname=character_nickname,
-                        channel_master_id=character_channel_master_id,
-                        begin=page_start,
-                        limit=min(page_start + page_size, stop),
-                    )
+                    return await render_page(page_start, min(page_start + page_size, stop))
 
             page_starts = range(start, stop, page_size)
             imgs = await asyncio.gather(*(render(page_start) for page_start in page_starts))
@@ -152,27 +162,11 @@ async def gacha_handler(
             tasks: list[asyncio.Task] = []
             for page_start in range(start, stop, page_size):
                 page_stop = min(page_start + page_size, stop)
-                img = await render_gacha_history(
-                    gacha_data_grouped,
-                    user_info.status,
-                    nickname=character_nickname,
-                    channel_master_id=character_channel_master_id,
-                    begin=page_start,
-                    limit=page_stop,
-                )
+                img = await render_page(page_start, page_stop)
                 tasks.append(asyncio.create_task(send(img)))
             await asyncio.gather(*tasks)
     else:
-        await UniMessage.image(
-            raw=await render_gacha_history(
-                gacha_data_grouped,
-                user_info.status,
-                nickname=character_nickname,
-                channel_master_id=character_channel_master_id,
-                begin=start,
-                limit=stop,
-            )
-        ).send()
+        await UniMessage.image(raw=await render_page(start, stop)).send()
     send_reaction(user_session, "done")
 
 

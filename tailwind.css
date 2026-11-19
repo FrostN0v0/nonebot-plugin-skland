@@ -614,9 +614,27 @@
   .garrison-settlement-strategy .garrison-item-heading > strong { font-size: 11px; text-align: center; }
   .garrison-settlement-result > .garrison-earned-title { margin-top: 10px; }
   .garrison-settlement-player { margin-top: auto; padding-top: 20px; }
-  .garrison-session-meta { display: flex; grid-column: 1 / -1; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding-top: 10px; border-top: 1px solid rgb(255 255 255 / 8%); color: rgb(255 255 255 / 55%); font-size: 11px; }
-  .garrison-session-meta > time, .garrison-record-duration, .garrison-record-caption > time { display: inline-flex; align-items: center; gap: 5px; }
-  .garrison-record-duration > img, .garrison-record-caption time > img, .garrison-session-meta time > img { width: 13px; height: 13px; flex-shrink: 0; object-fit: contain; }
+  .garrison-teammates { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 10px; min-width: 0; margin-left: auto; }
+  .garrison-teammates-label { color: rgb(255 255 255 / 50%); font-size: 10px; }
+  .garrison-teammate { display: grid; width: 158px; min-width: 0; grid-template-columns: 28px minmax(0, 1fr) 40px; align-items: center; gap: 6px; padding-left: 8px; border-left: 1px solid rgb(255 255 255 / 12%); }
+  .garrison-teammate-avatar { width: 28px; height: 28px; overflow: hidden; border-color: rgb(255 255 255 / 28%); border-radius: 4px; font-size: 9px; }
+  .garrison-teammate-info { display: grid; min-width: 0; gap: 2px; }
+  .garrison-teammate-info > strong { display: block; color: #e8eee9; font-size: 12px; line-height: 1.2; }
+  .garrison-teammate .garrison-item { gap: 4px; padding: 0; }
+  .garrison-teammate .garrison-item-icon { width: 16px; height: 16px; }
+  .garrison-teammate .garrison-item-heading { display: block; }
+  .garrison-teammate-bond { display: grid; min-width: 0; justify-items: center; gap: 1px; }
+  .garrison-teammate .garrison-item-heading > strong, .garrison-teammate-bond > span { display: block; max-width: 100%; color: rgb(255 255 255 / 70%); font-size: 10px; font-weight: 400; line-height: 1.2; }
+  .garrison-teammate-info > strong, .garrison-teammate .garrison-item-heading > strong, .garrison-teammate-bond > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .garrison-teammate-bond .garrison-bond { width: 28px; height: 27px; }
+  .garrison-teammate-bond .garrison-bond-emblem { top: -5px; width: 37px; height: 37px; }
+  .garrison-teammate-bond .garrison-bond-count { width: 20px; height: 14px; }
+  .garrison-teammate-bond .garrison-bond-count > b { font-size: 13px; }
+  .garrison-teammate-bond .garrison-bond-fallback { display: none; }
+  .garrison-session-meta { display: grid; grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 14px; padding-top: 10px; border-top: 1px solid rgb(255 255 255 / 8%); color: rgb(255 255 255 / 55%); font-size: 11px; }
+  .garrison-session-times { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; min-width: 0; }
+  .garrison-session-times > time, .garrison-record-duration, .garrison-record-caption > time { display: inline-flex; align-items: center; gap: 5px; }
+  .garrison-record-duration > img, .garrison-record-caption time > img, .garrison-session-times time > img { width: 13px; height: 13px; flex-shrink: 0; object-fit: contain; }
   .garrison-settlement-main { display: grid; align-content: start; gap: 16px; min-width: 0; }
   .garrison-detail-lineup { grid-template-columns: repeat(5, minmax(0, 72px)); justify-content: center; gap: 8px 6px; }
   .garrison-detail-lineup.garrison-roster-four { grid-template-columns: repeat(4, minmax(0, 72px)); }

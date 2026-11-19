@@ -10,7 +10,6 @@ from .utils.background import BackgroundImage, background_to_uri
 from .image_cache import cached_template_to_pic as template_to_pic
 from .schemas import (
     Clue,
-    Status,
     ArkCard,
     HelpView,
     RogueData,
@@ -215,9 +214,11 @@ async def render_clue_board(props: Clue):
 
 async def render_gacha_history(
     props: GroupedGachaRecord,
-    status: Status,
+    *,
     nickname: str,
     channel_master_id: str,
+    avatar_url: str | None,
+    level: int | None = None,
     begin: int | None = None,
     limit: int | None = None,
 ) -> bytes:
@@ -228,7 +229,8 @@ async def render_gacha_history(
             "record": props,
             "nickname": nickname,
             "channel_master_id": channel_master_id,
-            "status": status,
+            "avatar_url": avatar_url,
+            "level": level,
             "start_index": begin,
             "end_index": limit,
         },

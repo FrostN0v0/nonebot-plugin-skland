@@ -40,9 +40,9 @@ nonebot_plugin_skland/
 ├── tasks.py             # APScheduler：每日签到与 09:00 数据资源更新
 ├── config.py            # Pydantic 配置、资源/缓存/数据目录常量
 ├── extras.py            # 单一帮助目录、命令示例与 PicMenu 元数据
-├── model.py             # nonebot-plugin-orm 模型：SkUser、Character、CharacterDefault、GachaRecord
+├── model.py             # nonebot-plugin-orm 模型：SkUser、Character、CharacterDefault、GachaRecord、GarrisonMatch
 ├── account.py           # 多账号角色快照、默认角色投影、角色同步与账号操作互斥
-├── db_handler.py        # 账号、角色、默认角色与抽卡记录查询/写入契约
+├── db_handler.py        # 账号、角色、默认角色、抽卡与卫戍归档查询/写入契约
 ├── data_source.py       # 游戏数据下载、干员目录构建与本地元数据缓存
 ├── player_data.py       # 玩家实时数据账号级短期缓存：ArkCard TTL/LRU/single-flight
 ├── image_cache.py       # 方舟半身图浏览器响应缓存与显式资源就绪等待
@@ -54,7 +54,7 @@ nonebot_plugin_skland/
 ├── services/
 │   ├── __init__.py      # Package boundary without implicit exports
 │   ├── auth.py          # Credential refresh policy and detached credential state
-│   ├── garrison.py      # 卫戍资源、当前赛季和账号凭证读取编排
+│   ├── garrison.py      # 卫戍资源和战绩读取、对局归档及同局队友关联
 │   ├── binding.py       # Binding preparation and atomic confirmed account mutations
 │   ├── gacha.py         # History fetching, grouping, and Heybox conversion
 │   ├── resources.py     # 启动、手动、定时数据更新互斥与汇总反馈
@@ -252,7 +252,7 @@ class Config(BaseModel):
 
 ### 数据库模型
 
-`model.py` 中有四个主要 ORM 模型：
+`model.py` 中有五个主要 ORM 模型：
 
 - `SkUser`
   - 每行表示一个森空岛账号绑定；自增 `id` 为账号主键，`owner_id` 是所属 NoneBot 用户 ID。
@@ -261,6 +261,7 @@ class Config(BaseModel):
   - 每行表示一个具体游戏角色，通过 `account_id` 归属森空岛账号。
   - 角色身份为账号、`app_code`、`channel_master_id`、`role_id`；终末地同一 binding UID 下的多服务器角色可并存。
   - `is_skland_default` 仅用于展示和首次默认候选，不直接决定插件查询角色。
+  - 不持久化游戏头像。头像不是角色匹配键，也不参与角色或对局归档。
 - `CharacterDefault`
   - 以 `(owner_id, app_code)` 保存每个 NoneBot 用户在明日方舟/终末地各自选择的插件默认角色。
   - 默认角色属于用户和游戏，而不是某个森空岛账号。
@@ -268,8 +269,11 @@ class Config(BaseModel):
   - 通过 `character_id` 直接归属具体角色；`item_type` 区分 `char` / `weapon`，`is_free` 标记终末地免费抽。
   - 唯一约束为 `character_id + gacha_ts + pos`，不同账号角色可保存相同时间与位置的记录。
   - 可空 `pool_version` 保存终末地接口 `poolVersion`，用于区分重构池当期期次；旧记录不按池名或时间猜期次，成功同步时按现有记录身份回填，不计为新增抽卡。
+- `GarrisonMatch`
+  - 通过 `character_id + activity_id + record_id` 唯一归属一名绑定角色的一局。只保存联合场景 ID、资源版本、结束时间、策略与完成状态、激活盟约层数、有效用时、Boss 击败计数及可选策略标识，不保存完整阵容、原始响应或凭证。
+  - `in_history` 表示曾从普通战绩返回；仅从收藏归档的条目可用于同局关联，但不参与合计。
 
-账号删除通过数据库/ORM 级联删除其角色、默认映射和抽卡记录。新增或修改模型后需要添加迁移脚本。
+账号删除通过数据库/ORM 级联删除其角色、默认映射、抽卡和卫戍归档。新增或修改模型后需要添加迁移脚本。
 
 多账号升级迁移会丢弃没有对应 `SkUser` 绑定账号的旧版孤立角色缓存并记录警告；抽卡归属错配、缺失角色引用和身份冲突仍会拒绝迁移，避免静默破坏有效记录。
 
@@ -277,7 +281,7 @@ class Config(BaseModel):
 
 `api/request.py` 中 `SklandAPI.get_sign_header()` 负责生成森空岛签名请求头。
 
-同模块的私有函数 `_raise_for_skland_code(payload, error_prefix=...)` 为 13 个同类业务接口统一错误码映射：`10000` 为 `UnauthorizedException`，`10002` 为 `LoginException`，其他非零码为 `RequestException`。调用方保留各自的错误文案前缀，每个响应只解析一次 JSON；HTTP、JSON 解码与模型校验仍由各接口处理。登录接口、dId 设备注册及公开资源接口不套用这套账号异常分类。
+同模块的 `_raise_for_skland_code(payload, error_prefix=...)` 统一业务错误码：`10000` 为 `UnauthorizedException`，`10002` 为 `LoginException`，其他非零码为 `RequestException`。HTTP、JSON 解码与模型校验由各接口处理。登录、dId 设备注册及公开资源接口不套用这套账号异常分类。
 
 签名流程：
 
@@ -294,6 +298,7 @@ class Config(BaseModel):
 - `get_binding()`：获取森空岛绑定游戏角色。
 - `get_user_ID()`：获取森空岛 userId。
 - `ark_card()`：获取明日方舟角色卡片数据。
+- `ark_avatar(cred, *, uid)`：用所属账号的方舟绑定 UID 请求 `/api/v1/game/assist/user-info`。和 `ark_card()` 一样，把原始响应交给 `_raise_for_skland_code()`，再读默认 JSON 的 `data.gameAvatar.url`；无头像返回空串。不发 `x-transformed`，接口不返回等级。
 - `ark_sign()`：明日方舟签到。
 - `get_rogue()`：明日方舟肉鸽数据。
 - `get_gacha_categories()` / `get_gacha_history()`：明日方舟抽卡类别与记录。
@@ -341,7 +346,7 @@ class Config(BaseModel):
 
 ### 玩家角色卡短期缓存
 
-- `player_data.py` 的 `ArkCardDataSource` 为 `commands/card.py`、`commands/box.py` 和 `commands/gacha.py` 统一缓存无副作用的 `ArkCard` API 读取；`get_ark_card()` 在每个命令请求上下文独立执行 token 刷新。
+- `ArkCardDataSource` 为 `card`、`box` 缓存完整方舟卡片；`gacha` 仅通过 `get_cached()` 读取同一身份的有效缓存，不触发新的卡片加载。冷缓存时由 `get_ark_avatar()` 使用所选账号凭证和方舟 UID 请求轻量头像。
 - 缓存按森空岛账号、应用、服务器、角色 UID 与 role ID 隔离，使用绝对 TTL、固定容量 LRU 和同角色 single-flight；命中不会延长过期时间。
 - 默认 TTL 为 120 秒、容量为 64，可通过 `ark_card_cache_ttl` 和 `ark_card_cache_max_entries` 配置；只缓存成功解析的 `ArkCard`，异常与空结果不缓存。
 - 三个命令在读取完成后、任何提前返回或渲染发送前提交 session，确保自动刷新的 `cred` / `cred_token` 不因后续空结果或发送失败而回滚。
@@ -398,7 +403,7 @@ Boss 头像由 `filters.ark_enemy_icon_url()` 按有效敌人 ID 拼接 `yuanyan
 - `services.gacha.group_gacha_records()` 按卡池与时间戳分组，并补充 UP 干员、开放时间、卡池规则类型。
 - `render.render_gacha_history()` 使用 `gacha.html.jinja2` 渲染。
 - `-b` / `-l` 先按 Python 切片规则规范化为绝对起止位置；超过 `gacha_render_max` 时在该区间内分页，末页不超过用户终点，QQ 合并转发标题使用同一页边界。
-- 新记录在查询角色资料前加入 session，并随凭证刷新一起提交；角色资料、渲染或发送失败不会丢失已获取的记录。
+- 新记录与已刷新的凭证在渲染前提交。分页复用同一个头像，轻量查询失败仍展示抽卡数据；等级只取有效卡片缓存或已知角色等级，未知时不画徽标。
 - 小黑盒导入按官方角色表解析干员名称（保留夜刀别名），存在无法识别的名称时抛出 `UnresolvedGachaCharacterError`，整次导入不保存并向用户列出名称；未知卡池仍归入 `NORM_1_0_1` / 未知寻访。
 - 卡池统计中的平均值为全部六星（含歪卡）的平均抽数，模板标注为 `6★平均`。
 
@@ -425,7 +430,7 @@ Boss 头像由 `filters.ark_enemy_icon_url()` 按有效敌人 ID 拼接 `yuanyan
 - 角色抽卡响应只接受显式 `kind="draw"` 的条目，缺失 `kind` 的事件仍参与原始分页边界但不进入抽卡列表；仅武器旧格式允许省略 `kind`，不能将这项兼容扩展到角色接口。
 - `skland efgacha` 和“终末地抽卡记录”统一完成获取、保存和展示，不接受 `-u`，也不提供独立的抽卡更新快捷指令。缺少 token 或接口失败时，仅在已有本地记录的情况下回退，并明确标注记录未更新；错误反馈不包含可能携带凭证的原始请求 URL。
 - `SklandAPI.get_ef_gacha_history()` 在 API 边界将 JSON/字符解码错误、非对象响应或 `data`、Pydantic 模型校验失败转换为 `RequestException`，不在错误文案中附带原始响应或请求 URL。登录和鉴权错误保持原异常类型；命令复用已有的文字提示或带未更新标记的缓存展示，不笼统捕获程序、数据库及渲染异常。
-- `commands/endfield/gacha.py` 在事务结束前保存普通角色/账号身份，渲染使用脱离 ORM 的数据。头像请求失败不阻断已保存历史的展示，刷新后的凭证在渲染前单独提交；全部图片发送成功后才标记完成。
+- `commands/endfield/gacha.py` 在事务结束前保存普通角色/账号身份，渲染使用脱离 ORM 的数据。终末地抽卡与战争回响沿用原有 `SklandAPI.endfield_card()` 请求取得 `base.avatarUrl`，不依赖事先执行 `efcard`，不维护单独的头像缓存，也不接入开拓日志活动接口。头像请求失败不阻断已保存历史的展示，刷新后的凭证在渲染前单独提交；全部图片发送成功后才标记完成。
 - `services.gacha.get_all_ef_gacha_records(server_id, ...)` 在每个类别内顺序跟随原始末项 `seqId`；不同角色池共享且不连续的序号不能按页大小推算，只有奖励事件的页面也必须继续。游标缺失或未向前推进时抛出 `RequestException`，不返回部分成功数据；函数不依赖 ORM `Character`。
 - `services.gacha.group_ef_gacha_records()` 将记录分为 `beginner_pools`、`standard_pools`、`special_pools`、`rerun_pools`、`joint_pools`、`weapon_pools`。`EfGachaPoolInfo.pool_category` 是唯一分类来源，武器物品类型优先于 ID 前缀，保留历史 `wepon` 命名；重构武器不进入角色统计。
 - `EfGroupedGachaRecord` 负责总抽数、六星平均抽数、保底、UP/歪卡与武库配额。限定池、重构角色池或武器子类别任一卡池缺少 UP 信息时，相应类别歪卡数和 UP 平均均为 `None`，模板显示 `-`；各平均抽数只以付费六星为分母（UP 平均为付费 UP 六星），分母为零时为 `None`。
@@ -440,11 +445,13 @@ Boss 头像由 `filters.ark_enemy_icon_url()` 按有效敌人 ID 拼接 `yuanyan
 
 - `skland garrison` 和快捷指令 `卫戍战绩`、`卫` 共用入口，默认只返回首页；`-a` / `--all` 显示所选列表的全部可用战绩，`-i` / `--index` 查看单局，`-f` / `--favored` 在收藏列表内查询和编号，`-r` / `--role` 沿用方舟选角权限。两种快捷指令均沿用 Bot 命令前缀，使用 `compact=False` 要求参数以空格分隔，短入口不匹配其他以“卫”开头的词。不再提供 `--activity` 或手动活动选择，`-a` 不接收活动 ID。列表为空或编号越界时明确提示，不跨战绩和收藏列表回退；单局编号不受默认首页范围限制。
 - `SklandAPI.ark_garrison()` 与 `ark_garrison_resources()` 分别读取官方 `/api/ms/game/arknights/garrison/info`、`/resource`，不设置 `x-transformed`，直接解析 `data` JSON 对象，不保留 Base64 解码分支。业务错误先按统一认证分类处理，再检查 HTTP 状态和对应 Pydantic 模型；格式失败统一为不含原始响应或 URL 的 `RequestException`。
-- `services/garrison.py` 顺序读取资源和角色战绩，命令自动从资源首个版本获取当前 `activityId`，不硬编码赛季。两次读取共用有界凭证刷新；命令在任何视图构造、图片渲染和消息发送前提交刷新结果，并仅使用已保存的普通 UID、区服、渠道 ID 和脱离 ORM 的模型。`GarrisonView.from_data()` 按角色渠道 ID 将 `1` / `2` 显示为“官服” / “bilibili服”，兼容区服名仍保存编号的旧数据，未知渠道保留原名称；不修改数据库或请求身份，模板继续显式开启 autoescape。
+- `services/garrison.py` 顺序读取资源和角色战绩，从资源首个版本获取当前 `activityId`，两次读取共用有界凭证刷新。成功后在进程内串行提交归档和凭证，既有行只在内容改变时更新；普通战绩优先于收藏，滑出窗口不删除。归档后读取脱离 ORM 的统计和队友信息，在构造主视图、渲染及发送前结束事务。`GarrisonView.from_data()` 按角色渠道 ID 将 `1` / `2` 显示为“官服” / “bilibili服”，兼容旧区服名称，未知渠道保留原名称，不修改请求身份。
 - `schemas/arknights/garrison.py` 负责生涯统计、模式/胜负、品质、策略、盟约、装备、能力和称号投影。生涯场次、胜负和奖杯读取 `career` 字段，零分母胜率未知；记录按实际活动和版本匹配资源，缺元数据保留名称或 ID，不套用最新版本。详情由同一次 `info` 的 `history.records` / `favourRecords` 选择，不额外猜测详情或分页接口，也不执行收藏写操作。
-- `GarrisonStrategyStat` 的 `recent_count`、`recent_wins` 和 `win_percent` 统一使用所查询活动中同一策略的场次，继承的 `count` 保持为空，不混入 API 生涯前三次数。`GarrisonBondStat.recent_count` 为激活场次，同局同盟约最多计一次，`max_layer` 取全部已激活条目的最大层数并保留 `0`。偏好、Boss 击杀及游戏时长统计所查询活动的 `history.records`，按记录 ID 去重，不合并收藏、不随选中详情或分页改变。界面使用“战绩记录”“共 N 场记录”等表述；`recent_*` 是现有内部字段名，不是接口时间范围或数据完整性的依据。
+- 偏好、Boss 击杀和游戏时长累计所选角色、当前活动的普通战绩归档；首次只能保存仍可查询的对局，不补造窗口外记录。界面区分已归档局数和官方总模拟数，不随选中详情或分页改变。`GarrisonStrategyStat` 的 `recent_count`、`recent_wins` 和 `win_percent` 使用相同归档范围，不混入 API 生涯前三次数。`GarrisonBondStat` 按同局同盟约最多计一次激活，最高层保留 `0`。
 - “游戏时长”取同一活动记录的 `gameEndTs - gameStartTs` 总和，先合计秒再显示时分；无记录或任一记录时间缺失、逆序时显示未知，不显示部分合计。统计面板不展示蚀刻章获取及独立／联合高难完成数，改为展示 Boss 击杀总数与其中的隐秘子项；只累计 `acBossInfo.isKilled=True`，隐秘子项另要求 `isHidden=True`，不根据整局胜负推断。无记录为未知，有记录但无击杀为零，原始 wire 字段仍保留。
-- `render_garrison_history(props, *, show_all=False)` 的总览固定使用 706px 竖版，每图最多 4 条记录；默认仅渲染首页，`show_all=True` 才渲染全部分页，页码分母始终保留所选列表的总页数。不在统计或单局选择之前截断原始记录，默认首页不会改变生涯及战绩统计；不再保留横版 `layout` 参数或样式分支。生涯概览的六项指标固定两行三列，完整生涯区位于战绩之前且仅首图显示，续图使用紧凑页头。单局详情使用 1080px 视口，8 人及以下按四列展示，9 人及以上按五列换行。模板与浏览器视口共用 `page_width`，沿用 1.5 倍 PNG、资源显式就绪等待及全局截图超时。QQClient 多图按每条合并转发最多 16 张图片顺序分批发送，节点页码在全部图片内连续，仅首批引用原消息；单图及其它平台保留普通图片发送。任一批次失败时停止后续发送，全部批次成功后才标记完成，不自动重发已成功批次。页面保持同一深色圆角外框，模板显式开启 autoescape，新样式只使用 `garrison-*` 命名空间，不新增数据库表、玩家历史文件或配置项。
+- 同局队友从同一插件绑定库按 `activityId` 与联合局的非空 `sceneId` 精确关联。实测个人记录 `id` 带角色 UID、活动和开局时间，只用于角色内去重，不按时间或昵称猜队友。按区服渠道和 UID 排除本人及同角色重复绑定；以队友自身版本解析策略及盟约。详情在时间栏右侧紧凑横排一至三名队友，不改变博士、奖杯及主阵容的位置；每人显示游戏头像、昵称、策略与一个最高层的已激活盟约（并列取首项，保留 `0` 层），不展示队友阵容、UID 或额外账号资料。未匹配到队友时不占位置。
+- 本人用本次战绩 `gameUserInfo.avatar.url`。仅查看联合单局且匹配到绑定队友时，在结束数据库读事务后，用每名队友自己的 `cred` / `cred_token` 并发读取其本人方舟头像（最多三人）。不使用查看者凭证查别人的 UID，不替队友刷新凭证；某人的头像缺失或请求失败不影响其他人或战绩正文。
+- `render_garrison_history(props, *, show_all=False)` 的总览固定使用 706px 竖版，每图最多 4 条记录；默认仅渲染首页，`show_all=True` 才渲染全部分页，页码分母始终保留所选列表的总页数。列表与单局仍来自本次接口，不把归档当作可回看战绩。生涯概览的六项指标固定两行三列，完整生涯区位于战绩之前且仅首图显示，续图使用紧凑页头。单局详情使用 1080px 视口，8 人及以下按四列展示，9 人及以上按五列换行。模板与浏览器视口共用 `page_width`，沿用 1.5 倍 PNG、资源显式就绪等待及全局截图超时。QQClient 多图按每条合并转发最多 16 张顺序分批发送，保持连续页码，仅首批引用原消息；单图及其它平台保留普通图片发送。任一批次失败时停止后续发送，不自动重发已成功批次。模板显式开启 autoescape，新样式只使用 `garrison-*` 命名空间，不新增后台任务、玩家历史文件或配置项。
 - 卫戍模板沿用方舟卡片的深色面板、Bender / Akrobat 字体与现有阴影，青绿表示模拟完成，红色表示中断。列表的干员卡宽度上限为 72px；列表和详情均在 8 人及以下按四列展示，9 人及以上按五列完整换行，两者共用半身图与紧凑标识，不截断阵容。`GarrisonOperator.half_portrait_url` 复用 `charId_to_portraitUrl` 的官方角色 ID 资源，不再拼接猜测的 `#1` 皮肤编号；阿米娅职业形态同样使用其自身角色资源。精英化使用 `ark_card/elite/` 素材，技能复用 `ark_skill_icon_url()`。装备位于立绘下方，区域固定宽高比 2:1；外层不铺设独立底色，所有数量下的空隙均直接透出卡片背景。不超过两件时保留双槽、方形槽位和普通／升级边框。三件及以上保持两行紧凑排布，取消区域及槽位内边距、纵向间距和槽位背景，以区域高度的一半作为图标边长；定宽列使用 `space-between` 横向两端对齐，剩余宽度均匀分配为列间距，不将图标挤在中间而留下两侧空白。普通灰框与升级金框使用 1px 内侧 outline 描边，不参与盒模型、不缩小图标，也不额外占用排列空间。六件保持三列两行，不撑高卡片、不覆盖立绘、不截断装备，图片继续等比显示。列表策略位于回合数右侧，规程与 Boss 位于其下，不再为策略单独预留一行；本局盟约单独分区、全宽排列并保留现有图标及层数大小。
 - 干员精英化图标按 `rank_label` 区分普通白色与精锐金色微光，等级数字继续保留；未知品质不染金。精锐身份沿用 `chessInfo.id == goldenChessId` 的非空匹配，不凭 `evolvePhase == 2`、等级或 `mergeLevel` 判断；真实记录存在 `mergeLevel=0` 的精锐干员。`mergeLevel` 只保留 wire 字段，不再投影或显示 `×N` 合成数字角标；列表和详情共用同一干员组件。
 - 卫戍随包基础素材包括 `common_logo.png`、`settlemen_personal_success.png`、`settlemen_personal_fail.png`、`operator_lv_bg.png`，原图来自游戏 `autochess/[uc]autochessouter/settlegame/auto_chess_settle_game_state/`。盟约圆盘 `img_bond_bkg.png` 来自 `[uc]autochessouter/stageinfo/stageinfogroup/`，计数底纹 `matte_num.png` 来自 `[uc]autochessbattle/hud/autochess_hud_bond_item/`。圆盘保持 0.8 亮度、图案保持近黑色，在原生纹理外补单一较亮绿色细环，不整体提亮或增加大范围辉光；未激活时连同外环置灰。素材直接读取 `resources/images/garrison/`，图标和底纹均参与资源就绪等待。
@@ -630,14 +637,14 @@ uv build
 
 ### 数据库迁移
 
-本项目通过 nonebot-plugin-orm 使用 Alembic。修改 `model.py` 后应新增迁移：
+本项目通过 nonebot-plugin-orm 使用 Alembic。修改已发布的数据库结构时应新增迁移；未发版 PR 内的结构调整直接整理到该 PR 的同一条迁移，不为中间方案叠加新增／删除迁移。
 
 ```bash
 nb orm revision -m "description" --branch-label "nonebot_plugin_skland"
 nb orm upgrade
 ```
 
-迁移脚本位于 `nonebot_plugin_skland/migrations/`。已有迁移包括初始表、抽卡记录表、`role_id`、模型类型修正、终末地抽卡支持、多账号身份重建，以及 `c8d95f314a62` 重构卡池期次；多账号 downgrade 在旧结构无法无损表达当前数据时必须拒绝执行。
+迁移脚本位于 `nonebot_plugin_skland/migrations/`。`c8d95f314a62` 增加重构卡池期次；卫戍归档 PR 仅保留直接接续它的 `4b71c2a9e650`，一次创建最终对局归档表及索引，不新增角色头像列。`tests/test_garrison_migration.py` 覆盖升级后的对局写入、角色隔离和降级时既有角色与抽卡记录保留。多账号 downgrade 在旧结构无法无损表达当前数据时必须拒绝执行。
 
 ## 添加新功能的一般流程
 

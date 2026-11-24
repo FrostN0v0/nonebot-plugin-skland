@@ -208,6 +208,31 @@
 {% endautoescape %}
 {% endmacro %}
 
+{% macro garrison_teammates(teammates) %}
+{% autoescape true %}
+<section class="garrison-teammates" aria-label="同局队友">
+  <span class="garrison-teammates-label" aria-hidden="true">队友</span>
+  {% for teammate in teammates %}
+  <div class="garrison-teammate">
+    <div class="garrison-player-avatar garrison-teammate-avatar">
+      {% if teammate.avatar_url %}<img src="{{ teammate.avatar_url }}" alt="" />{% else %}<span>博士</span>{% endif %}
+    </div>
+    <div class="garrison-teammate-info">
+      <strong title="{{ teammate.nickname }}">{{ teammate.nickname }}</strong>
+      {{ garrison_item(teammate.strategy) }}
+    </div>
+    {% if teammate.top_bond %}
+    <div class="garrison-teammate-bond">
+      {{ garrison_bonds([teammate.top_bond]) }}
+      <span>{{ teammate.top_bond.name or teammate.top_bond.id }}</span>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% endautoescape %}
+{% endmacro %}
+
 {% macro garrison_record_detail(record, view) %}
 {% autoescape true %}
 <article class="garrison-record garrison-record-detail gacha-info-shadow{% if record.success %} garrison-victory{% else %} garrison-interrupted{% endif %}" data-record-id="{{ record.record_id }}">
@@ -236,10 +261,13 @@
       {{ garrison_bonds(record.bonds, true) }}
     </div>
     <div class="garrison-session-meta">
-      <span>#{{ '%02d' | format(record.index) }}</span>
-      <span class="garrison-record-duration"><img src="{{ 'time_icon.png' | garrison_asset_url }}" alt="" aria-hidden="true" />本局用时 {{ record.duration_label }}</span>
-      {% if record.started_at > 0 %}<time data-event="start"><img src="{{ 'date_icon.png' | garrison_asset_url }}" alt="" aria-hidden="true" />开始 {{ record.started_at | format_timestamp_str }}</time>{% endif %}
-      {% if record.ended_at > 0 %}<time data-event="end">结束 {{ record.ended_at | format_timestamp_str }}</time>{% endif %}
+      <div class="garrison-session-times">
+        <span>#{{ '%02d' | format(record.index) }}</span>
+        <span class="garrison-record-duration"><img src="{{ 'time_icon.png' | garrison_asset_url }}" alt="" aria-hidden="true" />本局用时 {{ record.duration_label }}</span>
+        {% if record.started_at > 0 %}<time data-event="start"><img src="{{ 'date_icon.png' | garrison_asset_url }}" alt="" aria-hidden="true" />开始 {{ record.started_at | format_timestamp_str }}</time>{% endif %}
+        {% if record.ended_at > 0 %}<time data-event="end">结束 {{ record.ended_at | format_timestamp_str }}</time>{% endif %}
+      </div>
+      {% if view.teammates %}{{ garrison_teammates(view.teammates) }}{% endif %}
     </div>
   </div>
   {{ garrison_footer(view) }}

@@ -170,6 +170,25 @@ class SklandAPI:
                 raise RequestException(f"获取账号 userId 失败: {e}")
 
     @classmethod
+    async def ark_avatar(cls, cred: CRED, *, uid: str) -> str:
+        """获取当前账号绑定的明日方舟角色头像；接口明确无头像时返回空字符串。"""
+        query = urlencode({"uid": uid})
+        url = f"{base_url}/game/assist/user-info?{query}"
+        error_prefix = "获取明日方舟角色头像失败"
+        async with httpx.AsyncClient() as client:
+            try:
+                headers = await cls.get_sign_header(cred, url, method="get")
+                response = await client.get(url, headers=headers)
+                payload = response.json()
+                _raise_for_skland_code(payload, error_prefix=error_prefix)
+                response.raise_for_status()
+
+                avatar = payload["data"].get("gameAvatar") or {}
+                return (avatar.get("url") or "").strip()
+            except (httpx.HTTPError, json.JSONDecodeError):
+                raise RequestException(error_prefix) from None
+
+    @classmethod
     async def get_rogue(cls, cred: CRED, uid: str, topic_id: str) -> RogueData:
         """获取肉鸽数据"""
         rogue_url = f"{base_url}/game/arknights/rogue?uid={uid}&targetUserId={cred.userId}&topicId={topic_id}"
